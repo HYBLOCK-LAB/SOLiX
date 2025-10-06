@@ -741,6 +741,70 @@ contract ReturnExample {
 }
 ```
 
+### Event
+
+event는 Contract나 사용자의 특정한 상태를 출력하며 그 상태를 블록체인에 저장합니다. 예를 들어, 다음과 같은 Contract가 있다고 생각합시다.
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.4.21 <0.9.0;
+
+contract ClientReceipt {
+    event Deposit(
+        address indexed from,
+        bytes32 indexed id,
+        uint value
+    );
+
+    function deposit(bytes32 id) public payable {
+        // Events are emitted using `emit`, followed by
+        // the name of the event and the arguments
+        // (if any) in parentheses. Any such invocation
+        // (even deeply nested) can be detected from
+        // the JavaScript API by filtering for `Deposit`.
+        emit Deposit(msg.sender, id, msg.value);
+    }
+}
+```
+
+여기서 Deposit이라는 event는 보내는 주소 `from`, 어떤 목적으로 예치했는지 식별하는지 필요한 `id`, 얼마나 예치할지에 대한 값인 `value`를 기록합니다. `emit`를 사용해 Deposit 이벤트를 발생시킬 수 있습니다.
+
+Event를 사용하면 스토리지에 저장하는 것과 비교해 비교적 적은 가스 비용으로 데이터를 저장할 수 있습니다. 한 가지 주의할 점은 이벤트에 기록되면 값을 변경할 수 없다는 점입니다. 또한, 이벤트를 통햇 프론트엔드와 쉽게 소통할 수 있습니다. 프론트에서는 아래와 같이 이벤트의 발생 여부를 감지해 그에 대응되는 행동을 취할 수 있습니다.
+
+```javascript
+import { ethers } from "ethers";
+
+// 프로바이더
+const provider = new ethers.WebSocketProvider("wss://<your-endpoint>");
+
+// 컨트랙트 인스턴스
+const abi = [
+  /* compiler가 생성한 ABI */
+];
+const address = "0x1234...ab67";
+const contract = new ethers.Contract(address, abi, provider);
+
+// 이벤트 필터
+const filter = contract.filters.Deposit();
+
+// 실시간 구독
+contract.on(filter, (from, amount, event) => {
+  console.log("Deposit:", {
+    from,
+    amount: amount.toString(),
+    block: event.blockNumber,
+    tx: event.transactionHash,
+  });
+});
+
+// 정리(종료 시)
+process.on("SIGINT", async () => {
+  contract.removeAllListeners(filter);
+  await provider.destroy();
+  process.exit(0);
+});
+```
+
 ## 환경 설정 및 테스트
 
 Duration: 30

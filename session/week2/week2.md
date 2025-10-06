@@ -426,9 +426,30 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 ERC-1155 표준 메타데이터 URI를 반환합니다.
 
-### 기능에 따른 함수
+이제 `LicenseManager.sol`을 작성해봅시다.
 
-### contructor와 전역변수
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
+
+contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
+
+}
+```
+
+먼저 외부 라이브러리를 살펴봅시다.
+
+1.  AccessControl
+
+AccessControl은 스마트 컨트랙트의 함수 호출 권한을 “역할(Role)” 단위로 관리할 수 있게 해주는 모듈입니다. 역할은 bytes32 식별자(e.g. keccak256("MINTER_ROLE"))로 정의하며, 해당 역할을 가진 주소만 특정 함수(또는 로직)를 실행할 수 있도록 제한합니다. 이를 통해 관리자, 민터, 버너 등 업무/권한 분리가 명확해지며, 권한 변경이 필요할 때도 역할 부여/회수만으로 안전하게 운용할 수 있습니다.
+
+2. ERC1155
+
+EIP-1155 멀티 토큰 표준의 OpenZeppelin 기본 컨트랙트 구현을 가져옵니다. 하나의 컨트랙트에서 여러 토큰 ID를 관리하며, 각 ID는 “대체 가능(FT)처럼 수량형” 또는 “대체 불가능(NFT)처럼 1개”로 사용할 수 있습니다. EIP-1155에 대해서는 밑에서 알아봅시다.
 
 ### 토큰(Token)
 
@@ -446,10 +467,16 @@ ERC-721은 **대체 불가능 토큰,** 즉 NFT(Non-fungible token)를 정의한
 
 ERC-1155는 ERC-20과 ERC-721의 장점을 결합한 멀티 토큰 표준입니다. 하나의 컨트랙트에서 여러 종류의 토큰을 동시에 관리할 수 있으며, 대체 가능 토큰과 대체 불가능 토큰을 모두 발행할 수 있습니다. 예를 들어 게임에서 흔히 사용되는 구조를 생각해 보면, 일반적인 소비형 아이템인 ‘물약’은 ERC-20처럼 동일한 성격을 가진 대체 가능 토큰으로 표현할 수 있고, 유일한 전설 무기는 ERC-721처럼 고유한 NFT로 표현할 수 있습니다. ERC-1155를 이용하면 이 모든 자산을 하나의 컨트랙트에서 관리할 수 있고, 여러 개의 토큰을 한 번에 전송할 수도 있기 때문에 가스 비용을 절감할 수 있습니다. 이러한 효율성 때문에 메타버스, 게임, 복합 자산 플랫폼에서 널리 사용되고 있습니다. 이번에 만들 라이센스 토큰도 ERC-1155 기반으로 만듭니다.
 
+### contructor와 전역변수
+
+작성된 contract에 contructor와 전역변수를 정의해봅시다.
+
+### 기능에 따른 함수
+
+작성된 contract에 함수의 뼈대를 작성해봅시다. 함수명, 파라미터, 반환값 등은 ILicenseManager와 동일하게 작성하면 됩니다.
+
 ## 스마트 컨트랙트 작성
 
 ## IPFS 사용법 익히기
-
-## 위원회 동작 방식의 이해
 
 ## 축하합니다

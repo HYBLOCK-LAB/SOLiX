@@ -19,7 +19,6 @@ contract CommitteeManager is AccessControl {
 
     /* ========= 상태 ========= */
 
-    // runKey = keccak256(abi.encodePacked(codeId))
     mapping(bytes32 => uint256) public shardCountForRun;
     uint256 public committeeThreshold = 2;
 
@@ -40,9 +39,9 @@ contract CommitteeManager is AccessControl {
         uint256 count
     );
 
-    /* ========= 관리자 오퍼레이션 ========= */
+    /* ========= 관리자 기능 ========= */
 
-    // 위원회 임계치 설정(관리자)
+    // 위원회 임계치 설정. 관리자만 가능
     function setCommitteeThreshold(
         uint256 newThreshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -50,21 +49,21 @@ contract CommitteeManager is AccessControl {
         committeeThreshold = newThreshold;
     }
 
-    // 위원회 멤버 추가(관리자)
+    // 위원회 멤버 추가. 관리자만 가능
     function addCommittee(address who) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(COMMITTEE_ROLE, who);
     }
 
-    // 위원회 멤버 제거(관리자)
+    // 위원회 멤버 제거. 관리자만 가능
     function removeCommittee(
         address who
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(COMMITTEE_ROLE, who);
     }
 
-    /* ========= 샤드 제출 ========= */
+    /* ========= Shard 제출 ========= */
 
-    // 위원회가 샤드 CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
+    // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
     function submitShard(
         uint256 codeId,
         bytes32 runNonce,

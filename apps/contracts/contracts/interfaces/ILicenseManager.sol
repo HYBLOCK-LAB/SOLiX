@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-interface ILicenseManager is IERC1155, IAccessControl {
+interface ILicenseManager is IERC165 {
     /* ========= 상태 조회 ========= */
 
     // code를 조회하는 함수
@@ -112,13 +111,13 @@ interface ILicenseManager is IERC1155, IAccessControl {
     ) external;
 
     // 소유자 혹은 사용자 대신 실행
-    function requestOnBehalf(
-        uint256 codeId,
-        address user,
-        bytes calldata recipientPubKey,
-        uint256 runNonce,
-        bytes calldata sig
-    ) external;
+    // function requestOnBehalf(
+    //     uint256 codeId,
+    //     address user,
+    //     bytes calldata recipientPubKey,
+    //     uint256 runNonce,
+    //     bytes calldata sig
+    // ) external;
 
     /* ========= View Helper ========= */
 

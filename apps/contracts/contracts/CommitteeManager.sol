@@ -9,7 +9,7 @@ contract CommitteeManager is AccessControl {
 
     bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
 
-    // 코드/라이선스 코어 컨트랙트 (read-only)
+    /// @notice 코드/라이선스 코어 컨트랙트 (읽기 의존)
     ILicenseManager public immutable licenseManager;
 
     constructor(address licenseManager_) {

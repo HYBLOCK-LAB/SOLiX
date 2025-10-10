@@ -41,7 +41,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
 
     /* ========= 상태 조회 ========= */
 
-    // code를 조회하는 함수
+    // code 조회
     function code(
         uint256 codeId
     ) external view override returns (bytes32, string memory, bool, bool) {
@@ -69,7 +69,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         return _nextCodeId;
     }
 
-    // ERC165 통합 오버라이드: ERC1155, AccessControl, 그리고 ILicenseManager에 대한 선언을 모두 해결
+    // ERC165 통합 오버라이드: ERC1155, AccessControl, ILicenseManager에 대한 선언을 모두 해결
     function supportsInterface(
         bytes4 interfaceId
     )
@@ -90,7 +90,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         bytes32 codeHash,
         string calldata cipherCid
     ) external override returns (uint256 codeId) {
-        require(codeHash != bytes32(0), "invalid codeHash");
+        require(codeHash != bytes32(0), "Invalid codeHash");
 
         codeId = _nextCodeId++;
         _codes[codeId] = CodeInfo({
@@ -126,7 +126,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     function pauseCodeExecution(uint256 codeId) external override {
         _requireCodeExists(codeId);
         _requireCodeOwnerOrAdmin(codeId);
-        require(!_codes[codeId].paused, "Already paused");
+        require(!_codes[codeId].paused, "Code already paused");
 
         _codes[codeId].paused = true;
         emit CodePaused(codeId);
@@ -136,7 +136,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     function unpauseCodeExecution(uint256 codeId) external override {
         _requireCodeExists(codeId);
         _requireCodeOwnerOrAdmin(codeId);
-        require(_codes[codeId].paused, "Not paused");
+        require(_codes[codeId].paused, "Code not paused");
 
         _codes[codeId].paused = false;
         emit CodeUnpaused(codeId);
@@ -151,12 +151,12 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     ) external override {
         _requireCodeExists(codeId);
         _requireCodeOwner(codeId);
-        require(!_codes[codeId].paused, "Code paused");
-        require(to != address(0), "Invalid to");
-        require(runs > 0, "runs=0");
+        require(!_codes[codeId].paused, "Code is paused");
+        require(to != address(0), "Invalid recipient");
+        require(runs > 0, "Runs must be greater than 0");
         require(
             expiryTimestamp == 0 || expiryTimestamp > block.timestamp,
-            "invalid expiry"
+            "Invalid expiry"
         );
 
         // 만료 갱신: 더 긴 쪽으로 확장(기존 만료가 더 길면 유지)
@@ -177,7 +177,10 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         _requireCodeExists(codeId);
         _requireCodeOwner(codeId);
         uint256 bal = balanceOf(account, codeId);
-        require(bal > 0 || _expiry[account][codeId] > 0, "Nothing to revoke");
+        require(
+            bal > 0 || _expiry[account][codeId] > 0,
+            "No license to revoke"
+        );
 
         if (bal > 0) {
             _burn(account, codeId, bal);
@@ -193,8 +196,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         bytes calldata recipientPubKey
     ) external override {
         _requireCodeExists(codeId);
-        require(!_codes[codeId].paused, "Code paused");
-        require(balanceOf(msg.sender, codeId) > 0, "No runs");
+        require(!_codes[codeId].paused, "Code is paused");
+        require(balanceOf(msg.sender, codeId) > 0, "Insufficient runs");
         uint256 expiry = _expiry[msg.sender][codeId];
         require(expiry == 0 || block.timestamp <= expiry, "License expired");
 
@@ -273,11 +276,17 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     }
 
     function _requireCodeOwner(uint256 codeId) internal view {
-        require(_codes[codeId].owner == msg.sender, "Not code owner");
+        require(
+            _codes[codeId].owner == msg.sender,
+            "Caller is not the code owner"
+        );
     }
 
     function _requireCodeOwnerOrAdmin(uint256 codeId) internal view {
         if (hasRole(ADMIN_ROLE, msg.sender)) return;
-        require(_codes[codeId].owner == msg.sender, "Not code owner or admin");
+        require(
+            _codes[codeId].owner == msg.sender,
+            "Caller is neither code owner nor admin"
+        );
     }
 }

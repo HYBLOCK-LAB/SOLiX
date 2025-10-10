@@ -6,7 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 interface ILicenseManager is IERC165 {
     /* ========= 상태 조회 ========= */
 
-    // code를 조회하는 함수
+    // code 조회
     function code(
         uint256 codeId
     ) external view returns (bytes32, string memory, bool, bool);

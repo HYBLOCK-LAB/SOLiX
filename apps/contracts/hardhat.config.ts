@@ -1,7 +1,16 @@
 import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
-import { configVariable } from "hardhat/config";
+import * as dotenv from "dotenv";
+dotenv.config();
+
+function getVar(name: string, opts?: { optional?: boolean }) {
+  const v = process.env[name];
+  if (!v && !opts?.optional) {
+    throw new Error(`Missing required config variable: ${name}`);
+  }
+  return v;
+}
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
@@ -33,8 +42,8 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: getVar("SEPOLIA_RPC_URL")!,
+      accounts: [getVar("SEPOLIA_PRIVATE_KEY")!],
     },
   },
 };

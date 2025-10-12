@@ -39,5 +39,3 @@ export const wagmiConfig = getDefaultConfig({
   },
   ssr: true,
 });
-
-export const supportedChains = [chain];

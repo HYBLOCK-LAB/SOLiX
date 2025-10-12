@@ -10,6 +10,7 @@ const clientEnvSchema = z.object({
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address"),
   NEXT_PUBLIC_WALLETCONNECT_ID: z.string().min(1),
+  NEXT_PUBLIC_STORAGE_MODE: z.enum(["local", "production"]).default("local"),
 });
 
 export const clientEnv = clientEnvSchema.parse({
@@ -20,4 +21,5 @@ export const clientEnv = clientEnvSchema.parse({
   NEXT_PUBLIC_CHAIN_EXPLORER_URL: process.env.NEXT_PUBLIC_CHAIN_EXPLORER_URL,
   NEXT_PUBLIC_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
   NEXT_PUBLIC_WALLETCONNECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_ID,
+  NEXT_PUBLIC_STORAGE_MODE: process.env.NEXT_PUBLIC_STORAGE_MODE,
 });

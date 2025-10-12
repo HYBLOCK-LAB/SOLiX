@@ -19,8 +19,8 @@ export function ManageCodeStateCard() {
     try {
       await updateMetadata.execute([
         BigInt(codeId),
-        (codeHash || code?.codeHash ?? "0x0") as `0x${string}`,
-        cipherCid || code?.cipherCid ?? "",
+        ((codeHash || code?.codeHash) ?? "0x0") as `0x${string}`,
+        (cipherCid || code?.cipherCid) ?? "",
       ]);
       await refetch();
     } catch {
@@ -47,50 +47,71 @@ export function ManageCodeStateCard() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
+    <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold">코드 상태 관리</h2>
-        <p className="text-sm text-slate-400">일시정지, 메타데이터 갱신을 수행합니다.</p>
+        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+          코드 상태 관리
+        </h2>
+        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+          일시정지, 메타데이터 갱신을 수행합니다.
+        </p>
       </header>
 
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-slate-300">코드 ID</span>
+          <span className="text-sm text-text-light-75 dark:text-text-dark-75">
+            코드 ID
+          </span>
           <input
             type="number"
             min={0}
-            className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+            className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
             value={codeId}
             onChange={(event) => setCodeId(Number(event.target.value))}
           />
         </label>
 
-        <div className="rounded border border-slate-800 bg-slate-950/60 p-4 text-sm">
+        <div className="rounded border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-50 dark:bg-background-dark-75">
           {isLoading ? (
-            <p className="text-slate-400">코드 정보를 불러오는 중...</p>
+            <p className="text-text-light-50 dark:text-text-dark-50">
+              코드 정보를 불러오는 중...
+            </p>
           ) : code && code.exists ? (
             <ul className="space-y-1">
               <li>
-                <span className="text-slate-400">해시:</span>{" "}
-                <span className="font-mono text-xs">{code.codeHash}</span>
+                <span className="text-text-light-50 dark:text-text-dark-50">
+                  해시:
+                </span>{" "}
+                <span className="font-mono text-xs text-text-light-100 dark:text-text-dark-100">
+                  {code.codeHash}
+                </span>
               </li>
               <li>
-                <span className="text-slate-400">CID:</span> {code.cipherCid}
+                <span className="text-text-light-50 dark:text-text-dark-50">
+                  CID:
+                </span>{" "}
+                <span className="text-text-light-100 dark:text-text-dark-100">
+                  {code.cipherCid}
+                </span>
               </li>
               <li>
-                <span className="text-slate-400">상태:</span>{" "}
-                {code.paused ? "일시정지됨" : "활성"}
+                <span className="text-text-light-50 dark:text-text-dark-50">
+                  상태:
+                </span>{" "}
+                <span className="text-text-light-100 dark:text-text-dark-100">
+                  {code.paused ? "일시정지됨" : "활성"}
+                </span>
               </li>
             </ul>
           ) : (
-            <p className="text-rose-400">코드 정보를 찾을 수 없습니다.</p>
+            <p className="text-accent-100">코드 정보를 찾을 수 없습니다.</p>
           )}
         </div>
 
         <div className="flex gap-2">
           <button
             type="button"
-            className="flex-1 rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-lg bg-accent-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-accent-75 disabled:cursor-not-allowed disabled:bg-accent-50 disabled:text-text-dark-50"
             onClick={onPause}
             disabled={pause.isPending || !code?.exists}
           >
@@ -98,7 +119,7 @@ export function ManageCodeStateCard() {
           </button>
           <button
             type="button"
-            className="flex-1 rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-secondary-75 disabled:cursor-not-allowed disabled:bg-secondary-50 disabled:text-text-dark-50"
             onClick={onUnpause}
             disabled={unpause.isPending || !code?.exists}
           >
@@ -106,25 +127,36 @@ export function ManageCodeStateCard() {
           </button>
         </div>
 
-        <form className="flex flex-col gap-4 rounded border border-slate-800 bg-slate-950/60 p-4" onSubmit={onUpdateMetadata}>
-          <h3 className="text-sm font-semibold text-slate-200">메타데이터 갱신</h3>
+        <form
+          className="flex flex-col gap-4 rounded border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-primary-50 dark:bg-background-dark-75"
+          onSubmit={onUpdateMetadata}
+        >
+          <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">
+            메타데이터 갱신
+          </h3>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-slate-300">새 코드 해시</span>
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">
+              새 코드 해시
+            </span>
             <input
               type="text"
-              className="rounded border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm"
+              className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 font-mono text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
               placeholder="0x..."
               value={codeHash}
-              onChange={(event) => setCodeHash(event.target.value as `0x${string}` | "")}
+              onChange={(event) =>
+                setCodeHash(event.target.value as `0x${string}` | "")
+              }
             />
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-slate-300">새 암호화 CID</span>
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">
+              새 암호화 CID
+            </span>
             <input
               type="text"
-              className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
               placeholder="bafy..."
               value={cipherCid}
               onChange={(event) => setCipherCid(event.target.value)}
@@ -133,7 +165,7 @@ export function ManageCodeStateCard() {
 
           <button
             type="submit"
-            className="rounded bg-sky-500 px-4 py-2 text-sm font-semibold text-sky-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-primary-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-primary-75 disabled:cursor-not-allowed disabled:bg-primary-50 disabled:text-text-dark-75"
             disabled={updateMetadata.isPending || !code?.exists}
           >
             {updateMetadata.isPending ? "갱신 중..." : "메타데이터 업데이트"}

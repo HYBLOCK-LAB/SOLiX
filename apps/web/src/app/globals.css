@@ -20,10 +20,11 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans, "Helvetica Neue", Helvetica, Arial, sans-serif);
-}
-
-::selection {
-  background-color: theme(colors.accent.50);
-  color: theme(colors.primary.100);
+  font-family: var(
+    --font-geist-sans,
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    sans-serif
+  );
 }

@@ -1,138 +1,156 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>하이블록 개발세션 학습자료</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        html, body {
-            height: 100%; 
-        }
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f7f6; 
-            color: #333; 
-            display: flex; 
-            flex-direction: column;
-        }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f7f6;
+        color: #333;
+        display: flex;
+        flex-direction: column;
+      }
 
-        main {
-            flex-grow: 1; 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
+      main {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
 
+      .container {
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 600px;
+        width: 90%;
+      }
+
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        font-weight: 700;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      li {
+        margin: 0;
+      }
+
+      a {
+        display: block;
+        padding: 15px 25px;
+        background-color: #3498db;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 1.2em;
+        font-weight: 500;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      a:hover {
+        background-color: #2980b9;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      a.disabled {
+        background-color: #bdc3c7;
+        color: #ecf0f1;
+        pointer-events: none;
+        cursor: not-allowed;
+      }
+
+      a.disabled:hover {
+        transform: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      footer {
+        padding: 20px;
+        text-align: center;
+        color: #888;
+        font-size: 0.9em;
+        background-color: #f4f7f6;
+      }
+
+      @media (max-width: 768px) {
         .container {
-            background-color: #ffffff; 
-            padding: 40px;
-            border-radius: 12px; 
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); 
-            text-align: center; 
-            max-width: 600px; 
-            width: 90%; 
+          background-color: #f4f7f6;
+          border-radius: 0px;
+          box-shadow: none;
+          padding: 30px;
+          width: 90%;
+          max-width: 90%;
+          height: 100%;
         }
-
         h1 {
-            color: #2c3e50; 
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            font-weight: 700; 
+          font-size: 2em;
         }
-
-        ul {
-            list-style: none; 
-            padding: 0;
-            margin: 0;
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-        }
-
-        li {
-            margin: 0;
-        }
-
-      
         a {
-            display: block; 
-            padding: 15px 25px;
-            background-color: #3498db; 
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 1.2em;
-            font-weight: 500;
-            transition: background-color 0.3s ease, transform 0.2s ease; 
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+          margin: 0 20px;
+          font-size: 1.1em;
+          padding: 12px 20px;
         }
-
-        a:hover {
-            background-color: #2980b9;
-            transform: translateY(-3px); 
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); 
-        }
-
-        a.disabled {
-            background-color: #bdc3c7;
-            color: #ecf0f1; 
-            pointer-events: none; 
-            cursor: not-allowed; 
-        }
-
-
-        a.disabled:hover {
-            transform: none;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        footer {
-            padding: 20px;
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
-            background-color: #f4f7f6;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                background-color: #f4f7f6; 
-                border-radius: 0px; 
-                box-shadow: none; 
-                padding: 30px;
-                width: 90%;
-                max-width: 90%; 
-                height: 100%;
-            }
-            h1 {
-                font-size: 2em;
-            }
-            a {
-                margin: 0 20px;
-                font-size: 1.1em;
-                padding: 12px 20px;
-            }
-        }
+      }
     </style>
-</head>
-<body>
-      <main>
-    <div class="container">
+  </head>
+  <body>
+    <main>
+      <div class="container">
         <h1>학습 자료</h1>
         <ul>
-            <li><a href="./week1/index.html">1주차: Smart Contract와 Solidity 익히기</a></li>
-            <li><a href="./week2/index.html">2주차: Smart Contract 개발</a></li>
-             <li><a href="./week3/index.html" class="disabled">3주차: Solidity 코드 분석 및 수정</a></li>
-              <li><a href="./week4/index.html" class="disabled">4주차: 부족한 점 보완 및 테스트</a></li>
-            </ul>
-    </div>
+          <li>
+            <a href="./week1/index.html"
+              >1주차: Smart Contract와 Solidity 익히기</a
+            >
+          </li>
+          <li>
+            <a href="./week2/index.html" class="disabled"
+              >2주차: Smart Contract 개발</a
+            >
+          </li>
+          <li>
+            <a href="./week3/index.html" class="disabled"
+              >3주차: Solidity 코드 분석 및 수정</a
+            >
+          </li>
+          <li>
+            <a href="./week4/index.html" class="disabled"
+              >4주차: 부족한 점 보완 및 테스트</a
+            >
+          </li>
+        </ul>
+      </div>
     </main>
-     <footer>
-        <p>&copy; 2025 HYBLOCK. All Rights Reserved.</p>
+    <footer>
+      <p>&copy; 2025 HYBLOCK. All Rights Reserved.</p>
     </footer>
-</body>
+  </body>
 </html>

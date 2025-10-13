@@ -1029,16 +1029,16 @@ npx hardhat test
 4. **배포**
 
 ```bash
-npx hardhat run scripts/deploy.ts --network sepolia
+npx hardhat run scripts/deploy-example.ts --network sepolia
 ```
 
 ### 실습: 컨트랙트를 Sepolia에 배포하기
 
-Hardhat 워크스페이스는 `apps/contracts`에 구성되어 있습니다. 아래 순서를 따라가면서 테스트넷에 컨트랙트를 배포해 봅시다.
+위에서 살펴본 Hardhat 기본 명령어(`compile`, `test`, `run`)를 그대로 활용하면서 아래 순서를 따라가면 로컬 테스트와 Sepolia 배포까지 한 번에 경험할 수 있습니다.
 
 #### 1. Solidity 컨트랙트 작성
 
-`apps/contracts/contracts/Example.sol`에 예제 컨트랙트를 추가합니다. 소유자가 메시지를 관리하고, 누구나 ETH를 입금할 수 있으며, 남은 잔액은 소유자가 회수할 수 있도록 설계했습니다.
+`contracts/Example.sol`에 예제 컨트랙트를 추가합니다. 소유자가 메시지를 관리하고, 누구나 ETH를 입금할 수 있으며, 남은 잔액은 소유자가 회수할 수 있는 컨트랙트입니다.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -1090,7 +1090,7 @@ contract Example {
 
 #### 2. Hardhat 테스트 코드 작성
 
-`apps/contracts/test/example.test.ts`는 위 컨트랙트를 대상으로 기본 흐름을 검증합니다. `loadFixture`로 배포 과정을 고정하고, 메시지 변경·입금/출금·revert 케이스를 모두 확인합니다.
+`test/example.test.ts`를 만들어 아래의 코드를 붙여넣어주세요. `npx hardhat test`명령어를 통해 실행가능합니다. `loadFixture`로 배포 과정을 고정하고, 메시지 변경·입금/출금·revert 케이스를 모두 확인합니다.
 
 ```typescript
 import assert from "node:assert/strict";
@@ -1104,7 +1104,7 @@ describe("Example", function () {
     return networkHelpers.loadFixture(fixture);
   }
 
-  async function deployWExampleFixture() {
+  async function deployExampleFixture() {
     const { viem } = await hre.network.connect();
     const [deployer, participant] = await viem.getWalletClients();
     const contract = await viem.deployContract("Example", ["처음 메시지"], {
@@ -1120,8 +1120,23 @@ describe("Example", function () {
       abi: contract.abi,
       address: contract.address,
       functionName: "readMessage",
+      args: [],
     });
     expect(message).to.equal("처음 메시지");
+  });
+
+  it("0 ETH 입금은 거부된다", async function () {
+    const { contract, participant } = await loadFixture(deployExampleFixture);
+    await assert.rejects(
+      participant.writeContract({
+        abi: contract.abi,
+        address: contract.address,
+        functionName: "deposit",
+        args: [],
+        value: 0n,
+      }),
+      /VALUE_MUST_BE_POSITIVE/
+    );
   });
 
   // ...중략...
@@ -1130,7 +1145,7 @@ describe("Example", function () {
 
 #### 3. 배포 스크립트 준비
 
-`apps/contracts/scripts/deploy-week1-example.ts`는 Sepolia RPC에 연결해 컨트랙트를 배포하고, `readMessage`로 초기값을 확인합니다.
+`scripts/deploy-example.ts`는 Sepolia RPC에 연결해 컨트랙트를 배포하고, `readMessage`로 초기값을 확인합니다.
 
 ```typescript
 import hre from "hardhat";
@@ -1154,6 +1169,7 @@ async function main() {
     abi: contract.abi,
     address: contract.address,
     functionName: "readMessage",
+    args: [],
   });
 
   console.log("초기 메시지:", currentMessage);
@@ -1167,7 +1183,7 @@ main().catch((error) => {
 
 #### 4. 환경 변수 설정
 
-Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. `apps/contracts/.env`에 아래 값을 채워 주세요. 프라이빗 키는 공개하시면 안 됩니다.
+Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. `.env`에 아래 값을 채워 주세요. PRIVATE KEY는 공개하시면 안 됩니다.
 
 ```bash
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<YOUR_INFURA_KEY>
@@ -1176,12 +1192,13 @@ SEPOLIA_PRIVATE_KEY=0x<YOUR_PRIVATE_KEY>
 
 #### 5. 테스트와 배포 실행
 
+다음의 명령어를 실행해주세요.
+
 ```bash
-cd apps/contracts
 npm install
 npx hardhat compile
 npx hardhat test
-npx hardhat run scripts/deploy-week1-example.ts --network sepolia
+npx hardhat run scripts/deploy-example.ts --network sepolia
 ```
 
 성공적으로 실행되면 콘솔에 배포 주소와 초기 메시지가 출력됩니다. Sepolia Etherscan에서 주소를 조회하면 트랜잭션과 이벤트 로그를 직접 확인할 수 있습니다.

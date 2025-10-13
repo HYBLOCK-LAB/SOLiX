@@ -12,7 +12,9 @@ async function main() {
   const contract = await viem.deployContract(
     "Example",
     ["Hardhat과 Sepolia에서 만나요!"],
-    {}
+    {
+      account: deployer.account,
+    },
   );
 
   console.log("Example 배포 완료:", contract.address);

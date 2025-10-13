@@ -9,3 +9,10 @@ docs/week4/html/
 
 # for VSCode
 .vscode/
+
+# Node.js
+**/node_modules/
+
+# Environment files
+**/.env
+**/.env.local

@@ -49,7 +49,7 @@ Duration: 5
 
 #### 5. 환경 설정 및 테스트
 
-개발을 위해 Ethereum IDE인 **리믹스(Remix IDE)와 HardHat**을 중심으로 개발 환경을 설정합니다. 가상의 테스트넷에 컨트랙트를 배포하고, 작성한 함수의 기능이 올바르게 동작하는지 테스트하고 디버깅하는 방법을 실습합니다.
+개발을 위해 Ethereum IDE인 **리믹스(Remix IDE)와 Hardhat**을 중심으로 개발 환경을 설정합니다. 가상의 테스트넷에 컨트랙트를 배포하고, 작성한 함수의 기능이 올바르게 동작하는지 테스트하고 디버깅하는 방법을 실습합니다.
 
 #### 6. 프로젝트 준비
 
@@ -929,7 +929,7 @@ string public message = "Hello, Remix!";
 - Deploy & Run Transactions 탭을 선택합니다.
 - 환경(Environment) 선택을 택해주세요. 환경은 다음과 같습니다.
 - JavaScript VM → 브라우저 내 임시 블록체인
-- Injected Provider: 크롬 extention 기반의 외부 지갑(e.g. MetaMask)
+- Injected Provider: 크롬 extension 기반의 외부 지갑(e.g. MetaMask)
 - Web3 Provider → 실제 네트워크 RPC 노드
 
 Deploy 버튼을 클릭하여 컨트랙트 배포합니다.
@@ -951,9 +951,9 @@ Deploy 버튼을 클릭하여 컨트랙트 배포합니다.
 
 실행된 트랜잭션 선택 후 Debugger에서 단계별 추적가능합니다. (Gas 비용, 메모리 사용량, 스토리지 상태 확인)
 
-### HardHat
+### Hardhat
 
-[HardHat](https://hardhat.org/docs/getting-started)는 Ethereum 기반의 스마트 컨트랙트를 개발할 수 있는 **프레임워크** 입니다. 주요 기능은 다음과 같습니다
+[Hardhat](https://hardhat.org/docs/getting-started)는 Ethereum 기반의 스마트 컨트랙트를 개발할 수 있는 **프레임워크** 입니다. 주요 기능은 다음과 같습니다
 
 - 개발 환경 제공: 로컬에서 이더리움 네트워크 시뮬레이션
 - 플러그인 시스템 (e.g. Ethers.js, Waffle, OpenZeppelin)
@@ -972,36 +972,24 @@ mkdir hardhat-example
 cd hardhat-example
 ```
 
-2. Hardhat 프로젝트를 시작해주세요. 기본설정으로 진행하면 됩니다.
+2. Hardhat 프로젝트를 초기화합니다. 기본 설정으로 진행하면 충분합니다.
 
 ```bash
 npx hardhat --init
 ```
 
-3. 프로젝트 구조는 다음과 같습니다.
+3. 기본적으로 아래와 같은 구조가 만들어집니다. 우리 저장소에는 `apps/contracts`가 동일한 역할을 합니다.
 
 ```bash
-project-root/
+apps/contracts/
 │
-├── hardhat.config.ts # Solidity 컴파일러 버전, 네트워크, 플러그인, Task 설정 등 Hardhat의 메인 구성 파일
-│
-├── contracts/ # Solidity 스마트 컨트랙트 및 테스트용 .t.sol 파일 저장
-│   ├── Counter.sol
-│   └── Counter.t.sol
-│
-├── test/ # TypeScript 기반의 통합 테스트 파일
-│   └── Counter.ts
-│
-├── ignition/ # 공식 배포 프레임워크 Ignition 모듈 (배포 상태를 기록하고 관리)
-│   └── modules/
-│       └── Counter.ts
-│
-├── scripts/ # 배포·상호작용·운영 자동화를 위한 실행 스크립트
-│   └── send-op-tx.ts
-│
-└── package.json
-    # (선택) npm 패키지 의존성과 스크립트 관리
-
+├── hardhat.config.ts    # Solidity 컴파일러 버전, 네트워크, 플러그인 설정
+├── contracts/           # 스마트 컨트랙트 소스 파일
+├── scripts/             # 배포 및 운영 자동화를 위한 스크립트
+├── test/                # TypeScript 기반 통합 테스트
+├── ignition/            # (선택) Ignition 배포 모듈
+├── package.json         # npm 의존성과 스크립트
+└── tsconfig.json        # TypeScript 설정
 ```
 
 #### 자주 사용하는 명령어
@@ -1039,8 +1027,10 @@ Ignition을 이용해 배포합니다.
 4. 읽기/쓰기 클라이언트 제공(viem)로 후속 호출도 가능합니다.
 </p></aside>
 
+원하는 네트워크와 컨트랙트를 지정해 배포 스크립트를 실행합니다.
+
 ```bash
-npx hardhat ignition deploy ignition/modules/{배포할파일}.ts --network {원하는 네트워크. e.g. mainnet, localhost, sepolia}
+npx hardhat ignition deploy ignition/modules/Counter.ts --network sepolia
 ```
 
 ### INFURA
@@ -1058,7 +1048,7 @@ Infura RPC에서 API key와 각 네트워크 별 endpoint를 확인할 수 있�
 
 1. [브라우저 익스텐션](https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn)을 설치해주세요.
 
-![metamask_extention](./images/metamask_extention.png)
+![metamask_extension](./images/metamask_extention.png)
 
 2. 이더리움 계정을 생성해주세요.
 
@@ -1068,7 +1058,7 @@ Infura RPC에서 API key와 각 네트워크 별 endpoint를 확인할 수 있�
 
 ![metamask_network](./images/metamask_network.png)
 
-4. 테스트용 이더(SepoliaETH)를 받을 겁니다. Sepolia Faucet은 테스트용 이더를 무료로 받을 수 있는 공식 테스트넷 보급소입니다. `받기`를 누르고 주소를 복사해주세요. [Goolgle Cloud Web3](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)에서 Ethereum Sepolia Faucet 서비스를 제공합니다. 복사한 주소를 붙여넣고 `Receive 0.05 Sepolia ETH`버튼을 눌러주세요.
+4. 테스트용 이더(SepoliaETH)를 받을 겁니다. Sepolia Faucet은 테스트용 이더를 무료로 받을 수 있는 공식 테스트넷 보급소입니다. `받기`를 누르고 주소를 복사해주세요. [Google Cloud Web3](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)에서 Ethereum Sepolia Faucet 서비스를 제공합니다. 복사한 주소를 붙여넣고 `Receive 0.05 Sepolia ETH` 버튼을 눌러주세요.
 
 ![sepolia_faucet](./images/sepolia_faucet.png)
 
@@ -1114,8 +1104,8 @@ contract Example {
         storedMessage = initialMessage;
     }
 
-    //현재 저장된 메시지를 반환합니다.
-    //`view` 함수는 상태를 변경하지 않으며, eth_call(오프체인)로 호출 시 가스 비용이 들지 않습니다.
+    // 현재 저장된 메시지를 반환합니다.
+    // `view` 함수는 상태를 변경하지 않으며, eth_call(오프체인)로 호출 시 가스 비용이 들지 않습니다.
     function readMessage() external view returns (string memory) {
         return storedMessage;
     }
@@ -1305,20 +1295,25 @@ describe("Example", function () {
 import hre from "hardhat";
 
 async function main() {
+  // 지갑과 RPC 클라이언트를 Hardhat에서 가져옵니다.
   const { viem } = await hre.network.connect();
   const [deployer] = await viem.getWalletClients();
   const publicClient = await viem.getPublicClient();
 
   console.log("배포 지갑:", deployer.account.address);
 
+  // 초기 메시지를 포함해 Example 컨트랙트를 배포합니다.
   const contract = await viem.deployContract(
     "Example",
     ["Hardhat과 Sepolia에서 만나요!"],
-    { account: deployer.account }
+    {
+      account: deployer.account,
+    }
   );
 
   console.log("Example 배포 완료:", contract.address);
-  // 배포 직후 readMessage가 제공한 초기값을 그대로 반환하는지 확인합니다.
+
+  // 배포 직후 읽기 함수 호출로 상태가 정상 저장되었는지 확인합니다.
   const currentMessage = await publicClient.readContract({
     abi: contract.abi,
     address: contract.address,

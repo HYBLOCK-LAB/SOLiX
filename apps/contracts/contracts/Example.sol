@@ -31,8 +31,8 @@ contract Example {
         storedMessage = initialMessage;
     }
 
-    //현재 저장된 메시지를 반환합니다.
-    //`view` 함수는 상태를 변경하지 않으며, eth_call(오프체인)로 호출 시 가스 비용이 들지 않습니다.
+    // 현재 저장된 메시지를 반환합니다.
+    // `view` 함수는 상태를 변경하지 않으며, eth_call(오프체인)로 호출 시 가스 비용이 들지 않습니다.
     function readMessage() external view returns (string memory) {
         return storedMessage;
     }

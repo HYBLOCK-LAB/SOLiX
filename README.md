@@ -39,5 +39,18 @@
 
 1. Solidity를 이용한 Smart Contract 개발
 2. Smart Contract 개발
-3. SOolidity 코드 분석 및 수정
+3. Solidity 코드 분석 및 수정
 4. 부족한 점 보완 및 테스트
+
+### 로컬 실습 빠르게 시작하기
+
+주차별 실습 예제는 `apps/contracts` Hardhat 워크스페이스에 정리되어 있습니다. 아래 명령어로 실행해 볼 수 있습니다.
+
+```bash
+cd apps/contracts
+npm install
+npx hardhat test
+npx hardhat run scripts/deploy.ts --network sepolia
+```
+
+- Sepolia에 배포하려면 `.env` 파일(또는 `npx hardhat vars`)에 `SEPOLIA_RPC_URL`, `SEPOLIA_PRIVATE_KEY`를 등록해 주세요.

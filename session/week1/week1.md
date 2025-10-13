@@ -983,28 +983,27 @@ npx hardhat --init
 3. 프로젝트 구조는 다음과 같습니다
 
 ```bash
-// 프로젝트의 기본 구성 파일입니다.
-// Solidity 컴파일러 버전, 네트워크 구성, 프로젝트에서 사용하는 플러그인 및 작업 등의 설정을 정의합니다.
-hardhat.config.ts
+project-root/
+│
+├── hardhat.config.ts # Solidity 컴파일러 버전, 네트워크, 플러그인, Task 설정 등 Hardhat의 메인 구성 파일
+│
+├── contracts/ # Solidity 스마트 컨트랙트 및 테스트용 .t.sol 파일 저장
+│   ├── Counter.sol
+│   └── Counter.t.sol
+│
+├── test/ # TypeScript 기반의 통합 테스트 파일
+│   └── Counter.ts
+│
+├── ignition/ # 공식 배포 프레임워크 Ignition 모듈 (배포 상태를 기록하고 관리)
+│   └── modules/
+│       └── Counter.ts
+│
+├── scripts/ # 배포·상호작용·운영 자동화를 위한 실행 스크립트
+│   └── send-op-tx.ts
+│
+└── package.json
+    # (선택) npm 패키지 의존성과 스크립트 관리
 
-// 프로젝트의 Solidity 컨트랙트를 포함하는 디렉토리입니다.
-// .t.sol확장자를 사용한 파일은 테스트 파일입니다.
-contracts
-├── Counter.sol
-└── Counter.t.sol
-
-// TypeScript 통합 테스트에 사용됩니다.
-test
-└── Counter.ts
-
-// 공식 배포 프레임워크입니다. deploy를 모듈로 정의해서 상태를 기록합니다.
-ignition
-└── modules
-    └── Counter.ts
-
-// 배포 등의 작업을 스크립트로 정의해 자동화할 수 있습니다.
-scripts
-└── send-op-tx.ts
 ```
 
 #### 자주 사용하는 명령어
@@ -1032,6 +1031,160 @@ npx hardhat test
 ```bash
 npx hardhat run scripts/deploy.ts --network sepolia
 ```
+
+### 실습: 컨트랙트를 Sepolia에 배포하기
+
+Hardhat 워크스페이스는 `apps/contracts`에 구성되어 있습니다. 아래 순서를 따라가면서 테스트넷에 컨트랙트를 배포해 봅시다.
+
+#### 1. Solidity 컨트랙트 작성
+
+`apps/contracts/contracts/Example.sol`에 예제 컨트랙트를 추가합니다. 소유자가 메시지를 관리하고, 누구나 ETH를 입금할 수 있으며, 남은 잔액은 소유자가 회수할 수 있도록 설계했습니다.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+contract Example {
+    address public immutable owner;
+    string private storedMessage;
+
+    event MessageUpdated(string newMessage);
+    event Deposited(address indexed from, uint256 amount);
+    event Withdrawn(address indexed to, uint256 amount);
+
+    constructor(string memory initialMessage) {
+        owner = msg.sender;
+        storedMessage = initialMessage;
+    }
+
+    function readMessage() external view returns (string memory) {
+        return storedMessage;
+    }
+
+    function updateMessage(string calldata newMessage) external onlyOwner {
+        storedMessage = newMessage;
+        emit MessageUpdated(newMessage);
+    }
+
+    function deposit() external payable {
+        require(msg.value > 0, "VALUE_MUST_BE_POSITIVE");
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    function withdraw(address payable receiver, uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "INSUFFICIENT_FUNDS");
+        receiver.transfer(amount);
+        emit Withdrawn(receiver, amount);
+    }
+
+    function contractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
+}
+```
+
+#### 2. Hardhat 테스트 코드 작성
+
+`apps/contracts/test/example.test.ts`는 위 컨트랙트를 대상으로 기본 흐름을 검증합니다. `loadFixture`로 배포 과정을 고정하고, 메시지 변경·입금/출금·revert 케이스를 모두 확인합니다.
+
+```typescript
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { expect } from "chai";
+import hre from "hardhat";
+
+describe("Example", function () {
+  async function loadFixture<T>(fixture: () => Promise<T>) {
+    const { networkHelpers } = await hre.network.connect();
+    return networkHelpers.loadFixture(fixture);
+  }
+
+  async function deployWExampleFixture() {
+    const { viem } = await hre.network.connect();
+    const [deployer, participant] = await viem.getWalletClients();
+    const contract = await viem.deployContract("Example", ["처음 메시지"], {
+      account: deployer.account,
+    });
+    const publicClient = await viem.getPublicClient();
+    return { contract, deployer, participant, publicClient };
+  }
+
+  it("초기 메시지를 저장한다", async function () {
+    const { contract, publicClient } = await loadFixture(deployExampleFixture);
+    const message = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "readMessage",
+    });
+    expect(message).to.equal("처음 메시지");
+  });
+
+  // ...중략...
+});
+```
+
+#### 3. 배포 스크립트 준비
+
+`apps/contracts/scripts/deploy-week1-example.ts`는 Sepolia RPC에 연결해 컨트랙트를 배포하고, `readMessage`로 초기값을 확인합니다.
+
+```typescript
+import hre from "hardhat";
+
+async function main() {
+  const { viem } = await hre.network.connect();
+  const [deployer] = await viem.getWalletClients();
+  const publicClient = await viem.getPublicClient();
+
+  console.log("배포 지갑:", deployer.account.address);
+
+  const contract = await viem.deployContract(
+    "Example",
+    ["Hardhat과 Sepolia에서 만나요!"],
+    { account: deployer.account }
+  );
+
+  console.log("Example 배포 완료:", contract.address);
+
+  const currentMessage = await publicClient.readContract({
+    abi: contract.abi,
+    address: contract.address,
+    functionName: "readMessage",
+  });
+
+  console.log("초기 메시지:", currentMessage);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+#### 4. 환경 변수 설정
+
+Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. `apps/contracts/.env`에 아래 값을 채워 주세요. 프라이빗 키는 공개하시면 안 됩니다.
+
+```bash
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<YOUR_INFURA_KEY>
+SEPOLIA_PRIVATE_KEY=0x<YOUR_PRIVATE_KEY>
+```
+
+#### 5. 테스트와 배포 실행
+
+```bash
+cd apps/contracts
+npm install
+npx hardhat compile
+npx hardhat test
+npx hardhat run scripts/deploy-week1-example.ts --network sepolia
+```
+
+성공적으로 실행되면 콘솔에 배포 주소와 초기 메시지가 출력됩니다. Sepolia Etherscan에서 주소를 조회하면 트랜잭션과 이벤트 로그를 직접 확인할 수 있습니다.
 
 <!-- =========== 7번째 페이지 ============ -->
 

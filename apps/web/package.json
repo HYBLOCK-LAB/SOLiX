@@ -9,11 +9,24 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@helia/unixfs": "^6.0.1",
+    "@ipld/car": "^5.4.2",
+    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@storacha/access": "^1.6.1",
+    "@storacha/client": "^1.8.2",
+    "@storacha/upload-client": "^1.3.3",
     "@tanstack/react-query": "^5.90.2",
+    "date-fns": "^3.6.0",
+    "helia": "^6.0.1",
+    "ipfs-car": "^3.1.0",
     "lucide-react": "^0.545.0",
+    "multiformats": "^13.4.1",
     "next": "15.5.4",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "viem": "^2.38.0",
+    "wagmi": "^2.18.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

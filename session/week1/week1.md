@@ -887,8 +887,6 @@ process.on("SIGINT", async () => {
 
 Duration: 30
 
-### Metamask
-
 ### 리믹스(Remix IDE)
 
 [Remix IDE](https://remix.ethereum.org/)는 Ethereum기반의 스마트 컨트랙트를 작성·컴파일·배포·디버깅할 수 있는 **웹 기반 통합 개발 환경(IDE)** 입니다.
@@ -1016,11 +1014,15 @@ npx hardhat compile
 
 2. **로컬 네트워크 실행**
 
+로컬 RPC 노드를 띄워 개발용 체인을 실행합니다.
+
 ```bash
 npx hardhat node
 ```
 
 3. **테스트**
+
+`test/`의 스펙을 로컬 EDR 시뮬레이션에서 실행합니다.
 
 ```bash
 npx hardhat test
@@ -1028,9 +1030,48 @@ npx hardhat test
 
 4. **배포**
 
+Ignition을 이용해 배포합니다.
+
+<aside class="positive"><p><strong>Ignition의 역할</strong></p>
+<p>
+1. 배포 계획(Deploy Plan) 을 읽고 순서대로 배포합니다. 
+2. 상태 및 아티팩트 기록: 동일 모듈을 다시 실행하면 중복 배포를 피하고 재사용(idempotent)합니다.
+3. 실패 시 재개(resume)할 수 있습니다.
+4. 읽기/쓰기 클라이언트 제공(viem)로 후속 호출도 가능합니다.
+</p></aside>
+
 ```bash
-npx hardhat run scripts/deploy-example.ts --network sepolia
+npx hardhat ignition deploy ignition/modules/{배포할파일}.ts --network {원하는 네트워크. e.g. mainnet, localhost, sepolia}
 ```
+
+### INFURA
+
+[Infura](https://www.infura.io/)는 Ethereum 및 IPFS 네트워크에 쉽게 접근할 수 있도록 RPC(원격 노드) 인프라를 제공하는 서비스입니다. Infura를 통해 이더리움 메인넷 및 테스트넷에 쉽게 연결할 수 있습니다. 회원가입하고 API KEY를 발급 받아봅시다.
+
+![infura_home](./images/infura_home.png)
+
+Infura RPC에서 API key와 각 네트워크 별 endpoint를 확인할 수 있습니다.
+![infura_rpc](./images/infura_rpc.png)
+
+### Metamask
+
+[MetaMask](https://metamask.io)는 이더리움 블록체인과 상호작용할 수 있는 지갑 애플리케이션입니다. 아래의 과정을 거쳐 환경 설정을 해봅시다.
+
+1. [브라우저 익스텐션](https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn)을 설치해주세요.
+
+![metamask_extention](./images/metamask_extention.png)
+
+2. 이더리움 계정을 생성해주세요.
+
+![metamask_account](./images/metamask_account.png)
+
+3. 이더리움 계정에 sepolia network가 추가되어 있는지 확인해주세요.
+
+![metamask_network](./images/metamask_network.png)
+
+4. 테스트용 이더(SepoliaETH)를 받을 겁니다. Sepolia Faucet은 테스트용 이더를 무료로 받을 수 있는 공식 테스트넷 보급소입니다. `받기`를 누르고 주소를 복사해주세요. [Goolgle Cloud Web3](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)에서 Ethereum Sepolia Faucet 서비스를 제공합니다. 복사한 주소를 붙여넣고 `Receive 0.05 Sepolia ETH`버튼을 눌러주세요.
+
+![sepolia_faucet](./images/sepolia_faucet.png)
 
 ### 실습: 컨트랙트를 Sepolia에 배포하기
 
@@ -1038,18 +1079,23 @@ npx hardhat run scripts/deploy-example.ts --network sepolia
 
 #### 1. Solidity 컨트랙트 작성
 
-`contracts/Example.sol`에 예제 컨트랙트를 추가합니다. 소유자가 메시지를 관리하고, 누구나 ETH를 입금할 수 있으며, 남은 잔액은 소유자가 회수할 수 있는 컨트랙트입니다.
+`contracts/Example.sol`에 예제 컨트랙트를 추가합니다. 각 함수와 이벤트에 달린 주석을 통해 동작을 점검해보세요.
 
 ```solidity
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.28;
 
+// Example
+// 메시지를 저장하고 간단한 입·출금 흐름을 실습하기 위한 예제 컨트랙트입니다.
 contract Example {
     address public immutable owner;
     string private storedMessage;
 
+    // 새로운 메시지가 등록될 때마다 알림을 보냅니다.
     event MessageUpdated(string newMessage);
+    // 입금이 발생하면 누가 얼마를 보냈는지 기록합니다.
     event Deposited(address indexed from, uint256 amount);
+    // 출금이 발생하면 수신자와 금액을 기록합니다.
     event Withdrawn(address indexed to, uint256 amount);
 
     constructor(string memory initialMessage) {
@@ -1090,20 +1136,22 @@ contract Example {
 
 #### 2. Hardhat 테스트 코드 작성
 
-`test/example.test.ts`를 만들어 아래의 코드를 붙여넣어주세요. `npx hardhat test`명령어를 통해 실행가능합니다. `loadFixture`로 배포 과정을 고정하고, 메시지 변경·입금/출금·revert 케이스를 모두 확인합니다.
+`test/example.test.ts`를 만들어 아래의 코드를 붙여넣어주세요. 각 테스트에 적힌 주석을 통해 어떤 흐름을 검증하는지 바로 파악할 수 있습니다.
 
 ```typescript
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { expect } from "chai";
 import hre from "hardhat";
 
+// Example 컨트랙트의 기본 동작을 Hardhat 환경에서 검증합니다.
 describe("Example", function () {
+  // Hardhat 3에서는 network.connect()를 통해 fixture 도우미를 획득합니다.
   async function loadFixture<T>(fixture: () => Promise<T>) {
     const { networkHelpers } = await hre.network.connect();
     return networkHelpers.loadFixture(fixture);
   }
 
+  // 반복되는 배포 절차를 고정해 테스트 간 독립성과 속도를 확보합니다.
   async function deployExampleFixture() {
     const { viem } = await hre.network.connect();
     const [deployer, participant] = await viem.getWalletClients();
@@ -1116,17 +1164,96 @@ describe("Example", function () {
 
   it("초기 메시지를 저장한다", async function () {
     const { contract, publicClient } = await loadFixture(deployExampleFixture);
+    // 배포 직후 readMessage가 제공한 초기값을 그대로 반환하는지 확인합니다.
     const message = await publicClient.readContract({
       abi: contract.abi,
       address: contract.address,
       functionName: "readMessage",
       args: [],
     });
-    expect(message).to.equal("처음 메시지");
+    assert.strictEqual(message, "처음 메시지");
+  });
+
+  it("소유자가 메시지를 변경한다", async function () {
+    const { contract, publicClient, deployer } = await loadFixture(
+      deployExampleFixture
+    );
+    // 소유자 지갑으로 메시지를 갱신합니다.
+    await deployer.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "updateMessage",
+      args: ["새로운 메시지"],
+    });
+    // 변경된 메시지가 즉시 조회되는지 확인합니다.
+    const message = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "readMessage",
+      args: [],
+    });
+    assert.strictEqual(message, "새로운 메시지");
+  });
+
+  it("소유자가 아닌 경우 메시지 변경을 거부한다", async function () {
+    const { contract, participant } = await loadFixture(deployExampleFixture);
+    // participant 계정은 소유자가 아니므로 revert가 발생해야 합니다.
+    await assert.rejects(
+      participant.writeContract({
+        abi: contract.abi,
+        address: contract.address,
+        functionName: "updateMessage",
+        args: ["권한 없음"],
+      }),
+      /ONLY_OWNER/
+    );
+  });
+
+  it("입금과 출금 흐름을 처리한다", async function () {
+    const { contract, publicClient, participant, deployer } = await loadFixture(
+      deployExampleFixture
+    );
+    const depositValue = 1_000_000_000_000_000n;
+
+    // 임의 참가자가 0.001 ETH를 입금합니다.
+    await participant.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "deposit",
+      args: [],
+      value: depositValue,
+    });
+
+    // 입금 이후 잔액이 정확히 늘어났는지 확인합니다.
+    const balanceAfterDeposit = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "contractBalance",
+      args: [],
+    });
+    assert.strictEqual(balanceAfterDeposit, depositValue);
+
+    // 소유자가 동일 금액을 출금합니다.
+    await deployer.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "withdraw",
+      args: [deployer.account.address, depositValue],
+    });
+
+    // 출금 이후 잔액이 0으로 돌아왔는지 확인합니다.
+    const balanceAfterWithdraw = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: "contractBalance",
+      args: [],
+    });
+    assert.strictEqual(balanceAfterWithdraw, 0n);
   });
 
   it("0 ETH 입금은 거부된다", async function () {
     const { contract, participant } = await loadFixture(deployExampleFixture);
+    // 값이 0인 입금 시 require가 revert를 발생시키는지 검증합니다.
     await assert.rejects(
       participant.writeContract({
         abi: contract.abi,
@@ -1138,14 +1265,12 @@ describe("Example", function () {
       /VALUE_MUST_BE_POSITIVE/
     );
   });
-
-  // ...중략...
 });
 ```
 
 #### 3. 배포 스크립트 준비
 
-`scripts/deploy-example.ts`는 Sepolia RPC에 연결해 컨트랙트를 배포하고, `readMessage`로 초기값을 확인합니다.
+`scripts/deploy-example.ts`는 Sepolia RPC에 연결해 컨트랙트를 배포하고, `readMessage`로 초기값을 확인합니다. 실행 흐름마다 주석으로 동작을 설명해두었습니다.
 
 ```typescript
 import hre from "hardhat";
@@ -1164,7 +1289,7 @@ async function main() {
   );
 
   console.log("Example 배포 완료:", contract.address);
-
+  // 배포 직후 readMessage가 제공한 초기값을 그대로 반환하는지 확인합니다.
   const currentMessage = await publicClient.readContract({
     abi: contract.abi,
     address: contract.address,
@@ -1176,6 +1301,7 @@ async function main() {
 }
 
 main().catch((error) => {
+  // Hardhat이 예외를 캐치할 수 있도록 종료 코드를 설정합니다.
   console.error(error);
   process.exitCode = 1;
 });
@@ -1183,11 +1309,69 @@ main().catch((error) => {
 
 #### 4. 환경 변수 설정
 
-Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. `.env`에 아래 값을 채워 주세요. PRIVATE KEY는 공개하시면 안 됩니다.
+Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. `.env`파일에 아래의 코드를 복사/붙여넣어주세요. PRIVATE KEY는 공개하시면 안 됩니다.
+`SEPOLIA_RPC_URL`는 Infura에서 발급받은 RPC URL이고 `SEPOLIA_PRIVATE_KEY`는 metamask에서 생성한 계정의 개인 키입니다.
+metamask에서 `계정 세부 정보 > 개인 키 > 비밀 번호 입력` 과정을 거처서 개인 키를 받아주세요.
+
+```env
+npx hardhat vars set SEPOLIA_RPC_URL https://sepolia.infura.io/v3/<YOUR_ID>
+npx hardhat vars set SEPOLIA_PRIVATE_KEY 0x<YOUR_PRIVATE_KEY>
+```
+
+`.env`파일에서 환경변수를 읽어와 config 파일에 넣어야합니다. 먼저 다음의 명령어를 실행해 주세요.
 
 ```bash
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<YOUR_INFURA_KEY>
-SEPOLIA_PRIVATE_KEY=0x<YOUR_PRIVATE_KEY>
+npm i dotenv
+```
+
+이제 `hardhat.config.ts`파일을 다음과 같이 변경해주세요.
+
+```typescript
+import "dotenv/config";
+import type { HardhatUserConfig } from "hardhat/config";
+
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
+const SEPOLIA_PRIVATE_KEY = process.env.SEPOLIA_PRIVATE_KEY;
+
+const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin],
+  solidity: {
+    profiles: {
+      default: {
+        version: "0.8.28",
+      },
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    },
+  },
+  networks: {
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
+    },
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
+    },
+    sepolia: {
+      type: "http",
+      chainType: "l1",
+      url: SEPOLIA_RPC_URL!,
+      accounts: SEPOLIA_PRIVATE_KEY ? [SEPOLIA_PRIVATE_KEY] : [],
+    },
+  },
+};
+
+export default config;
 ```
 
 #### 5. 테스트와 배포 실행
@@ -1201,7 +1385,9 @@ npx hardhat test
 npx hardhat run scripts/deploy-example.ts --network sepolia
 ```
 
-성공적으로 실행되면 콘솔에 배포 주소와 초기 메시지가 출력됩니다. Sepolia Etherscan에서 주소를 조회하면 트랜잭션과 이벤트 로그를 직접 확인할 수 있습니다.
+![test_deploy](./images/test_deploy.png)
+
+성공적으로 실행되면 콘솔에 배포 주소와 초기 메시지가 출력됩니다. [Sepolia Etherscan](https://sepolia.etherscan.io/)에서 주소를 조회하면 트랜잭션과 이벤트 로그를 직접 확인할 수 있습니다.
 
 <!-- =========== 7번째 페이지 ============ -->
 

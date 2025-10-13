@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.28;
 
+/// @title Example
+/// @notice 메시지를 저장하고 간단한 입·출금 흐름을 실습하기 위한 예제 컨트랙트입니다.
 contract Example {
     // 컨트랙트를 배포한 지갑 주소를 저장합니다.
     address public immutable owner;
     // 사용자가 최신 메시지를 확인할 수 있도록 문자열을 보관합니다.
     string private storedMessage;
 
+    // 새로운 메시지가 등록될 때마다 알림을 보냅니다.
     event MessageUpdated(string newMessage);
+    // 입금이 발생하면 누가 얼마를 보냈는지 기록합니다.
     event Deposited(address indexed from, uint256 amount);
+    // 출금이 발생하면 수신자와 금액을 기록합니다.
     event Withdrawn(address indexed to, uint256 amount);
 
     // 배포 시 초기 메시지를 설정합니다.

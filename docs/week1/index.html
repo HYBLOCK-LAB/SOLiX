@@ -30,6 +30,18 @@
     
       <google-codelab-step label="세션 소개" duration="5">
         <p>이번 세션은 Solidity를 사용하여 Smart Contract 개발에 대해 이해하는 것이 목적입니다. 여러분은 단순히 문법을 배우는 것을 넘어, 이더리움 생태계의 핵심 원리를 이해하고, 스마트 컨트랙트를 작성하여 블록체인 상에 배포하는 개발 과정을 경험하게 됩니다.</p>
+<h2 is-upgraded>학습 목표</h2>
+<ul>
+<li>Smart Contract와 Solidity의 핵심 개념을 이해합니다.</li>
+<li>Ethereum 네트워크의 계정, 트랜잭션, 가스 구조를 살펴보며 작동 원리를 익힙니다.</li>
+<li>간단한 컨트랙트를 설계·배포·검증하는 전체 흐름을 경험합니다.</li>
+<li>개발 환경(Remix IDE, Hardhat)을 셋업하고 기본 테스트를 수행할 수 있습니다.</li>
+</ul>
+<h2 is-upgraded>준비물</h2>
+<ul>
+<li>기본적인 프로그래밍 경험(타 언어여도 괜찮습니다)이 있으면 이해가 훨씬 빠릅니다.</li>
+<li>설치된 <code>Node.js</code>와 <code>npm</code>, VS Code와 같은 <strong>코드 에디터,</strong> 그리고 <strong>테스트용 지갑(Metamask 등)이</strong> 필요합니다.</li>
+</ul>
 <h2 is-upgraded>목차</h2>
 <h3 is-upgraded>1. 이더리움(Ethereum)</h3>
 <p>블록체인의 기본 원리를 바탕으로 이더리움이 어떻게 동작하는지 알아봅니다. 사용자가 상호작용하는 <strong>계정(EOA/CA),</strong> 모든 상태 변화를 일으키는 트랜잭션, 그리고 연산의 대가로 지불하는 <strong>가스(Gas)의</strong> 개념을 명확히 이해합니다.</p>
@@ -48,40 +60,138 @@
       </google-codelab-step>
     
       <google-codelab-step label="이더리움(Ethereum)" duration="15">
-        <p>이더리움(Ethereum)은 전 세계에 분산되어 있는 컴퓨터로, 그 분산된 구조에도 불구하고 <strong>하나의 컴퓨터(Truly Global Singleton)처럼</strong> 동작하며, 실패나 정지, 검열을 겪지 않습니다. 또한, 여러 명의 사용자가 동시에 참여할 수 있고, 누구나 자유롭게 접근할 수 있는 개방적인 시스템입니다.</p>
+        <p>이더리움(Ethereum)은 전 세계에 분산되어 있는 컴퓨터로, 그 분산된 구조에도 불구하고 <strong>하나의 컴퓨터(Truly Global Singleton)처럼</strong> 동작하며, 실패나 정지, 검열을 겪지 않습니다. 매우 느리고, 구성 요소는 느슨하게 연결되었다가 끊어지기를 반복 하지만, 한치의 오차도 없이 작동하는 완벽한 컴퓨터압니다. 또한, 여러 명의 사용자가 동시에 참여할 수 있고, 누구나 자유롭게 접근할 수 있는 개방적인 시스템입니다.</p>
 <p>이더리움은 원래 범용 프로그래밍 언어를 통해 블록체인 기반의 다양한 가능성을 실현하기 위해 고안되었습니다. 그 범위는 에스크로 거래, 인출 제한, 금융 계약, 갬블링 시장 등 다양합니다. <strong>튜링 완전(Turing Complete)한</strong> 프로그래밍 언어를 지원함으로써, 어떠한 형태의 거래나 기능도 <strong>스마트 계약(Smart Contracts)을</strong> 통해 자유롭게 구현할 수 있게 되었습니다. 이로써, 단순한 암호화폐를 넘어서, 복잡한 계약과 거래를 실행할 수 있는 강력한 플랫폼이 탄생하게 된 것입니다.</p>
-<p>하지만, 이더리움이 처음 의도한 것보다 더 큰 가능성을 열게 된 사실은 그 자체가 하나의 <strong>세계적 컴퓨터(World Computer)처럼</strong> 동작한다는 점입니다. 이더리움의 스마트 컨트랙트는 분산화된 네트워크에서 자동으로 실행되는 프로그램으로, 중개자 없이 신뢰할 수 있는 거래를 가능하게 합니다. 이 시스템을 이해하고 스마트 컨트랙트를 개발하는 것은 이더리움의 잠재력을 최대한 활용하는 데 매우 중요한 부분입니다.</p>
+<p>하지만, 이더리움이 처음 의도한 것을 넘어서 그 자체가 하나의 <strong>세계적 컴퓨터(World Computer)처럼</strong> 동작한다는 점입니다. 이더리움의 스마트 컨트랙트는 분산화된 네트워크에서 자동으로 실행되는 프로그램으로, 중개자 없이 신뢰할 수 있는 거래를 가능하게 합니다. 이 시스템을 이해하고 스마트 컨트랙트를 개발하는 것은 이더리움의 잠재력을 최대한 활용하는 데 매우 중요한 부분입니다.</p>
+<h2 is-upgraded>자주 등장하는 이더리움 관련 용어</h2>
+<ul>
+<li><strong>블록(Block)</strong>: 트랜잭션 묶음과 이를 설명하는 헤더로 구성된 데이터 단위입니다. 각 블록은 바로 이전 블록의 해시를 포함해 체인 형태로 연결되고, 이 연결이 위변조 방지를 돕습니다.</li>
+<li><strong>합의(Consensus)</strong>: 네트워크 참가자(검증자)가 동일한 상태를 공유하도록 만드는 규칙입니다. 현재 Ethereum Mainnet은 Proof of Stake 합의 방식을 사용합니다.</li>
+<li><strong>노드(Node)</strong>: Ethereum 클라이언트를 실행하여 블록을 검증하고 상태를 동기화하는 컴퓨터입니다.</li>
+<li><strong>스마트 컨트랙트(Smart Contract)</strong>: 블록체인에 배포되어 조건에 따라 자동으로 실행되는 프로그램입니다. 코드와 데이터가 모두 온체인에 있기 때문에 중개자 없이 신뢰를 확보할 수 있습니다.</li>
+<li><strong>상태(State)</strong>: 이더리움 네트워크가 현재 보유한 모든 계정의 잔액, 코드, 저장소 등의 전체 정보입니다.</li>
+<li><strong>EVM (Ethereum Virtual Machine)</strong>: EVM은 이더리움의 가상 컴퓨터로, 스마트 컨트랙트의 바이트코드를 실행하여 상태 변화를 일으키는 핵심 엔진입니다.</li>
+</ul>
 <h2 is-upgraded>상태(World State)</h2>
 <p class="image-container"><img alt="EVM" src="img/28eb1b88f58eafd.png"></p>
-<p>이러리움은 트랜잭션 기반의 state machine입니다. 이더리움 상에 저장되어 있는 정보를 상태(World State)라 생각하면 됩니다. 이를 트랜잭션을 통해 계산하고 그 결과를 상태에 반영할 수 있습니다. 상태는 주소와 계좌 상태를 매핑한 형태로 표현되며, 이 상태 정보의 머클 루트도 블록 헤더에 포함됩니다. 이 루트는 Merkle Patricia Tree로 구성되며, 이 구조는 각 주소와 관련된 계좌 정보(잔액, 스마트 계약 상태 등)를 효율적으로 관리합니다. World State의 머클 루트는 블록이 생성될 때의 시스템 상태를 나타내며, 이 해시값은 블록의 유효성을 검증하는 데 사용됩니다.</p>
+<p>이더리움은 트랜잭션 기반의 <strong>state machine</strong>입니다. 네트워크 상에 저장되어 있는 모든 정보를 <strong>월드 스테이트(World State)</strong> 라고 부르며, 새 트랜잭션이 실행될 때마다 규칙에 따라 이전 상태가 다음 상태로 전이됩니다.</p>
+<ul>
+<li>월드 스테이트는 주소를 키로, 계정 상태(Account State)를 값으로 가지는 거대한 맵(map)입니다.</li>
+<li>각 계정 상태에는 잔액(balance), nonce, 저장소(storage) 등이 들어 있으며, 컨트랙트 계정이라면 바이트코드도 함께 저장됩니다.</li>
+<li>전체 상태 요약본은 <strong>머클 패트리샤 트리(Merkle Patricia Tree)</strong> 에 보관되고, 그 루트 해시는 블록 헤더에 기록됩니다.</li>
+</ul>
+<p>머클 루트 덕분에 노드는 전체 데이터를 모두 내려받지 않고도 상태의 무결성을 검증할 수 있습니다. 또한 블록 헤더에 포함된 상태 루트가 체인으로 연결되기 때문에, 과거 블록이 변경되면 이후 해시도 모두 달라져 위변조가 즉시 탐지됩니다.</p>
 <h2 is-upgraded>트랜잭션(Transactions)</h2>
-<p>트랜잭션(Transaction)은 네트워크 상에서 데이터를 전송하거나 스마트 계약을 실행하는 단위입니다. 이더리움의 상태를 변경하거나 쿼리하는 작업을 포함합니다. 트랜젝션은 행위자(actor)의 서명이 된 채로 제출됩니다. 각 블록에는 여러 트랜잭션이 포함됩니다. 이 트랜잭션들은 블록 안에서 머클 트리(Merkle Tree)로 구성되고, 그 머클 루트는 블록 헤더에 저장됩니다. 머클 트리는 트랜잭션들의 해시값을 이진 트리 형태로 합쳐나가며, 트랜잭션들의 무결성을 보장하고, 효율적으로 트랜잭션을 검증할 수 있게 해줍니다.</p>
-<p>서명 과정 설명하기</p>
+<p>트랜잭션(Transaction)은 네트워크에서 실행되는 모든 상태 변화의 최소 단위입니다. 단순 ETH 전송부터 복잡한 Smart Contract 함수 호출까지 모두 트랜잭션으로 표현됩니다. 모든 트랜잭션은 발신자(EOA)의 개인 키로 서명되어야 하며, 이 서명 덕분에 네트워크는 요청이 위조되지 않았음을 확인할 수 있습니다.</p>
+<p>트랜잭션이 블록에 포함될 때는 <strong>머클 트리(Merkle Tree)</strong> 로 묶여 하나의 머클 루트를 생성하고, 이 루트가 블록 헤더에 기록됩니다. 따라서 특정 트랜잭션이 블록 안에 포함되었는지 빠르게 증명할 수 있고, 데이터가 중간에서 변조되면 머클 루트가 달라져 즉시 탐지됩니다.</p>
+<h3 is-upgraded>트랜잭션 핵심 필드</h3>
+<table>
+<tr><td colspan="1" rowspan="1"><p>필드</p>
+</td><td colspan="1" rowspan="1"><p>설명</p>
+</td><td colspan="1" rowspan="1"><p>설명</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>nonce</code></p>
+</td><td colspan="1" rowspan="1"><p>발신 계정이 지금까지 보낸 트랜잭션 수</p>
+</td><td colspan="1" rowspan="1"><p>순서를 보장하며 이중 전송을 막습니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>gasLimit</code></p>
+</td><td colspan="1" rowspan="1"><p>이번 트랜잭션에서 최대 사용할 가스량</p>
+</td><td colspan="1" rowspan="1"><p>너무 낮으면 실행 중단, 너무 높으면 남은 가스는 환불됩니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>maxFeePerGas</code></p>
+</td><td colspan="1" rowspan="1"><p>지불할 최대 가스 단가(EIP-1559 기준)</p>
+</td><td colspan="1" rowspan="1"><p>= base fee + priority fee 상한선입니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>maxPriorityFeePerGas</code></p>
+</td><td colspan="1" rowspan="1"><p>검증자에게 주는 추가 팁</p>
+</td><td colspan="1" rowspan="1"><p>빠른 포함을 원할수록 조금 더 높게 설정합니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>to</code></p>
+</td><td colspan="1" rowspan="1"><p>전송 대상 계정 주소(컨트랙트 호출 시 컨트랙트 주소)</p>
+</td><td colspan="1" rowspan="1"><p>컨트랙트 배포 트랜잭션이라면 비워 두고 <code>data</code>에 바이트코드를 넣습니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>value</code></p>
+</td><td colspan="1" rowspan="1"><p>함께 보낼 ETH 금액</p>
+</td><td colspan="1" rowspan="1"><p>함수 호출 시에도 ETH를 동시에 보낼 수 있습니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>data</code></p>
+</td><td colspan="1" rowspan="1"><p>함수 호출 인코딩 값 또는 컨트랙트 바이트코드</p>
+</td><td colspan="1" rowspan="1"><p>함수 호출 시 <code>function selector + 인자</code>를 ABI 형식으로 인코딩합니다.</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>chainId</code></p>
+</td><td colspan="1" rowspan="1"><p>어느 네트워크용인지 식별하는 값</p>
+</td><td colspan="1" rowspan="1"><p><code>1(Mainnet)</code>, <code>11155111(Sepolia)</code> 등</p>
+</td></tr>
+</table>
+<h3 is-upgraded>서명(Signature) 흐름</h3>
+<ol type="1">
+<li>지갑이 트랜잭션 정보를 정해진 순서대로 정리(직렬화)합니다.</li>
+<li>직렬화된 바이트를 <code>keccak256</code> 해시함수에 넣어 메시지 다이제스트(32바이트 길이의 요약값)를 만듭니다.</li>
+<li>지갑은 개인 키로 이 요약값에 서명해 <code>(v, r, s)</code> 세 개의 서명값을 만듭니다.</li>
+<li>이 서명을 트랜잭션에 붙여 네트워크로 전송합니다.</li>
+<li>노드는 서명이 맞는지 확인하고, 가스와 수수료가 충분하면 트랜잭션을 실행합니다.</li>
+</ol>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="EVM(Ethereum Virtual Machine)" duration="0">
         <p class="image-container"><img alt="EVM" src="img/e63221f86b9b235.png"></p>
+<p>EVM은 위와 같은 구조를 가진 가상 머신입니다. 보다시피 Stack Machine입니다. 다만, 다른 Machine과 다르게 Gas라는 독특한 매커니즘을 가지고 있습니다. 트랜잭션이 실행되면 EVM은 프로그램 카운터(PC)가 명령어를 하나씩 읽으며, 각 연산(Operation)을 수행할 때마다 가스를 소모합니다. 계산은 스택(Stack)과 메모리(Memory)를 이용해 처리되며, 스토리지(Storage)에 접근하거나 값을 변경할 때는 훨씬 더 많은 가스가 필요합니다. 또한 외부 컨트랙트를 호출하는 메시지 콜(Message call)이 발생하면 새로운 EVM 실행 환경이 만들어지고, 일부 가스가 전달되어 실행됩니다.</p>
+<h3 is-upgraded>메모리 영역 요약</h3>
+<table>
+<tr><td colspan="1" rowspan="1"><p>영역</p>
+</td><td colspan="1" rowspan="1"><p>수명</p>
+</td><td colspan="1" rowspan="1"><p>용도</p>
+</td><td colspan="1" rowspan="1"><p>주 사용처</p>
+</td><td colspan="1" rowspan="1"><p>가스 비용</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Storage</p>
+</td><td colspan="1" rowspan="1"><p>블록체인에 영구 저장</p>
+</td><td colspan="1" rowspan="1"><p>읽기/쓰기</p>
+</td><td colspan="1" rowspan="1"><p>상태 변수, 영구 데이터</p>
+</td><td colspan="1" rowspan="1"><p>매우 높음</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Memory</p>
+</td><td colspan="1" rowspan="1"><p>함수 실행 동안 임시 유지</p>
+</td><td colspan="1" rowspan="1"><p>읽기/쓰기</p>
+</td><td colspan="1" rowspan="1"><p>함수 지역 변수, 반환값</p>
+</td><td colspan="1" rowspan="1"><p>중간</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Calldata</p>
+</td><td colspan="1" rowspan="1"><p>함수 호출 동안 유지</p>
+</td><td colspan="1" rowspan="1"><p>읽기 전용</p>
+</td><td colspan="1" rowspan="1"><p>외부 함수 매개변수</p>
+</td><td colspan="1" rowspan="1"><p>매우 낮음</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Stack</p>
+</td><td colspan="1" rowspan="1"><p>한 연산 내에서만 유지</p>
+</td><td colspan="1" rowspan="1"><p>읽기/쓰기</p>
+</td><td colspan="1" rowspan="1"><p>EVM 연산 피연산자, 제어 흐름 관리</p>
+</td><td colspan="1" rowspan="1"><p>매우 낮음</p>
+</td></tr>
+</table>
 <h3 is-upgraded>Storage</h3>
-<p>블록체인에 영구적으로 저장되는 데이터입니다. 스토리지는 키(Key)와 값(Value) 쌍으로 이루어진 구조를 가집니다. 각 키와 값의 크기는 32byte입니다. 주로 함수 외부에 정의 된 변수, 함수와 같은 스마트 컨트랙트의 주요 정보가 저장되며 영속적입니다 따라서 가스비가 가장 비쌉니다.</p>
+<p>Storage는 블록체인에 영구적으로 기록되는 데이터 영역입니다. 키(Key)와 값(Value) 쌍으로 구성된 거대한 맵 구조이며, 하나의 슬롯은 32바이트입니다. 상태 변수처럼 거래 후에도 남아야 하는 정보는 모두 Storage에 담기지만, 연산이 매우 비싸기 때문에 꼭 필요한 데이터만 저장해야 합니다.</p>
 <h3 is-upgraded>Memory</h3>
-<p>함수나 반복문이 실행되는 동안에만 임시로 데이터를 저장합니다. 함수 실행이 끝나면 사라지며, Storage보다 훨씬 저렴합니다. 함수의 경우 함수가 실행될 때 매개변수, 반환값, 함수 내부의 변수와 같은 데이터가 Memory에 저장됩니다. 즉, 함수가 실행될 대마다 메모리는 <strong>깨끗한</strong> 상태에서 데이터를 저장한 후 함수 실행이 끝나면 데이터가 삭제됩니다.</p>
+<p>Memory는 함수 실행 동안에만 유지되는 임시 저장소입니다. 함수가 호출될 때 초기화되고, 종료되면 자동으로 해제됩니다. Storage보다 훨씬 저렴하지만, 필요할 때마다 크기가 동적으로 늘어나므로 불필요한 복사를 줄이는 습관이 가스 최적화에 도움이 됩니다.</p>
 <h3 is-upgraded>Calldata</h3>
-<p>외부에 있는 함수(EOA(Externally Owned Accounts) 또는 다른 컨트랙트)가 함수를 호출할 때 전달하는, 수정 불가능한 임시 데이터 영역입니다. Memory와 비슷하지만 <strong>수정이 불가능(읽기 전용)하며,</strong> 가스비가 가장 저렴합니다. 주로 가시성 지정자 <code>external</code>이 적용된 함수의 매개변수가 사용합니다.</p>
+<p>Calldata는 외부 계정이나 다른 컨트랙트가 함수를 호출할 때 전달되는 읽기 전용 데이터 버퍼입니다. <code>external</code> 함수의 매개변수가 여기에 위치하며, 수정이 불가능하기 때문에 안전하고 비용도 가장 저렴합니다.</p>
 <h3 is-upgraded>Stack</h3>
-<p>Stack은 EVM에서 휘발성을 가진 데이터를 유지 관리하는 공간입니다. 보통 Solidity 개발할 때 직접적으로 접근하지 않습니다. Stack의 최대 깊이는 1024입니다.</p>
+<p>Stack은 EVM 연산이 사용하는 초고속 메모리입니다. 최대 깊이는 1024로 제한되어 있으며, 대부분의 Solidity 코드는 컴파일 과정에서 자동으로 스택을 사용하므로 개발자가 직접 조작할 일은 거의 없습니다. 다만 너무 많은 지역 변수를 동시에 사용할 경우 스택이 가득 차 <code>stack too deep</code> 오류가 발생할 수 있습니다.</p>
 <h2 is-upgraded>가스</h2>
-<p>컴퓨터에서 연산을 하면 비용이 들어갑니다. 이더리움도 마찬가지입니다. 이더리움에선 가스라는 수수료를 도입해 이더리움 네트워크의 보안을 유지합니다. 네트워크에서 실행되는 모든 연산에 대해 수수료를 부과함으로써 악의적인 행위자가 네트워크에 스팸을 보내는 것을 방지합니다. 코드에서 우발적이거나 악의적인 무한 루프 또는 기타 연산 낭비를 방지하기 위해 각 트랜잭션은 사용할 수 있는 코드 실행 단계 수에 제한을 두어야 합니다. 연산의 기본 단위는 &#34;가스&#34;입니다.</p>
+<p>컴퓨터에서 연산을 하면 비용이 들어갑니다. 이더리움도 마찬가지입니다. 이더리움에선 가스라는 수수료를 도입해 이더리움 네트워크의 보안을 유지합니다. 네트워크에서 실행되는 모든 연산에 대해 수수료를 부과함으로써 악의적인 행위자가 네트워크에 스팸을 보내는 것을 방지합니다. 코드에서 우발적이거나 악의적인 <strong>무한 루프 또는 기타 연산 낭비를 방지하기 위해</strong> 각 트랜잭션은 사용할 수 있는 코드 실행 단계 수에 제한을 두어야 합니다. 연산의 기본 단위는 &#34;가스&#34;입니다.</p>
 <h3 is-upgraded>단위</h3>
-<p>가스 요금은 이더리움의 기본 화폐인 이더(ETH)로 지불해야 합니다. 가스 가격은 일반적으로 ETH의 단위인 gwei로 표시됩니다. 1 gwei는 ETH의 10억분의 1( 10-9 ETH)에 해당 합니다.</p>
-<p><code>gwei</code>는 <code>giga-wei</code>의 줄임말로, <code>10<sup>9</sup> wei</code>를 뜻합니다. 1gwei는 10wei와 같습니다. wei은 ETH의 최소 단위입니다.</p>
+<p>가스 요금은 이더리움의 기본 화폐인 이더(ETH)로 지불해야 합니다. 가스 가격은 일반적으로 ETH의 단위인 gwei로 표시됩니다. 1 gwei는 ETH의 10억분의 1(10-9 ETH)에 해당합니다.</p>
+<p><code>gwei</code>는 <code>giga-wei</code>의 줄임말로 <code>10<sup>9</sup> wei</code>를 뜻합니다. 다시 말해 1 gwei = 1,000,000,000 wei이고, 1 ETH = 1,000,000,000,000,000,000 wei입니다. 실무에서는 &#34;30 gwei&#34;, &#34;50 gwei&#34;처럼 표현하며, <code>gasLimit 21,000</code>과 <code>gasPrice 30 gwei</code>를 곱하면 약 <code>0.00063 ETH</code>의 기본 전송 수수료가 나온다는 식으로 계산합니다.</p>
 <h3 is-upgraded>가스비</h3>
 <p>트랜잭션을 제출할 때 지불할 가스량을 설정할 수 있습니다. 특정 가스량을 제시하면 트랜잭션이 다음 블록에 포함되도록 입찰하는 것입니다. 가스량을 너무 적게 제시하면 검증자가 트랜잭션을 포함할 가능성이 낮아져 트랜잭션이 늦게 실행되거나 전혀 실행되지 않을 수 있습니다. 가스량을 너무 많이 제시하면 ETH를 낭비할 수 있습니다. 지불해야하는 가스량을 예상하는 것이 스마트 컨트랙트를 실행하고 비용관리하는데 있어 도움이 됩니다.</p>
 <p>총 가스비는 base fee(요금)과 priority fee(팁)으로 나뉩니다.</p>
 <p>프로토콜에 의해 자동으로 base fee는 설정됩니다. 거래가 유효한 것으로 간주되려면 최소 이 금액을 지불해야 합니다. priority fee는 검증자에게 주는 추가적인 요금입니다. priority fee가 높으면 검증자에게 거래가 매력적이어서 다음 블록에 포함될 가능성이 높아집니다. 따라서 <code>적정</code> 수수료는 거래를 전송할 당시의 네트워크 사용량에 따라 결정됩니다. 수요가 많으면 수수료를 priority더 높게 책정해야 할 수 있지만, 수요가 적으면 수수료를 더 낮게 책정할 수 있습니다.</p>
 <p>수수료 계산은 다음과 같습니다.</p>
 <p><code>units of gas used * (base fee + priority fee)</code></p>
+<aside class="special"><p><strong>Tip: </strong> 일반적으로 MetaMask 같은 지갑에서는 <strong>고급 가스 설정(Advanced options)</strong> 항목에서 Max priority fee (Gwei) 값을 직접 입력할 수 있습니다. 네트워크 상황에 따라 기본값이 자동 제안되지만, 빠른 처리를 원하면 수동으로 조금 더 높게(예: 2~3 Gwei) 설정합니다. 또한 코드로 트랜잭션을 작성할 때는 <code>maxPriorityFeePerGas</code> 필드를 지정합니다. </p>
+</aside>
 <h3 is-upgraded>기본 수수료</h3>
 <p>모든 블록에는 예비 가격 역할을 하는 기본 수수료가 있습니다. 블록에 포함되려면 가스당 제시 가격이 기본 수수료와 최소 동일해야 합니다. 기본 수수료는 현재 블록과는 별도로 계산되며, 이전 블록에 따라 결정되므로 사용자가 거래 수수료를 더 쉽게 예측할 수 있습니다. 블록이 생성되면 이 기본 수수료는 <strong>소각되어</strong> 유통에서 제거됩니다.</p>
 <p>기본 수수료는 이전 블록의 크기(모든 거래에 사용된 가스량)를 목표 블록 크기와 비교하는 공식을 통해 계산됩니다. 목표 블록 크기를 초과할 경우, 기본 수수료는 블록당 최대 12.5%까지 증가합니다. 이러한 기하급수적인 증가로 인해 블록 크기가 무한정 높게 유지되는 것은 경제적으로 불가능합니다.</p>
@@ -213,11 +323,11 @@
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><strong>G</strong>coldaccountaccess</p>
 </td><td colspan="1" rowspan="1"><p>2600</p>
-</td><td colspan="1" rowspan="1"><p>차가운 계정 접근에 드는 비용</p>
+</td><td colspan="1" rowspan="1"><p>cold account(처음 접근하는 계정) 접근에 드는 비용</p>
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><strong>G</strong>coldsload</p>
 </td><td colspan="1" rowspan="1"><p>2100</p>
-</td><td colspan="1" rowspan="1"><p>차가운 저장소 접근에 드는 비용</p>
+</td><td colspan="1" rowspan="1"><p>cold storage(처음 읽거나 쓰는 저장소 키) 접근에 드는 비용</p>
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><strong>G</strong>sset</p>
 </td><td colspan="1" rowspan="1"><p>20000</p>
@@ -289,7 +399,7 @@
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><strong>G</strong>log</p>
 </td><td colspan="1" rowspan="1"><p>375</p>
-</td><td colspan="1" rowspan="1"><p><strong>LOG 연산에 대한 부분 지불</strong></p>
+</td><td colspan="1" rowspan="1"><p><strong>LOG 연산(이벤트 기록)에 대한 기본 금액</strong></p>
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><strong>G</strong>logdata</p>
 </td><td colspan="1" rowspan="1"><p>8</p>
@@ -317,7 +427,7 @@
 </td></tr>
 </table>
 <h3 is-upgraded>최대 수수료</h3>
-<p>네트워크에서 거래를 실행하기 위해 사용자는 거래 실행에 대해 지불할 의향이 있는 최대 한도(maxFeePerGas)를 지정할 수 있습니다. 거래가 실행되려면 최대 수수료가 기본 수수료와 팁의 합계보다 커야 합니다. 거래 발신자는 최대 수수료와 기본 수수료 및 팁의 합계 차액을 환불받습니다.</p>
+<p>네트워크에서 거래를 실행하기 위해 사용자는 거래 실행에 대해 지불할 의향이 있는 최대 한도(<code>maxFeePerGas</code>)를 지정할 수 있습니다. 거래가 실행되려면 최대 수수료가 기본 수수료와 팁의 합계보다 커야 합니다. 거래 발신자는 최대 수수료와 기본 수수료 및 팁의 합계 차액을 환불받습니다.</p>
 <h3 is-upgraded>블록 크기</h3>
 <p>각 블록의 목표 크기는 1,500만 가스이지만, 블록 크기는 네트워크 수요에 따라 증가하거나 감소하며, 블록 한도인 3,000만 가스(목표 블록 크기의 2배)까지 증가합니다. 즉, 블록 크기가 목표 블록 크기보다 크면 프로토콜은 다음 블록의 기본 수수료를 높입니다. 마찬가지로, 블록 크기가 목표 블록 크기보다 작으면 프로토콜은 기본 수수료를 낮춥니다. 기본 수수료가 조정되는 양은 현재 블록 크기가 목표에서 얼마나 떨어져 있는지에 비례합니다.</p>
 <h3 is-upgraded>가스 한도</h3>
@@ -331,15 +441,17 @@
       <google-codelab-step label="스마트 컨트랙트(Smart Contract)" duration="15">
         <h2 is-upgraded>Smart Contract Lifecycle</h2>
 <p>Smart Contract는 작성, 컴파일, 배포, 실행의 과정을 거치게 됩니다. 주요 흐름은 아래의 그림과 같습니다.</p>
-<p class="image-container"><img alt="Complie" src="img/22902fa5579940be.png"></p>
+<p class="image-container"><img alt="Compile" src="img/22902fa5579940be.png"></p>
 <h3 is-upgraded>작성</h3>
-<p>개발자는 Solidity, Vyper와 같은 스마트 컨트랙트 언어를 사용하여 코드를 작성합니다. 이 단계에서는 계약의 목적, 데이터 구조, 상태 변수, 함수 등을 정의합니다. 예를 들어, 토큰 발행(ERC-20), 투표 시스템, 라이선스 관리와 같은 비즈니스 로직을 코드로 표현합니다. 이 단계에서 컨트랙트는 아직 단순한 소스 코드일 뿐, 블록체인과 연결되지 않았습니다.</p>
+<p>개발자는 Solidity, Vyper와 같은 스마트 컨트랙트 언어를 사용하여 코드를 작성합니다. 이 단계에서는 계약의 목적, 데이터 구조, 상태 변수, 함수 등을 정의합니다. 예를 들어, 토큰 발행(ERC-20), 투표 시스템과 같은 비즈니스 로직을 코드로 표현합니다. 이 단계에서 컨트랙트는 아직 단순한 소스 코드일 뿐, 블록체인과 연결되지 않았습니다.</p>
 <h3 is-upgraded>컴파일</h3>
-<p>작성된 Solidity 코드는 <strong>Solidity Compiler</strong>를 통해 Btyecode와 ABI(Application Binary Interface)로 변환됩니다.</p>
+<p>작성된 Solidity 코드는 <strong>Solidity Compiler를</strong> 통해 Bytecode와 ABI(Application Binary Interface)로 변환됩니다.</p>
 <p>바이트코드(Bytecode)는 EVM 위에서 실제로 실행되는 코드입니다. Contract transaction의 data 필드에 그대로 들어가게 됩니다. 컨트랙트가 실행될 때 이 data 필드의 Bytecode를 읽어와 실행되게 됩니다.</p>
-<p>ABI는 외부 애플리케이션이 컨트랙트 함수를 호출할 때 사용하는 인터페이스입니다. ABI는 컨트랙트의 구조를 보여주며 외부 애플리케이션에서 컨트랙트의 함수를 호출하거나 데이터를 얻고자 하기 위해 사용됩니다. ABI에 정의된 함수에 대한 정보를 이용해 function selector를 구하고 message transaction(함수 호출 트랜잭션)의 앞에 function selector를 넣어 해당 함수나 데이터의 Btyecode의 위치를 얻어 실행가능하도록 해줍니다.</p>
-<p>function selector는 4byte로 구성되며 함수의 정보(함수명, parameter의 type)을 Keccack256로 함수의 서명정보를 해시하여 빅 엔디안 방식으로 기술했을 시, 첫 번째 4byte입니다.</p>
-<p>컴파일된 컨트랙트는 function selector로 분기처리하는 로직을 가지고 있습니다. 즉, function Selector 생성 규칙은 결정론적입니다. 이는 아래의 컴파일 전 컨트랙트와 컴파일된 컨트랙트를 통해 확인할 수 있습니다.</p>
+<p>ABI는 외부 애플리케이션이 컨트랙트 함수를 호출할 때 사용하는 인터페이스입니다. ABI는 컨트랙트의 구조를 보여주며 외부 애플리케이션에서 컨트랙트의 함수를 호출하거나 데이터를 얻고자 하기 위해 사용됩니다. ABI에 정의된 함수에 대한 정보를 이용해 <code>function selector</code>를 구하고 message transaction(함수 호출 트랜잭션)의 앞에 <code>function selector</code>를 넣어 해당 함수나 데이터의 Bytecode 위치를 찾고 실행할 수 있게 해줍니다.</p>
+<p><code>function selector</code>는 4byte로 구성되며 함수의 정보(함수명, parameter의 type)을 Keccak256으로 해시했을 때, 빅 엔디안 기준 앞쪽 4byte를 취한 값입니다.</p>
+<aside class="special"><p><strong>Tip:</strong> 예를 들어 <code>transfer(address,uint256)</code> 함수의 selector는 <code>a9059cbb</code>이며, 트랜잭션의 <code>data</code> 필드 앞 4바이트에 항상 포함됩니다.</p>
+</aside>
+<p>컴파일된 컨트랙트는 function selector로 분기처리하는 로직을 가지고 있습니다. 그렇기 때문에 <strong>function Selector 생성 규칙은 결정론적입니다.</strong> 이는 아래의 컴파일 전 컨트랙트와 컴파일된 컨트랙트를 통해 확인할 수 있습니다.</p>
 <pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: GPL-3.0
 pragma solidity &gt;=0.5.0 &lt;0.9.0;
 contract C {
@@ -350,7 +462,7 @@ contract C {
 </code></pre>
 <pre><code language="language-asm" class="language-asm">======= contract.sol:C =======
 EVM assembly:
-    /* &#34;contract.sol&#34;:0:86  contract C {... */
+  /* &#34;contract.sol&#34;:0:86  contract C {... */
   mstore(0x40, 0x80)    // free memory pointer 초기화
   callvalue
   dup1
@@ -393,7 +505,7 @@ sub_0: assembly {
       tag_3
       jumpi
     tag_2:
-    // Selecter 매칭되는 함수가 없으므로 revert (fallback 없음)
+    // Selector 매칭되는 함수가 없으므로 revert (fallback 없음)
       0x00
       dup1
       revert
@@ -498,16 +610,16 @@ sub_0: assembly {
     auxdata: 0xa2646970667358221220a5874f19737ddd4c5d77ace1619e5160c67b3d4bedac75fce908fed32d98899864736f6c637827302e382e342d646576656c6f702e323032312e332e33302b636f6d6d69742e65613065363933380058
 }
 </code></pre>
-<aside class="warning"><p><strong>Warning:</strong> ABI와 Function Selector는 코어 이더리움 프로토콜에 포함되지는 않습니다.</p>
+<aside class="warning"><p><strong>Warning:</strong> ABI와 Function Selector는 코어 이더리움 프로토콜에 포함되지는 않습니다. 하지만 대부분의 지갑 및 서비스는 ABI 규약을 전제로 동작합니다. 대중적 인터페이스(ERC-20/721/1155 등)와의 상호운용을 원하면 ABI를 따르는 것을 권장입니다.</p>
 </aside>
 <h3 is-upgraded>배포</h3>
 <p>컴파일된 바이트코드를 Ethereum 네트워크에 트랜잭션 형태로 전송하여 Contract address(컨트랙트 계정)을 생성합니다. 이때 발생하는 가스비(Gas Fee)는 네트워크 검증자에게 지급됩니다.</p>
-<p>Contract Address는 컨트랙트가 위치할 주소입니다. Contract Address는 배포자(sender)의 주소와 해당 주소의 nonce를 이용해 <strong>결정론적</strong> 생성됩니다.</p>
+<p>Contract Address는 컨트랙트가 위치할 주소입니다. Contract Address는 배포자(sender)의 주소와 해당 주소의 nonce를 이용해 <strong>결정론적으로</strong> 생성됩니다.</p>
 <p><code>keccak256( RLP.encode([sender, nonce]) )[12:]</code></p>
 <p>여기서 마지막 20byte가 새로운 컨트랙트의 주소가 됩니다. 같은 sender + nonce 조합은 재사용될 수 없으므로, 네트워크 상에서 주소 충돌은 발생하지 않습니다. 또한, 이미 존재하는 주소에 새로운 컨트랙트를 덮어쓸 수는 없습니다. Address는 ethereum network에 올라가므로 한 번 생성된 contract address는 변경할 수 없습니다. Contract를 실행하기 위해서 message transaction의 to에 contract address값을 넣습니다.</p>
 <aside class="special"><p><strong>Tip: Ethereum Account Type</strong></p>
-<p>Ethereum에는 **EOA(Externally Owned Account)**와 Contract Account 두 종류의 계정이 있습니다.</p>
-<p>EOA는 개인 키로 서명한 트랜잭션만 보낼 수 있고, Contract Account는 code와 storage, balance, contract address를 갖고 있으며, 외부 트랜잭션이나 다른 컨트랙트의 호출이 있을 때만 동작합니다.</p>
+<p>Ethereum에는 <strong>EOA(Externally Owned Account)</strong>와 <strong>Contract Account</strong> 두 종류의 계정이 있습니다.</p>
+<p>EOA는 사용자의 지갑 계정입니다. 개인 키로 서명한 트랜잭션만 보낼 수 있고, Contract Account는 스마트 컨트랙트가 배포될 때 생성되는 계정입니다. code와 storage, balance, contract address를 갖고 있으며, 외부 트랜잭션이나 다른 컨트랙트의 호출이 있을 때만 동작합니다.</p>
 </aside>
 <h3 is-upgraded>실행</h3>
 <p>배포가 끝난 후에는 누구나 컨트랙트 주소를 이용해 call 또는 transaction을 보낼 수 있습니다. 단순 조회 함수(view/pure)는 가스를 소모하지 않고 읽을 수 있으며, 상태 변경 함수는 반드시 가스를 내고 트랜잭션을 보내야 합니다. 배포가 완료되면 해당 컨트랙트는 고유한 <strong>주소(Address)를</strong> 가지며, 누구나 이 주소를 통해 접근할 수 있습니다.</p>
@@ -523,7 +635,7 @@ function badRandom() public view returns (uint) {
     return uint(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
 }
 </code></pre>
-<p>이러한 특성은 컴파일 단계에서 컨트랙트의 가스 사용량과 동작 방식을 정확히 측정할 수 있습니다.</p>
+<p>이러한 특성은 컴파일 단계에서 <strong>컨트랙트의 가스 사용량과 동작 방식을</strong> 정확히 측정할 수 있습니다.</p>
 
 
       </google-codelab-step>
@@ -539,10 +651,28 @@ contract Hello {
 }
 </code></pre>
 <ol type="1">
-<li>SPDX-License-Identifier: MITSPDX 라이선스는 솔리디티 컴파일러 버전 0.6.8부터 스마트 컨트랙트 최상단에 명시해야 합니다. 스마트 컨트랙트 소스 코드는 공유되어 사용할수록 코드의 신뢰도가 높아집니다. <code>MIT</code> 라이선스는 자유롭게 사용하고 수정할 수 있는 조건을 제공하는 오픈소스 라이선스입니다. 다른 라이선스를 사용하려면 적절한 SPDX 식별자를 선택해야 합니다.</li>
-<li>pragma solidity ^0.8.24;pragma solidity는 현재 작성된 스마트 컨트랙트의 솔리디티 컴파일러 버전을 나타냅니다. 이 코드는 스마트 계약의 호환성 범위를 지정합니다. ^0.8.24는 컴파일러가 0.8.24 버전 이상이지만 0.9.0 미만일 경우에만 컴파일이 가능하다는 의미입니다. 이 구문은 코드의 정확한 버전 호환성을 보장하여, 버전 차이로 인한 에러를 방지하는 데 도움을 줍니다.</li>
-<li>contractscontract는 스마트 계약의 시작을 알리는 키워드입니다. 이 구문은 contract {컨트랙트 이름}의 형태로 작성되며, Solidity에서 스마트 계약을 정의할 때 사용됩니다. Hello는 이 계약의 이름이며, 계약 내에서 정의된 함수나 상태 변수들을 포함할 수 있습니다.</li>
-<li>주석 주석은 코드의 부연 설명이나 메모 정도로 생각하면 됩니다. 개발자를 위한 용도로 사용되면 프로그램의 동작에는 영향을 미치지 않습니다. 이번 세션에서는 코드의 부연 설명을 위해 주로 사용할 예정입니다.주석의 종류는 두 가지가 있습니다:<ul>
+<li>SPDX-License-Identifier: MIT</li>
+</ol>
+<p>SPDX 라이선스는 솔리디티 컴파일러 버전 0.6.8부터 스마트 컨트랙트 최상단에 명시해야 합니다. 스마트 컨트랙트 소스 코드는 공유되어 사용할수록 코드의 신뢰도가 높아집니다. <code>MIT</code> 라이선스는 자유롭게 사용하고 수정할 수 있는 조건을 제공하는 오픈소스 라이선스입니다. 다른 라이선스를 사용하려면 적절한 SPDX 식별자를 선택해야 합니다.</p>
+<ol type="1" start="2">
+<li>pragma solidity ^0.8.24;</li>
+</ol>
+<p>pragma solidity는 현재 작성된 스마트 컨트랙트의 솔리디티 컴파일러 버전을 나타냅니다. 이 코드는 스마트 계약의 호환성 범위를 지정합니다. ^0.8.24는 컴파일러가 0.8.24 버전 이상이지만 0.9.0 미만일 경우에만 컴파일이 가능하다는 의미입니다. 이 구문은 코드의 정확한 버전 호환성을 보장하여, 버전 차이로 인한 에러를 방지하는 데 도움을 줍니다.</p>
+<ul>
+<li><code>^</code>: 지정한 버전 이상, 하지만 다음 메이저 버전은 포함하지 않음</li>
+<li><code>~</code>: 같은 마이너 버전 내에서만 허용</li>
+<li>기호가 없는 경우 해당 버전만 허용</li>
+</ul>
+<ol type="1" start="3">
+<li>contracts</li>
+</ol>
+<p>contract는 스마트 계약의 시작을 알리는 키워드입니다. 이 구문은 contract {컨트랙트 이름}의 형태로 작성되며, Solidity에서 스마트 계약을 정의할 때 사용됩니다. Hello는 이 계약의 이름이며, 계약 내에서 정의된 함수나 상태 변수들을 포함할 수 있습니다.</p>
+<ol type="1" start="4">
+<li>주석</li>
+</ol>
+<p>주석은 코드의 부연 설명이나 메모 정도로 생각하면 됩니다. 개발자를 위한 용도로 사용되면 프로그램의 동작에는 영향을 미치지 않습니다. 이번 세션에서는 코드의 부연 설명을 위해 주로 사용할 예정입니다.</p>
+<p>주석의 종류는 두 가지가 있습니다:</p>
+<ul>
 <li>행 단위 주석 (//): 한 줄만 주석 처리할 때 사용합니다.</li>
 </ul>
 <pre><code language="language-solidity" class="language-solidity">// 이 변수는 숫자를 저장합니다
@@ -556,28 +686,33 @@ uint public number;
 uint public number;
 
 </code></pre>
-</li>
-</ol>
 <h2 is-upgraded>변수와 자료형</h2>
 <h3 is-upgraded>변수</h3>
-<p>변수는 변하는 값을 가질 수 있는 메모리 공간입니다. 밑의 예시는 변수를 정의하는 방법입니다. 변수를 처음 정의할 때 <strong>자료형</strong>을 변수에 명시해야 하며 변수명은 <strong>예약어</strong>만 제외하고 자유롭게 정할 수 있습니다. 예시에서 변수명은 a이고 값은 5입니다. 변수명을 정할 때는 무슨 용도인지 알아보기 쉽도록 작성하는 것을 추천드립니다. 변수명은 주로 소문자로 시작하고 숫자와 특수기호로 시작하는 이름은 지을 수 없습니다.</p>
+<p>변수는 변하는 값을 가질 수 있는 메모리 공간입니다. 밑의 예시는 변수를 정의하는 방법입니다. 변수를 처음 정의할 때 <strong>자료형을</strong> 변수에 명시해야 하며 변수명은 <strong>예약어를</strong> 제외하고 자유롭게 정할 수 있습니다. 예시에서 변수명은 a이고 값은 5입니다. 변수명을 정할 때는 무슨 용도인지 알아보기 쉽도록 작성하는 것을 추천드립니다. 변수명은 주로 소문자로 시작하고 숫자와 특수기호로 시작하는 이름은 지을 수 없습니다.</p>
 <pre><code language="language-solidity" class="language-solidity">  uint a = 5;
 </code></pre>
 <h3 is-upgraded>자료형</h3>
-<p>자료형은 데이터를 분류하는 기준이고 크게 값 타입(Value Type)과 참조 타입(Reference Type)이 있습니다. 먼저 값 타입에 대해 알아봅시다. 변수가 전달될 때 값(value)이 전달됩니다. 즉, 이 타입이 함수의 인자로 사용되거나 할당값으로 사용될 땐, 값이 복사됩니다.</p>
+<p>자료형은 데이터를 분류하는 기준이고 크게 값 타입(Value Type)과 참조 타입(Reference Type)이 있습니다. 먼저 값 타입에 대해 알아봅시다. 변수가 전달될 때 값(value)이 전달됩니다. 즉, 이 타입이 함수의 인자로 사용되거나 할당값으로 사용될 땐, <strong>값이 복사됩니다.</strong> 자세한 내용을 <a href="https://docs.soliditylang.org/en/latest/types.html" target="_blank">여기</a>를 참고해주세요</p>
 <h3 is-upgraded>값 타입 자료형</h3>
-<aside class="warning"><p><strong>Tip:</strong> Value Type에는 struct도 포함됩니다.Primitive type과는 차이가 있습니다.</p>
-</aside>
 <ol type="1">
-<li>Booleans bool: 가능한 값은 상수 true 그리고 false 입니다.연산자:<ul>
+<li>Booleans</li>
+</ol>
+<p>bool: 가능한 값은 상수 true 그리고 false 입니다.</p>
+<p>연산자:</p>
+<ul>
 <li><code>!</code> (논리 부정)</li>
 <li><code>&&</code> (논리 AND, &#34;and&#34;)</li>
 <li><code>||</code> (논리 OR, &#34;or&#34;)</li>
 <li><code>==</code> (같음)</li>
 <li><code>!=</code> (같지 않음)</li>
 </ul>
-<code>||</code> 과 <code>&&</code> 에는 일반적인 short-circuiting rules이 적용됩니다. 이것은 <code>f(x) || g(y)</code> 에서 만약 <code>f(x)</code> 가 true 라면, <code>g(y)</code> 의 값을 확인하지 않는다면 부작용이 있을 수 있음에도 불구하고 값을 확인하지 않는것을 의미합니다.</li>
-<li>정수 int / uint: 다양한 크기의 부호있는 정수 타입, 부호없는 정수 타입이 존재합니다. uint8 에서 uint256 까지, 그리고 int8 부터 int256 까지 8비트 단위로 키워드가 존재합니다. uint 와 int 는 각각 uint256 와 int256 의 별칭입니다. 사용 가능한 정수 타입과 범위는 다음과 같습니다.<br> <br><strong>int 범위</strong><table>
+<p><code>||</code> 과 <code>&&</code> 에는 일반적인 short-circuiting rules이 적용됩니다. 이것은 <code>f(x) || g(y)</code> 에서 만약 <code>f(x)</code> 가 true 라면, <code>g(y)</code> 의 값을 확인하지 않는다면 부작용이 있을 수 있음에도 불구하고 값을 확인하지 않는것을 의미합니다.</p>
+<ol type="1" start="2">
+<li>정수</li>
+</ol>
+<p>int / uint: 다양한 크기의 부호있는 정수 타입, 부호없는 정수 타입이 존재합니다. uint8 에서 uint256 까지, 그리고 int8 부터 int256 까지 8비트 단위로 키워드가 존재합니다. uint 와 int 는 각각 uint256 와 int256 의 별칭입니다. 사용 가능한 정수 타입과 범위는 다음과 같습니다.</p>
+<p><strong>int 범위</strong></p>
+<table>
 <tr><td colspan="1" rowspan="1"><p><strong>타입</strong></p>
 </td><td colspan="1" rowspan="1"><p>** 범위 **</p>
 </td></tr>
@@ -600,7 +735,8 @@ uint public number;
 </td><td colspan="1" rowspan="1"><p>[-2255, -2255 - 1]</p>
 </td></tr>
 </table>
-<br> <br><strong>uint 범위</strong><table>
+<p><strong>uint 범위</strong></p>
+<table>
 <tr><td colspan="1" rowspan="1"><p><strong>타입</strong></p>
 </td><td colspan="1" rowspan="1"><p>** 범위 **</p>
 </td></tr>
@@ -622,17 +758,23 @@ uint public number;
 <tr><td colspan="1" rowspan="1"><p>uint256</p>
 </td><td colspan="1" rowspan="1"><p>[0, -2256 - 1]</p>
 </td></tr>
-<tr><td colspan="2" rowspan="1"></td><td colspan="1" rowspan="1"></td></tr>
 </table>
-연산자:<ul>
-<li>비교 연산자: &lt;=, &lt;, ==, !=, &gt;=, &gt; (bool 결과값을 가짐)</li>
-<li>비트 연산자: &amp;, |, ^ (배타적 비트 or), ~ (비트 보수)</li>
-<li>산술 연산자: +, -, 단항 -, 단항 +, *, /, % (나머지), ** (거듭제곱), « (왼쪽 시프트), » (오른쪽 시프트)</li>
-</ul>
-나눗셈의 결과는 항상 정수이며 소수부분은 절사됩니다(EVM의 DIV opcode로 컴파일 됩니다). 그러나 두 연산자가 literals (또는 리터럴 표현식)인 경우 소수부분은 절사되지 않습니다.0으로 나누거나 0으로 모듈로 연산을 하면 런타임 예외가 발생합니다.시프트 연산 결과의 타입은 왼쪽 피연산자의 타입을 따릅니다. <code>x << y</code> 는 <code>x * 2**y</code> 와 동일하며, <code>x >> y</code> 는 <code>x / 2**y</code> 와 동일합니다. 이는 음수를 시프트하는 경우 부호가 확장됨을 의미합니다.(This means that shifting negative numbers sign extends.) 음수만큼 시프트 연산을 실행하는 경우 런타임 예외가 발생합니다.<aside class="warning"><p><strong>Warning<br></strong> 부호있는 음의 정수를 우측 시프트 연산 한 결과값은 다른 프로그래밍 언어에서의 결과값과 다릅니다. solidity에서는, 우측 시프트는 나눗셈과 매핑되며 그로 인해 시프트된 음의 값은 0으로 반올림되어 갑니다(절사). 다른 프로그래밍 언어에서는, 음의 값을 우측 시프트연산 하는 경우, 나눗셈과 소수점 이하 버림이 동시에 작동하는것과 유사하게 동작합니다(음의 무한대 방향).</p>
+<p><br> <br> 연산자:</p>
+<pre><code>- 비교 연산자: &lt;=, &lt;, ==, !=, &gt;=, &gt; (bool 결과값을 가짐)
+- 비트 연산자: &amp;, |, ^ (배타적 비트 or), ~ (비트 보수)
+- 산술 연산자: +, -, 단항 -, 단항 +, \*, /, % (나머지), \*\* (거듭제곱), &lt;&lt; (왼쪽 시프트), &gt;&gt; (오른쪽 시프트)
+</code></pre>
+<p>나눗셈의 결과는 항상 정수이며 소수부분은 절사됩니다(EVM의 DIV opcode로 컴파일 됩니다). 그러나 두 연산자가 literals (또는 리터럴 표현식)인 경우 소수부분은 절사되지 않습니다.</p>
+<p>0으로 나누거나 0으로 모듈로 연산을 하면 런타임 예외가 발생합니다.</p>
+<p>시프트 연산 결과의 타입은 왼쪽 피연산자의 타입을 따릅니다. <code>x << y</code> 는 <code>x * 2**y</code> 와 동일하며, <code>x >> y</code> 는 <code>x / 2**y</code> 와 동일합니다. 이는 음수를 시프트하는 경우 부호가 확장됨을 의미합니다. 음수만큼 시프트 연산을 실행하는 경우 런타임 예외가 발생합니다.</p>
+<aside class="warning"><p><strong>Warning<br></strong> 부호있는 음의 정수를 우측 시프트 연산 한 결과값은 다른 프로그래밍 언어에서의 결과값과 다릅니다. solidity에서는, 우측 시프트는 나눗셈과 매핑되며 그로 인해 시프트된 음의 값은 0으로 반올림되어 갑니다(절사). 다른 프로그래밍 언어에서는, 음의 값을 우측 시프트연산 하는 경우, 나눗셈과 소수점 이하 버림이 동시에 작동하는것과 유사하게 동작합니다(음의 무한대 방향).</p>
 </aside>
-</li>
-<li>Bytes바이트 타입은 고정 바이트 배열과 동적 크기 바이트 배열로 나눌 수 있습니다. 고정 바이트 배열은 값 타입이고, 사용할 바이트의 길이(크기)를 미리 지정해야 합니다. 반면, 동적 바이트 타입은 참조 타입이며 사용할 바이트 값을 지정하지 않아도 됩니다.고정 바이트 타입은 bytes1부터 bytes32까지 있으며 각 숫자는 길이를 나타냅니다. 예를 들어 bytes4는 4바이트만 사용하겠다는 의미입니다.<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+<ol type="1" start="3">
+<li>Bytes</li>
+</ol>
+<p>바이트 타입은 고정 바이트 배열과 동적 크기 바이트 배열로 나눌 수 있습니다. 고정 바이트 배열은 값 타입이고, 사용할 바이트의 길이(크기)를 미리 지정해야 합니다. 반면, 동적 바이트 타입은 참조 타입이며 사용할 바이트 값을 지정하지 않아도 됩니다.</p>
+<p>고정 바이트 타입은 bytes1부터 bytes32까지 있으며 각 숫자는 길이를 나타냅니다. 예를 들어 bytes4는 4바이트만 사용하겠다는 의미입니다.</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 contract FixedByteArray {
@@ -647,17 +789,18 @@ contract FixedByteArray {
     }
 }
 </code></pre>
-</li>
-<li>Address 다른 프로그래밍 언어와 다르게 솔리디티는 주소형 타입이 존재합니다. 주소형 타입은 계정의 주소(e.g. 사용자 주소, 스마트 컨트랙트 주소)를 나타냅니다. 주소형 타입의 크기는 20byte로 고정되어 있습니다. 주로 16진수로 표현됩니다. 즉, 0x를 포함한 40자리 리터럴로 표현됩니다. (e.g. <code>0xdCad3a6d3569DF655070DEd06cb7A1b2Ccd1D3AF</code>) 체크섬 테스트를 통과하지 못한 39자리 ~ 41자리 길이의 16진수 리터럴은 경고를 발생시키고 일반적인 유리수 리터럴로 취급됩니다.    <aside class="special"><p><strong>Tip: </strong> 혼합 케이스 address의 체크섬 형식은    <a href="https://github.com/ethereum/ercs/blob/master/ERCS/erc-55.md" target="_blank">EIP-55</a>에 정의되어 있습니다.</p>
+<ol type="1" start="4">
+<li>Address</li>
+</ol>
+<p>다른 프로그래밍 언어와 다르게 솔리디티는 주소형 타입이 존재합니다. 주소형 타입은 계정의 주소(e.g. 사용자 주소, 스마트 컨트랙트 주소)를 나타냅니다. 주소형 타입의 크기는 20byte로 고정되어 있습니다. 주로 16진수로 표현됩니다. 즉, 0x를 포함한 40자리 리터럴로 표현됩니다. (e.g. <code>0xdCad3a6d3569DF655070DEd06cb7A1b2Ccd1D3AF</code>) 체크섬 테스트를 통과하지 못한 39자리 ~ 41자리 길이의 16진수 리터럴은 경고를 발생시키고 일반적인 유리수 리터럴로 취급됩니다.</p>
+<aside class="special"><p><strong>Tip: </strong> 혼합 케이스(대소문자를 섞음) address의 체크섬 형식은   <a href="https://github.com/ethereum/ercs/blob/master/ERCS/erc-55.md" target="_blank">EIP-55</a>에 정의되어 있습니다.</p>
 </aside>
-    <aside class="special"><p><strong>Tip: 유리수 및 정수 표기법</strong></p>
+<aside class="special"><p><strong>Tip: 유리수 및 정수 표기법</strong></p>
 <p>일반적으로 정수는 10진수로 나타내어집니다. 솔리디티에서 8진법은 지원하지 않습니다. 16진수의 경우 숫자 앞에 <code>0x</code>를 붙여 나타냅니다</p>
-<p>    소수점 이하 리터럴은 한쪽에 적어도 하나의 숫자가 있을때 . 에 의해 구성됩니다. 예로는 1., .1, 1.3 이 있습니다.    소수가 밑이 될 수 있지만 지수는 될 수 없는 과학적 표기법 또한 지원됩니다. 2e10, -2e10, 2e-10, 2.5e1 같은 예가 있습니다. </p>
+<p>소수점 이하 리터럴은 한쪽에 적어도 하나의 숫자가 있을때 . 에 의해 구성됩니다. 예로는 1., .1, 1.3 이 있습니다. 소수가 밑이 될 수 있지만 지수는 될 수 없는 과학적 표기법 또한 지원됩니다. 2e10, -2e10, 2e-10, 2.5e1 같은 예가 있습니다.</p>
 <p>숫자는 리터럴이 아닌 타입으로 변환될때까지 임의 정밀도를 유지합니다. 이는 계산이 수행될때 <strong>오버플로우</strong>가 발생하지 않으며 나눗셈이 수행될때 자릿수를 잘라내지 않는걸 의미합니다.</p>
 <p>예를 들어, (2**800 + 1) - 2**800 의 결과는 비록 중간 결과값이 machine word size에 적합하지 않을지라도 상수 1 (uint8 타입)입니다. 게다가 .5 * 8 의 결과값은 (비록 중간에 정수가 아닌 숫자가 사용되었을지라도) 정수 4 입니다.</p>
 </aside>
-</li>
-</ol>
 <h3 is-upgraded>참조 타입 자료형</h3>
 <p>참조 타입은 데이터를 다른 위치에 저장하고 그 위치를 값으로 가집니다. 보통 메모리나 스토리지에 저장할 수 있습니다. 위치에 따라 가스비가 크게 달라질 수 있으므로 주의하여 사용하여야 합니다. 동적 크기를 가지는 <code>string</code>나 <code>bytes</code>가 여기에 해당하고 밑에서 설명할 배열 / 매핑 / 구조체도 참조 타입 자료형입니다.</p>
 <p>모든 복합 타입은 자신이 메모리나 스토리지 중 어디에 저장되었는지를 나타내는 &#34;데이터 위치&#34;가 추가적으로 존재합니다. 컨텍스트에 따라 항상 기본값이 존재하지만, 타입에 스토리지 나 메모리 를 추가하여 재정의 할 수 있습니다. 함수 매개 변수(반환 매개 변수도 포함)의 기본값은 메모리 이고, 지역 변수의 기본값은 스토리지 이며 상태 변수의 위치는 스토리지 로 강제되어 있습니다.</p>
@@ -688,7 +831,7 @@ contract ArrayExample {
 <ol type="1" start="2">
 <li>매핑 (Mapping)</li>
 </ol>
-<p>매핑은 키-값 쌍으로 데이터를 저장합니다. 배열과 달리 순회가 불가능하며, 오직 특정 키를 통해서만 접근할 수 있습니다. 주로 storage에서 사용되며 존재 여부를 조회하기 위해 사용합니다.(e.g. 특정 사용자 잔액 조회)</p>
+<p>매핑은 키-값 쌍으로 데이터를 저장합니다. 배열과 달리 순회가 불가능하며, 오직 특정 키를 통해서만 접근할 수 있습니다. 주로 storage에서 사용되며 존재 여부를 조회하기 위해 사용합니다. (e.g. 특정 사용자 잔액 조회)</p>
 <pre><code language="language-solidity" class="language-solidity">pragma solidity ^0.8.24;
 
 contract MappingExample {
@@ -851,8 +994,7 @@ process.on(&#34;SIGINT&#34;, async () =&gt; {
       </google-codelab-step>
     
       <google-codelab-step label="환경 설정 및 테스트" duration="30">
-        <h2 is-upgraded>Metamask</h2>
-<h2 is-upgraded>리믹스(Remix IDE)</h2>
+        <h2 is-upgraded>리믹스(Remix IDE)</h2>
 <p><a href="https://remix.ethereum.org/" target="_blank">Remix IDE</a>는 Ethereum기반의 스마트 컨트랙트를 작성·컴파일·배포·디버깅할 수 있는 <strong>웹 기반 통합 개발 환경(IDE)</strong> 입니다.</p>
 <h3 is-upgraded>1. Solidity 파일 작성</h3>
 <p>왼쪽 패널에서 contracts 디렉토리 생성해주세요</p>
@@ -926,28 +1068,27 @@ cd hardhat-example
 <ol type="1" start="3">
 <li>프로젝트 구조는 다음과 같습니다</li>
 </ol>
-<pre><code language="language-bash" class="language-bash">// 프로젝트의 기본 구성 파일입니다.
-// Solidity 컴파일러 버전, 네트워크 구성, 프로젝트에서 사용하는 플러그인 및 작업 등의 설정을 정의합니다.
-hardhat.config.ts
+<pre><code language="language-bash" class="language-bash">project-root/
+│
+├── hardhat.config.ts # Solidity 컴파일러 버전, 네트워크, 플러그인, Task 설정 등 Hardhat의 메인 구성 파일
+│
+├── contracts/ # Solidity 스마트 컨트랙트 및 테스트용 .t.sol 파일 저장
+│   ├── Counter.sol
+│   └── Counter.t.sol
+│
+├── test/ # TypeScript 기반의 통합 테스트 파일
+│   └── Counter.ts
+│
+├── ignition/ # 공식 배포 프레임워크 Ignition 모듈 (배포 상태를 기록하고 관리)
+│   └── modules/
+│       └── Counter.ts
+│
+├── scripts/ # 배포·상호작용·운영 자동화를 위한 실행 스크립트
+│   └── send-op-tx.ts
+│
+└── package.json
+    # (선택) npm 패키지 의존성과 스크립트 관리
 
-// 프로젝트의 Solidity 컨트랙트를 포함하는 디렉토리입니다.
-// .t.sol확장자를 사용한 파일은 테스트 파일입니다.
-contracts
-├── Counter.sol
-└── Counter.t.sol
-
-// TypeScript 통합 테스트에 사용됩니다.
-test
-└── Counter.ts
-
-// 공식 배포 프레임워크입니다. deploy를 모듈로 정의해서 상태를 기록합니다.
-ignition
-└── modules
-    └── Counter.ts
-
-// 배포 등의 작업을 스크립트로 정의해 자동화할 수 있습니다.
-scripts
-└── send-op-tx.ts
 </code></pre>
 <h3 is-upgraded>자주 사용하는 명령어</h3>
 <ol type="1">
@@ -958,18 +1099,330 @@ scripts
 <ol type="1" start="2">
 <li><strong>로컬 네트워크 실행</strong></li>
 </ol>
+<p>로컬 RPC 노드를 띄워 개발용 체인을 실행합니다.</p>
 <pre><code language="language-bash" class="language-bash">npx hardhat node
 </code></pre>
 <ol type="1" start="3">
 <li><strong>테스트</strong></li>
 </ol>
+<p><code>test/</code>의 스펙을 로컬 EDR 시뮬레이션에서 실행합니다.</p>
 <pre><code language="language-bash" class="language-bash">npx hardhat test
 </code></pre>
 <ol type="1" start="4">
 <li><strong>배포</strong></li>
 </ol>
-<pre><code language="language-bash" class="language-bash">npx hardhat run scripts/deploy.ts --network sepolia
+<p>Ignition을 이용해 배포합니다.</p>
+<aside class="special"><p><strong>Ignition의 역할</strong></p>
+<p> 1. 배포 계획(Deploy Plan) 을 읽고 순서대로 배포합니다.  2. 상태 및 아티팩트 기록: 동일 모듈을 다시 실행하면 중복 배포를 피하고 재사용(idempotent)합니다. 3. 실패 시 재개(resume)할 수 있습니다. 4. 읽기/쓰기 클라이언트 제공(viem)로 후속 호출도 가능합니다. </p>
+</aside>
+<pre><code language="language-bash" class="language-bash">npx hardhat ignition deploy ignition/modules/{배포할파일}.ts --network {원하는 네트워크. e.g. mainnet, localhost, sepolia}
 </code></pre>
+<h2 is-upgraded>INFURA</h2>
+<p><a href="https://www.infura.io/" target="_blank">Infura</a>는 Ethereum 및 IPFS 네트워크에 쉽게 접근할 수 있도록 RPC(원격 노드) 인프라를 제공하는 서비스입니다. Infura를 통해 이더리움 메인넷 및 테스트넷에 쉽게 연결할 수 있습니다. 회원가입하고 API KEY를 발급 받아봅시다.</p>
+<p class="image-container"><img alt="infura_home" src="img/c110f60b8acc9bc4.png"></p>
+<p>Infura RPC에서 API key와 각 네트워크 별 endpoint를 확인할 수 있습니다. <img alt="infura_rpc" src="img/8adb821cf38b9d7c.png"></p>
+<h2 is-upgraded>Metamask</h2>
+<p><a href="https://metamask.io" target="_blank">MetaMask</a>는 이더리움 블록체인과 상호작용할 수 있는 지갑 애플리케이션입니다. 아래의 과정을 거쳐 환경 설정을 해봅시다.</p>
+<ol type="1">
+<li><a href="https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn" target="_blank">브라우저 익스텐션</a>을 설치해주세요.</li>
+</ol>
+<p class="image-container"><img alt="metamask_extention" src="img/662bef844e5dd206.png"></p>
+<ol type="1" start="2">
+<li>이더리움 계정을 생성해주세요.</li>
+</ol>
+<p class="image-container"><img alt="metamask_account" src="img/ae1264eac85742e0.png"></p>
+<ol type="1" start="3">
+<li>이더리움 계정에 sepolia network가 추가되어 있는지 확인해주세요.</li>
+</ol>
+<p class="image-container"><img alt="metamask_network" src="img/769e9628f831865f.png"></p>
+<ol type="1" start="4">
+<li>테스트용 이더(SepoliaETH)를 받을 겁니다. Sepolia Faucet은 테스트용 이더를 무료로 받을 수 있는 공식 테스트넷 보급소입니다. <code>받기</code>를 누르고 주소를 복사해주세요. <a href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank">Goolgle Cloud Web3</a>에서 Ethereum Sepolia Faucet 서비스를 제공합니다. 복사한 주소를 붙여넣고 <code>Receive 0.05 Sepolia ETH</code>버튼을 눌러주세요.</li>
+</ol>
+<p class="image-container"><img alt="sepolia_faucet" src="img/2132402270a7540a.png"></p>
+<h2 is-upgraded>실습: 컨트랙트를 Sepolia에 배포하기</h2>
+<p>위에서 살펴본 Hardhat 기본 명령어(<code>compile</code>, <code>test</code>, <code>run</code>)를 그대로 활용하면서 아래 순서를 따라가면 로컬 테스트와 Sepolia 배포까지 한 번에 경험할 수 있습니다.</p>
+<h3 is-upgraded>1. Solidity 컨트랙트 작성</h3>
+<p><code>contracts/Example.sol</code>에 예제 컨트랙트를 추가합니다. 각 함수와 이벤트에 달린 주석을 통해 동작을 점검해보세요.</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+// Example
+// 메시지를 저장하고 간단한 입·출금 흐름을 실습하기 위한 예제 컨트랙트입니다.
+contract Example {
+    address public immutable owner;
+    string private storedMessage;
+
+    // 새로운 메시지가 등록될 때마다 알림을 보냅니다.
+    event MessageUpdated(string newMessage);
+    // 입금이 발생하면 누가 얼마를 보냈는지 기록합니다.
+    event Deposited(address indexed from, uint256 amount);
+    // 출금이 발생하면 수신자와 금액을 기록합니다.
+    event Withdrawn(address indexed to, uint256 amount);
+
+    constructor(string memory initialMessage) {
+        owner = msg.sender;
+        storedMessage = initialMessage;
+    }
+
+    function readMessage() external view returns (string memory) {
+        return storedMessage;
+    }
+
+    function updateMessage(string calldata newMessage) external onlyOwner {
+        storedMessage = newMessage;
+        emit MessageUpdated(newMessage);
+    }
+
+    function deposit() external payable {
+        require(msg.value &gt; 0, &#34;VALUE_MUST_BE_POSITIVE&#34;);
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    function withdraw(address payable receiver, uint256 amount) external onlyOwner {
+        require(amount &lt;= address(this).balance, &#34;INSUFFICIENT_FUNDS&#34;);
+        receiver.transfer(amount);
+        emit Withdrawn(receiver, amount);
+    }
+
+    function contractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, &#34;ONLY_OWNER&#34;);
+        _;
+    }
+}
+</code></pre>
+<h3 is-upgraded>2. Hardhat 테스트 코드 작성</h3>
+<p><code>test/example.test.ts</code>를 만들어 아래의 코드를 붙여넣어주세요. 각 테스트에 적힌 주석을 통해 어떤 흐름을 검증하는지 바로 파악할 수 있습니다.</p>
+<pre><code language="language-typescript" class="language-typescript">import assert from &#34;node:assert/strict&#34;;
+import { describe, it } from &#34;node:test&#34;;
+import hre from &#34;hardhat&#34;;
+
+// Example 컨트랙트의 기본 동작을 Hardhat 환경에서 검증합니다.
+describe(&#34;Example&#34;, function () {
+  // Hardhat 3에서는 network.connect()를 통해 fixture 도우미를 획득합니다.
+  async function loadFixture&lt;T&gt;(fixture: () =&gt; Promise&lt;T&gt;) {
+    const { networkHelpers } = await hre.network.connect();
+    return networkHelpers.loadFixture(fixture);
+  }
+
+  // 반복되는 배포 절차를 고정해 테스트 간 독립성과 속도를 확보합니다.
+  async function deployExampleFixture() {
+    const { viem } = await hre.network.connect();
+    const [deployer, participant] = await viem.getWalletClients();
+    const contract = await viem.deployContract(&#34;Example&#34;, [&#34;처음 메시지&#34;], {
+      account: deployer.account,
+    });
+    const publicClient = await viem.getPublicClient();
+    return { contract, deployer, participant, publicClient };
+  }
+
+  it(&#34;초기 메시지를 저장한다&#34;, async function () {
+    const { contract, publicClient } = await loadFixture(deployExampleFixture);
+    // 배포 직후 readMessage가 제공한 초기값을 그대로 반환하는지 확인합니다.
+    const message = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;readMessage&#34;,
+      args: [],
+    });
+    assert.strictEqual(message, &#34;처음 메시지&#34;);
+  });
+
+  it(&#34;소유자가 메시지를 변경한다&#34;, async function () {
+    const { contract, publicClient, deployer } = await loadFixture(
+      deployExampleFixture
+    );
+    // 소유자 지갑으로 메시지를 갱신합니다.
+    await deployer.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;updateMessage&#34;,
+      args: [&#34;새로운 메시지&#34;],
+    });
+    // 변경된 메시지가 즉시 조회되는지 확인합니다.
+    const message = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;readMessage&#34;,
+      args: [],
+    });
+    assert.strictEqual(message, &#34;새로운 메시지&#34;);
+  });
+
+  it(&#34;소유자가 아닌 경우 메시지 변경을 거부한다&#34;, async function () {
+    const { contract, participant } = await loadFixture(deployExampleFixture);
+    // participant 계정은 소유자가 아니므로 revert가 발생해야 합니다.
+    await assert.rejects(
+      participant.writeContract({
+        abi: contract.abi,
+        address: contract.address,
+        functionName: &#34;updateMessage&#34;,
+        args: [&#34;권한 없음&#34;],
+      }),
+      /ONLY_OWNER/
+    );
+  });
+
+  it(&#34;입금과 출금 흐름을 처리한다&#34;, async function () {
+    const { contract, publicClient, participant, deployer } = await loadFixture(
+      deployExampleFixture
+    );
+    const depositValue = 1_000_000_000_000_000n;
+
+    // 임의 참가자가 0.001 ETH를 입금합니다.
+    await participant.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;deposit&#34;,
+      args: [],
+      value: depositValue,
+    });
+
+    // 입금 이후 잔액이 정확히 늘어났는지 확인합니다.
+    const balanceAfterDeposit = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;contractBalance&#34;,
+      args: [],
+    });
+    assert.strictEqual(balanceAfterDeposit, depositValue);
+
+    // 소유자가 동일 금액을 출금합니다.
+    await deployer.writeContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;withdraw&#34;,
+      args: [deployer.account.address, depositValue],
+    });
+
+    // 출금 이후 잔액이 0으로 돌아왔는지 확인합니다.
+    const balanceAfterWithdraw = await publicClient.readContract({
+      abi: contract.abi,
+      address: contract.address,
+      functionName: &#34;contractBalance&#34;,
+      args: [],
+    });
+    assert.strictEqual(balanceAfterWithdraw, 0n);
+  });
+
+  it(&#34;0 ETH 입금은 거부된다&#34;, async function () {
+    const { contract, participant } = await loadFixture(deployExampleFixture);
+    // 값이 0인 입금 시 require가 revert를 발생시키는지 검증합니다.
+    await assert.rejects(
+      participant.writeContract({
+        abi: contract.abi,
+        address: contract.address,
+        functionName: &#34;deposit&#34;,
+        args: [],
+        value: 0n,
+      }),
+      /VALUE_MUST_BE_POSITIVE/
+    );
+  });
+});
+</code></pre>
+<h3 is-upgraded>3. 배포 스크립트 준비</h3>
+<p><code>scripts/deploy-example.ts</code>는 Sepolia RPC에 연결해 컨트랙트를 배포하고, <code>readMessage</code>로 초기값을 확인합니다. 실행 흐름마다 주석으로 동작을 설명해두었습니다.</p>
+<pre><code language="language-typescript" class="language-typescript">import hre from &#34;hardhat&#34;;
+
+async function main() {
+  const { viem } = await hre.network.connect();
+  const [deployer] = await viem.getWalletClients();
+  const publicClient = await viem.getPublicClient();
+
+  console.log(&#34;배포 지갑:&#34;, deployer.account.address);
+
+  const contract = await viem.deployContract(
+    &#34;Example&#34;,
+    [&#34;Hardhat과 Sepolia에서 만나요!&#34;],
+    { account: deployer.account }
+  );
+
+  console.log(&#34;Example 배포 완료:&#34;, contract.address);
+  // 배포 직후 readMessage가 제공한 초기값을 그대로 반환하는지 확인합니다.
+  const currentMessage = await publicClient.readContract({
+    abi: contract.abi,
+    address: contract.address,
+    functionName: &#34;readMessage&#34;,
+    args: [],
+  });
+
+  console.log(&#34;초기 메시지:&#34;, currentMessage);
+}
+
+main().catch((error) =&gt; {
+  // Hardhat이 예외를 캐치할 수 있도록 종료 코드를 설정합니다.
+  console.error(error);
+  process.exitCode = 1;
+});
+</code></pre>
+<h3 is-upgraded>4. 환경 변수 설정</h3>
+<p>Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다. <code>.env</code>파일에 아래의 코드를 복사/붙여넣어주세요. PRIVATE KEY는 공개하시면 안 됩니다. <code>SEPOLIA_RPC_URL</code>는 Infura에서 발급받은 RPC URL이고 <code>SEPOLIA_PRIVATE_KEY</code>는 metamask에서 생성한 계정의 개인 키입니다. metamask에서 <code>계정 세부 정보 > 개인 키 > 비밀 번호 입력</code> 과정을 거처서 개인 키를 받아주세요.</p>
+<pre><code language="language-env" class="language-env">npx hardhat vars set SEPOLIA_RPC_URL https://sepolia.infura.io/v3/&lt;YOUR_ID&gt;
+npx hardhat vars set SEPOLIA_PRIVATE_KEY 0x&lt;YOUR_PRIVATE_KEY&gt;
+</code></pre>
+<p><code>.env</code>파일에서 환경변수를 읽어와 config 파일에 넣어야합니다. 먼저 다음의 명령어를 실행해 주세요.</p>
+<pre><code language="language-bash" class="language-bash">npm i dotenv
+</code></pre>
+<p>이제 <code>hardhat.config.ts</code>파일을 다음과 같이 변경해주세요.</p>
+<pre><code language="language-typescript" class="language-typescript">import &#34;dotenv/config&#34;;
+import type { HardhatUserConfig } from &#34;hardhat/config&#34;;
+
+import hardhatToolboxViemPlugin from &#34;@nomicfoundation/hardhat-toolbox-viem&#34;;
+
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
+const SEPOLIA_PRIVATE_KEY = process.env.SEPOLIA_PRIVATE_KEY;
+
+const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin],
+  solidity: {
+    profiles: {
+      default: {
+        version: &#34;0.8.28&#34;,
+      },
+      production: {
+        version: &#34;0.8.28&#34;,
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    },
+  },
+  networks: {
+    hardhatMainnet: {
+      type: &#34;edr-simulated&#34;,
+      chainType: &#34;l1&#34;,
+    },
+    hardhatOp: {
+      type: &#34;edr-simulated&#34;,
+      chainType: &#34;op&#34;,
+    },
+    sepolia: {
+      type: &#34;http&#34;,
+      chainType: &#34;l1&#34;,
+      url: SEPOLIA_RPC_URL!,
+      accounts: SEPOLIA_PRIVATE_KEY ? [SEPOLIA_PRIVATE_KEY] : [],
+    },
+  },
+};
+
+export default config;
+</code></pre>
+<h3 is-upgraded>5. 테스트와 배포 실행</h3>
+<p>다음의 명령어를 실행해주세요.</p>
+<pre><code language="language-bash" class="language-bash">npm install
+npx hardhat compile
+npx hardhat test
+npx hardhat run scripts/deploy-example.ts --network sepolia
+</code></pre>
+<p class="image-container"><img alt="test_deploy" src="img/25d7dcb259597611.png"></p>
+<p>성공적으로 실행되면 콘솔에 배포 주소와 초기 메시지가 출력됩니다. <a href="https://sepolia.etherscan.io/" target="_blank">Sepolia Etherscan</a>에서 주소를 조회하면 트랜잭션과 이벤트 로그를 직접 확인할 수 있습니다.</p>
 
 
       </google-codelab-step>

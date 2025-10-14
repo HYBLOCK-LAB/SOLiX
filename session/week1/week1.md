@@ -781,6 +781,7 @@ contract VisibilityExample {
 
 - pure: 블록체인 상태를 읽지도, 변경하지도 않음 (순수 계산 함수)
 - view: 블록체인 상태를 읽지만 변경하지는 않음
+- payable: 이더(ETH)를 송금받을 수 있는 함수나 주소임을 나타냄
 
 ```solidity
 pragma solidity ^0.8.24;
@@ -881,6 +882,25 @@ process.on("SIGINT", async () => {
 });
 ```
 
+### Function Modifiers
+
+**Function Modifier(함수변경자)**는 함수의 동작을 선언적으로 변경할 수 있는 기능입니다. 특정 조건을 함수 실행 전/후에 자동으로 검사하거나, 실행 흐름을 제어하는 데 사용할 수 있습니다.
+주로 Function Modifier는 함수의 접근 제어(가드 역할), 상태 조건 검사, 실행 전후 처리 로직 등을 반복 없이 선언적으로 정의할 때 사용합니다. 다음의 예시를 살펴봅시다.
+
+```solidity
+
+modifier onlyOwner() {
+    require(msg.sender == owner, "Not authorized");
+    _;
+}
+
+function withdraw() public onlyOwner {
+    // 함수 본문은 modifier 검사 후 실행됨
+}
+```
+
+withdraw함수는 onlyOwner라는 Function Modifiers를 사용하고 있습니다. withdraw함수를 호출하면 먼저 onlyOwner의 require가 먼저 실행됩니다. `_;` 기호는 함수 본문이 실행되는 위치를 의미합니다.
+
 <!-- =========== 6번째 페이지 ============ -->
 
 ## 환경 설정 및 테스트
@@ -978,10 +998,9 @@ cd hardhat-example
 npx hardhat --init
 ```
 
-3. 기본적으로 아래와 같은 구조가 만들어집니다. 우리 저장소에는 `apps/contracts`가 동일한 역할을 합니다.
+3. 기본적으로 아래와 같은 구조가 만들어집니다.
 
 ```bash
-apps/contracts/
 │
 ├── hardhat.config.ts    # Solidity 컴파일러 버전, 네트워크, 플러그인 설정
 ├── contracts/           # 스마트 컨트랙트 소스 파일
@@ -1338,8 +1357,8 @@ Sepolia 배포에는 RPC 엔드포인트와 프라이빗 키가 필요합니다.
 metamask에서 `계정 세부 정보 > 개인 키 > 비밀 번호 입력` 과정을 거처서 개인 키를 받아주세요.
 
 ```env
-npx hardhat vars set SEPOLIA_RPC_URL https://sepolia.infura.io/v3/<YOUR_ID>
-npx hardhat vars set SEPOLIA_PRIVATE_KEY 0x<YOUR_PRIVATE_KEY>
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<YOUR_ID>
+SEPOLIA_PRIVATE_KEY=0x<YOUR_PRIVATE_KEY>
 ```
 
 `.env`파일에서 환경변수를 읽어와 config 파일에 넣어야합니다. 먼저 다음의 명령어를 실행해 주세요.

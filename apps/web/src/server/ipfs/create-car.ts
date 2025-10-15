@@ -8,7 +8,10 @@ export interface CarFile {
   bytes: Uint8Array;
 }
 
-export async function createCarFromBytes(bytes: Uint8Array, rootCidString: string): Promise<CarFile> {
+export async function createCarFromBytes(
+  bytes: Uint8Array,
+  rootCidString: string,
+): Promise<CarFile> {
   const rootCid = CID.parse(rootCidString);
   const { writer, out } = CarWriter.create([rootCid]);
 

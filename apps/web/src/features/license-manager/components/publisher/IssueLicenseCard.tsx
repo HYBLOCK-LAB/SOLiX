@@ -29,11 +29,14 @@ export function IssueLicenseCard() {
 
   const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
 
-  const { execute, isPending, isSuccess, transactionHash, error } = useLicenseManagerWrite("issueLicense");
+  const { execute, isPending, isSuccess, transactionHash, error } =
+    useLicenseManagerWrite("issueLicense");
 
   useEffect(() => {
     const stored = readRecipientFavorites();
-    const normalizedConnected = account.address ? (getAddress(account.address) as `0x${string}`) : null;
+    const normalizedConnected = account.address
+      ? (getAddress(account.address) as `0x${string}`)
+      : null;
 
     const initial = normalizedConnected
       ? dedupeFavorites([{ address: normalizedConnected, label: "내 지갑" }, ...stored])
@@ -96,7 +99,12 @@ export function IssueLicenseCard() {
 
     try {
       setStatus(null);
-      await execute([BigInt(codeId), getAddress(recipient) as `0x${string}`, BigInt(runs), BigInt(expiryTimestamp)]);
+      await execute([
+        BigInt(codeId),
+        getAddress(recipient) as `0x${string}`,
+        BigInt(runs),
+        BigInt(expiryTimestamp),
+      ]);
     } catch (err) {
       setStatus(`트랜잭션 실패: ${(err as Error).message}`);
     }
@@ -105,8 +113,12 @@ export function IssueLicenseCard() {
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">라이선스 발급</h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">소유한 코드에 대해 실행권을 발급합니다.</p>
+        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+          라이선스 발급
+        </h2>
+        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+          소유한 코드에 대해 실행권을 발급합니다.
+        </p>
       </header>
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
@@ -121,7 +133,9 @@ export function IssueLicenseCard() {
             }}
             disabled={isCodesLoading || !hasOwnedCodes}
           >
-            <option value="">{isCodesLoading ? "코드 목록을 불러오는 중..." : "코드를 선택하세요"}</option>
+            <option value="">
+              {isCodesLoading ? "코드 목록을 불러오는 중..." : "코드를 선택하세요"}
+            </option>
             {ownedCodes.map((code) => (
               <option key={code.codeId} value={code.codeId}>
                 #{code.codeId} · {code.cipherCid}
@@ -133,17 +147,6 @@ export function IssueLicenseCard() {
               등록된 코드가 없습니다. 먼저 코드를 등록하세요.
             </span>
           )}
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-sm text-text-light-75 dark:text-text-dark-75">코드 ID</span>
-          <input
-            type="number"
-            min={0}
-            className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
-            value={codeId}
-            onChange={(event) => setCodeId(Number(event.target.value))}
-          />
         </label>
 
         <label className="flex flex-col gap-2">

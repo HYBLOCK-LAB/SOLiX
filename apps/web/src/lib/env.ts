@@ -6,9 +6,7 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_CHAIN_RPC_URL: z.string().url(),
   NEXT_PUBLIC_CHAIN_SYMBOL: z.string().default("ETH"),
   NEXT_PUBLIC_CHAIN_EXPLORER_URL: z.string().url().optional(),
-  NEXT_PUBLIC_CONTRACT_ADDRESS: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address"),
+  NEXT_PUBLIC_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address"),
   NEXT_PUBLIC_WALLETCONNECT_ID: z.string().min(1),
   NEXT_PUBLIC_STORAGE_MODE: z.enum(["local", "production"]).default("local"),
 });

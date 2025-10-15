@@ -59,9 +59,7 @@ export function ManageCodeStateCard() {
 
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-text-light-75 dark:text-text-dark-75">
-            코드 ID
-          </span>
+          <span className="text-sm text-text-light-75 dark:text-text-dark-75">코드 ID</span>
           <input
             type="number"
             min={0}
@@ -73,31 +71,23 @@ export function ManageCodeStateCard() {
 
         <div className="rounded border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-50 dark:bg-background-dark-75">
           {isLoading ? (
-            <p className="text-text-light-50 dark:text-text-dark-50">
-              코드 정보를 불러오는 중...
-            </p>
+            <p className="text-text-light-50 dark:text-text-dark-50">코드 정보를 불러오는 중...</p>
           ) : code && code.exists ? (
             <ul className="space-y-1">
               <li>
-                <span className="text-text-light-50 dark:text-text-dark-50">
-                  해시:
-                </span>{" "}
+                <span className="text-text-light-50 dark:text-text-dark-50">해시:</span>{" "}
                 <span className="font-mono text-xs text-text-light-100 dark:text-text-dark-100">
                   {code.codeHash}
                 </span>
               </li>
               <li>
-                <span className="text-text-light-50 dark:text-text-dark-50">
-                  CID:
-                </span>{" "}
+                <span className="text-text-light-50 dark:text-text-dark-50">CID:</span>{" "}
                 <span className="text-text-light-100 dark:text-text-dark-100">
                   {code.cipherCid}
                 </span>
               </li>
               <li>
-                <span className="text-text-light-50 dark:text-text-dark-50">
-                  상태:
-                </span>{" "}
+                <span className="text-text-light-50 dark:text-text-dark-50">상태:</span>{" "}
                 <span className="text-text-light-100 dark:text-text-dark-100">
                   {code.paused ? "일시정지됨" : "활성"}
                 </span>
@@ -136,24 +126,18 @@ export function ManageCodeStateCard() {
           </h3>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-text-light-75 dark:text-text-dark-75">
-              새 코드 해시
-            </span>
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">새 코드 해시</span>
             <input
               type="text"
               className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 font-mono text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
               placeholder="0x..."
               value={codeHash}
-              onChange={(event) =>
-                setCodeHash(event.target.value as `0x${string}` | "")
-              }
+              onChange={(event) => setCodeHash(event.target.value as `0x${string}` | "")}
             />
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-text-light-75 dark:text-text-dark-75">
-              새 암호화 CID
-            </span>
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">새 암호화 CID</span>
             <input
               type="text"
               className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"

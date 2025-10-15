@@ -71,12 +71,7 @@ export const licenseManagerAbi = [
     name: "code",
     stateMutability: "view",
     inputs: [{ name: "codeId", type: "uint256" }],
-    outputs: [
-      { type: "bytes32" },
-      { type: "string" },
-      { type: "bool" },
-      { type: "bool" },
-    ],
+    outputs: [{ type: "bytes32" }, { type: "string" }, { type: "bool" }, { type: "bool" }],
   },
   {
     type: "function",

@@ -30,7 +30,9 @@ export async function POST(request: Request) {
       const rootAsString = rootCid.toString();
 
       if (rootAsString !== heliaCidString) {
-        throw new Error(`CAR root CID (${rootAsString}) does not match Helia CID (${heliaCidString}).`);
+        throw new Error(
+          `CAR root CID (${rootAsString}) does not match Helia CID (${heliaCidString}).`,
+        );
       }
 
       await uploadCarToStoracha(carBytes, heliaCidString);

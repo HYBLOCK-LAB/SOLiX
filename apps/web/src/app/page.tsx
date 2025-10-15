@@ -12,9 +12,9 @@ export default function Home() {
           SOLiX 실행 라이선스 허브
         </h1>
         <p className="mt-4 max-w-3xl text-base text-text-light-75 dark:text-text-dark-75 md:text-lg">
-          배포자는 코드를 등록하고 라이선스를 발급하며, 사용자는 보유한 실행권을
-          기반으로 안전하게 실행을 요청합니다. 온체인 이벤트에 맞춰 설계된
-          컴팩트한 위원회 아키텍처와 함께 동작하도록 구성되어 있습니다.
+          배포자는 코드를 등록하고 라이선스를 발급하며, 사용자는 보유한 실행권을 기반으로 안전하게
+          실행을 요청합니다. 온체인 이벤트에 맞춰 설계된 컴팩트한 위원회 아키텍처와 함께 동작하도록
+          구성되어 있습니다.
         </p>
 
         <dl className="mt-6 grid gap-6 text-sm md:grid-cols-3">
@@ -25,17 +25,13 @@ export default function Home() {
             </dd>
           </div>
           <div className="rounded-2xl border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-surface-dark-75 dark:bg-surface-dark-75">
-            <dt className="text-text-light-50 dark:text-text-dark-50">
-              컨트랙트
-            </dt>
+            <dt className="text-text-light-50 dark:text-text-dark-50">컨트랙트</dt>
             <dd className="mt-1 font-mono text-xs overflow-hidden text-ellipsis text-text-light-75 dark:text-text-dark-75">
               {clientEnv.NEXT_PUBLIC_CONTRACT_ADDRESS}
             </dd>
           </div>
           <div className="rounded-2xl border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-surface-dark-75 dark:bg-surface-dark-75">
-            <dt className="text-text-light-50 dark:text-text-dark-50">
-              가이드
-            </dt>
+            <dt className="text-text-light-50 dark:text-text-dark-50">가이드</dt>
             <dd className="mt-1 text-text-light-75 dark:text-text-dark-75">
               /session/week2/week2.md 참고
             </dd>

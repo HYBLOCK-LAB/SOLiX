@@ -19,7 +19,8 @@ export function RegisterCodeCard() {
     size: number;
   } | null>(null);
 
-  const { execute, isPending, isSuccess, transactionHash, error } = useLicenseManagerWrite("registerCode");
+  const { execute, isPending, isSuccess, transactionHash, error } =
+    useLicenseManagerWrite("registerCode");
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,7 +77,9 @@ export function RegisterCodeCard() {
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">코드 등록</h2>
+        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+          코드 등록
+        </h2>
         <p className="text-sm text-text-light-50 dark:text-text-dark-50">
           코드를 해시하여 온체인에 등록하세요.
         </p>
@@ -97,7 +100,9 @@ export function RegisterCodeCard() {
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-text-light-75 dark:text-text-dark-75">코드 해시 (keccak256)</span>
+          <span className="text-sm text-text-light-75 dark:text-text-dark-75">
+            코드 해시 (keccak256)
+          </span>
           <input
             type="text"
             className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 font-mono text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
@@ -129,11 +134,15 @@ export function RegisterCodeCard() {
 
       {encryptionDetails && (
         <section className="mt-6 rounded border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-primary-50 dark:bg-background-dark-75">
-          <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">암호화 세부 정보</h3>
+          <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">
+            암호화 세부 정보
+          </h3>
           <dl className="mt-3 space-y-2 text-xs text-text-light-75 dark:text-text-dark-75">
             <div>
               <dt className="font-semibold">암호화 알고리즘</dt>
-              <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">{encryptionDetails.algorithm}</dd>
+              <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
+                {encryptionDetails.algorithm}
+              </dd>
             </div>
             <div>
               <dt className="font-semibold">AES Key</dt>

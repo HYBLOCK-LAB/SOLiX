@@ -8,7 +8,8 @@ export function ExecutionRequestCard() {
   const [recipientPubKey, setRecipientPubKey] = useState<`0x${string}` | "">("");
   const [status, setStatus] = useState<string | null>(null);
 
-  const { execute, isPending, isSuccess, transactionHash, error } = useLicenseManagerWrite("requestCodeExecution");
+  const { execute, isPending, isSuccess, transactionHash, error } =
+    useLicenseManagerWrite("requestCodeExecution");
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,7 +29,9 @@ export function ExecutionRequestCard() {
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">실행 요청</h2>
+        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+          실행 요청
+        </h2>
         <p className="text-sm text-text-light-50 dark:text-text-dark-50">
           라이선스를 소모하여 실행을 요청합니다. 공개키는 실행 조각을 복호화할 키입니다.
         </p>
@@ -47,7 +50,9 @@ export function ExecutionRequestCard() {
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-text-light-75 dark:text-text-dark-75">수신자 공개키 (hex)</span>
+          <span className="text-sm text-text-light-75 dark:text-text-dark-75">
+            수신자 공개키 (hex)
+          </span>
           <input
             type="text"
             className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 font-mono text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"

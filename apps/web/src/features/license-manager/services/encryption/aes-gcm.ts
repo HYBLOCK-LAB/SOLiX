@@ -38,14 +38,16 @@ export async function encryptWithAesGcm(payload: BufferSource): Promise<Encrypti
   const key = await generateKey();
   const iv = createInitializationVector();
 
-  const payloadView = payload instanceof Uint8Array ? payload : new Uint8Array(payload as ArrayBuffer);
+  const payloadView =
+    payload instanceof Uint8Array ? payload : new Uint8Array(payload as ArrayBuffer);
   const normalizedPayload =
     payloadView.byteOffset === 0 && payloadView.byteLength === payloadView.buffer.byteLength
       ? payloadView
       : payloadView.slice();
 
   const payloadArrayBuffer =
-    normalizedPayload.byteOffset === 0 && normalizedPayload.byteLength === normalizedPayload.buffer.byteLength
+    normalizedPayload.byteOffset === 0 &&
+    normalizedPayload.byteLength === normalizedPayload.buffer.byteLength
       ? normalizedPayload.buffer
       : normalizedPayload.buffer.slice(
           normalizedPayload.byteOffset,

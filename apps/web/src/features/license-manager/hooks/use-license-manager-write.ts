@@ -17,26 +17,22 @@ type LicenseManagerWriteArgs<Name extends LicenseManagerWriteFunctionName> = Con
   Name
 >;
 
-export function useLicenseManagerWrite<Name extends LicenseManagerWriteFunctionName>(functionName: Name) {
-  const {
-    data: hash,
-    writeContractAsync,
-    isPending,
-    error: writeError,
-  } = useWriteContract();
+export function useLicenseManagerWrite<Name extends LicenseManagerWriteFunctionName>(
+  functionName: Name,
+) {
+  const { data: hash, writeContractAsync, isPending, error: writeError } = useWriteContract();
 
   const wait = useWaitForTransactionReceipt({ hash, query: { enabled: !!hash } });
 
   const execute = useMemo(
-    () =>
-      async (args: LicenseManagerWriteArgs<Name>) =>
-        writeContractAsync({
-          address: LICENSE_MANAGER_ADDRESS,
-          abi: licenseManagerAbi,
-          functionName,
-          args,
-        } as Parameters<typeof writeContractAsync>[0]),
-    [functionName, writeContractAsync]
+    () => async (args: LicenseManagerWriteArgs<Name>) =>
+      writeContractAsync({
+        address: LICENSE_MANAGER_ADDRESS,
+        abi: licenseManagerAbi,
+        functionName,
+        args,
+      } as Parameters<typeof writeContractAsync>[0]),
+    [functionName, writeContractAsync],
   );
 
   return {

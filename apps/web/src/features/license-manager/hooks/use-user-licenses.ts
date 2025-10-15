@@ -102,7 +102,12 @@ export function useUserLicenses() {
 
           const balance = Number(balanceRaw);
           const expiry = Number(expiryRaw);
-          const [codeHash, cipherCid, paused, exists] = codeInfoRaw as readonly [string, string, boolean, boolean];
+          const [codeHash, cipherCid, paused, exists] = codeInfoRaw as readonly [
+            string,
+            string,
+            boolean,
+            boolean,
+          ];
 
           if (!exists || balance === 0) {
             return null;
@@ -119,7 +124,9 @@ export function useUserLicenses() {
         }),
       );
 
-      return summaries.filter((summary): summary is UserLicenseSummary => summary !== null).sort((a, b) => b.codeId - a.codeId);
+      return summaries
+        .filter((summary): summary is UserLicenseSummary => summary !== null)
+        .sort((a, b) => b.codeId - a.codeId);
     },
   });
 

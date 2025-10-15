@@ -13,6 +13,8 @@ export function UserLicensesCard() {
   const { licenses, isLoading, error } = useUserLicenses();
   const [selectedCodeId, setSelectedCodeId] = useState<number | null>(null);
 
+  console.log(licenses, "licenses");
+
   useEffect(() => {
     if (licenses.length === 0) {
       setSelectedCodeId(null);
@@ -30,23 +32,33 @@ export function UserLicensesCard() {
 
   const expiryLabel =
     selectedLicense && selectedLicense.expiry > 0
-      ? formatDistanceToNowStrict(fromUnixTime(selectedLicense.expiry), { addSuffix: true })
+      ? formatDistanceToNowStrict(fromUnixTime(selectedLicense.expiry), {
+          addSuffix: true,
+        })
       : "만료 없음";
 
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">내 라이선스</h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">보유 중인 실행권 목록과 상세 정보를 확인하세요.</p>
+        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+          내 라이선스
+        </h2>
+        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+          보유 중인 실행권 목록과 상세 정보를 확인하세요.
+        </p>
       </header>
 
       <div className="rounded border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-50 dark:bg-background-dark-75">
         {isLoading ? (
           <p className="text-text-light-50 dark:text-text-dark-50">라이선스를 불러오는 중...</p>
         ) : error ? (
-          <p className="text-rose-400">라이선스 정보를 불러오지 못했습니다. 지갑 연결 상태를 확인해주세요.</p>
+          <p className="text-rose-400">
+            라이선스 정보를 불러오지 못했습니다. 지갑 연결 상태를 확인해주세요.
+          </p>
         ) : licenses.length === 0 ? (
-          <p className="text-text-light-50 dark:text-text-dark-50">보유 중인 라이선스가 없습니다.</p>
+          <p className="text-text-light-50 dark:text-text-dark-50">
+            보유 중인 라이선스가 없습니다.
+          </p>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -70,18 +82,26 @@ export function UserLicensesCard() {
             {selectedLicense && (
               <dl className="grid gap-2 text-xs text-text-light-75 dark:text-text-dark-75 md:grid-cols-2">
                 <div>
-                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">코드 ID</dt>
-                  <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">#{selectedLicense.codeId}</dd>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    코드 ID
+                  </dt>
+                  <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
+                    #{selectedLicense.codeId}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">실행 가능 횟수</dt>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    실행 가능 횟수
+                  </dt>
                   <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
                     {selectedLicense.balance.toLocaleString()}
                   </dd>
                 </div>
                 <div>
                   <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">만료</dt>
-                  <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">{expiryLabel}</dd>
+                  <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
+                    {expiryLabel}
+                  </dd>
                 </div>
                 <div>
                   <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">상태</dt>
@@ -90,13 +110,17 @@ export function UserLicensesCard() {
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">Code Hash</dt>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    Code Hash
+                  </dt>
                   <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
                     {trimHash(selectedLicense.codeHash)}
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">Cipher CID</dt>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    Cipher CID
+                  </dt>
                   <dd className="mt-1 break-all font-mono text-text-light-100 dark:text-text-dark-100">
                     {selectedLicense.cipherCid || "-"}
                   </dd>

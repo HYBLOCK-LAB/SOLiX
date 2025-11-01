@@ -13,8 +13,6 @@ export function UserLicensesCard() {
   const { licenses, isLoading, error } = useUserLicenses();
   const [selectedCodeId, setSelectedCodeId] = useState<number | null>(null);
 
-  console.log(licenses, "licenses");
-
   useEffect(() => {
     if (licenses.length === 0) {
       setSelectedCodeId(null);

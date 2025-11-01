@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useCodeInfo } from "../../hooks/use-code-info";
 import { useLicenseManagerWrite } from "../../hooks/use-license-manager-write";
+import { useOwnedCodes } from "../../hooks/use-owned-codes";
 
 export function ManageCodeStateCard() {
   const [codeId, setCodeId] = useState(0);
@@ -13,6 +14,16 @@ export function ManageCodeStateCard() {
   const pause = useLicenseManagerWrite("pauseCodeExecution");
   const unpause = useLicenseManagerWrite("unpauseCodeExecution");
   const updateMetadata = useLicenseManagerWrite("updateCodeMetadata");
+  const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
+
+  const hasOwnedCodes = ownedCodes.length > 0;
+  const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
+
+  useEffect(() => {
+    if (!codeId && ownedCodes.length > 0) {
+      setCodeId(ownedCodes[0].codeId);
+    }
+  }, [codeId, ownedCodes]);
 
   const onUpdateMetadata = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,13 +71,29 @@ export function ManageCodeStateCard() {
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-2">
           <span className="text-sm text-text-light-75 dark:text-text-dark-75">코드 ID</span>
-          <input
-            type="number"
-            min={0}
+          <select
             className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
-            value={codeId}
-            onChange={(event) => setCodeId(Number(event.target.value))}
-          />
+            value={codeSelectValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              setCodeId(value ? Number(value) : 0);
+            }}
+            disabled={isCodesLoading || !hasOwnedCodes}
+          >
+            <option value="">
+              {isCodesLoading ? "코드 목록을 불러오는 중..." : "코드를 선택하세요"}
+            </option>
+            {ownedCodes.map((ownedCode) => (
+              <option key={ownedCode.codeId} value={ownedCode.codeId}>
+                #{ownedCode.codeId} · {ownedCode.cipherCid}
+              </option>
+            ))}
+          </select>
+          {!isCodesLoading && !hasOwnedCodes && (
+            <span className="text-xs text-text-light-50 dark:text-text-dark-50">
+              등록된 코드가 없습니다. 먼저 코드를 등록하세요.
+            </span>
+          )}
         </label>
 
         <div className="rounded border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-50 dark:bg-background-dark-75">

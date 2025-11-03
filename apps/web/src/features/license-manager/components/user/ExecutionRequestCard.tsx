@@ -103,7 +103,7 @@ export function ExecutionRequestCard() {
 
         <button
           type="submit"
-          className="rounded-lg bg-accent-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-accent-75 disabled:cursor-not-allowed disabled:bg-accent-50 disabled:text-text-dark-75"
+          className="rounded-lg bg-accent-100 px-4 py-[10px] text-sm font-bold uppercase tracking-wide text-text-dark-100 hover:bg-accent-75 disabled:bg-accent-25 disabled:text-text-dark-50"
           disabled={isPending || isPreparing}
         >
           {isPending || isPreparing ? "요청 전송 중..." : "실행 요청"}
@@ -120,7 +120,11 @@ export function ExecutionRequestCard() {
         {isSuccess && transactionHash && (
           <p className="text-secondary-100">요청 완료! Tx: {transactionHash.slice(0, 8)}...</p>
         )}
-        {error && <p className="text-rose-400">오류: {error.message}</p>}
+        {error && (
+          <p className="max-h-[4.5rem] overflow-hidden text-rose-500 line-clamp-3">
+            오류: {error.message}
+          </p>
+        )}
       </footer>
     </section>
   );

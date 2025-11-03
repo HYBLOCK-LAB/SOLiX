@@ -3,17 +3,17 @@
 
 :root {
   color-scheme: light;
-  --background: theme(colors.background.light.100);
-  --surface: theme(colors.surface.light.100);
-  --foreground: theme(colors.text.light.100);
+  --background: theme("colors.background.light.100");
+  --surface: theme("colors.surface.light.100");
+  --foreground: theme("colors.text.light.100");
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --background: theme(colors.background.dark.100);
-    --surface: theme(colors.surface.dark.100);
-    --foreground: theme(colors.text.dark.100);
+    --background: theme("colors.background.dark.100");
+    --surface: theme("colors.surface.dark.100");
+    --foreground: theme("colors.text.dark.100");
   }
 }
 
@@ -24,6 +24,21 @@ body {
 }
 
 ::selection {
-  background-color: theme(colors.accent.50);
-  color: theme(colors.primary.100);
+  background-color: theme("colors.accent.50");
+  color: theme("colors.primary.100");
+}
+
+@layer base {
+  button {
+    @apply font-semibold transition-colors duration-150 ease-out;
+  }
+
+  button:enabled {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    @apply opacity-70;
+  }
 }

@@ -64,7 +64,7 @@ export function UserLicensesCard() {
         {isLoading ? (
           <p className="text-text-light-50 dark:text-text-dark-50">라이선스를 불러오는 중...</p>
         ) : error ? (
-          <p className="text-rose-400">
+          <p className="max-h-[4.5rem] overflow-hidden text-rose-500">
             라이선스 정보를 불러오지 못했습니다. 지갑 연결 상태를 확인해주세요.
           </p>
         ) : licenses.length === 0 ? (

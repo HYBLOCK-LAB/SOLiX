@@ -9,7 +9,7 @@ export default function Home() {
 
       <section className="rounded-3xl border border-primary-25 bg-gradient-to-br from-background-light-100 via-surface-light-100 to-secondary-25 p-10 shadow-xl dark:border-surface-dark-75 dark:from-background-dark-100 dark:via-surface-dark-100 dark:to-primary-75">
         <h1 className="text-3xl font-semibold text-primary-100 dark:text-text-dark-100 md:text-4xl">
-          SOLiX 실행 라이선스 허브
+          SOLiX 라이선스 대시보드
         </h1>
         <p className="mt-4 max-w-3xl text-base text-text-light-75 dark:text-text-dark-75 md:text-lg">
           배포자는 코드를 등록하고 라이선스를 발급하며, 사용자는 보유한 실행권을 기반으로 안전하게

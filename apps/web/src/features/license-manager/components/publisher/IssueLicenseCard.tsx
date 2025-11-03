@@ -6,13 +6,18 @@ import { useAccount } from "wagmi";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { useOwnedCodes } from "../../hooks/useOwnedCodes";
 import {
-  dedupeFavorites,
+  createDefaultFavoriteLabel,
   readRecipientFavorites,
-  writeRecipientFavorites,
+  removeRecipientFavorite,
+  RECIPIENT_FAVORITES_LIMIT,
+  RECIPIENT_FAVORITE_LABEL_MAX_LENGTH,
+  saveRecipientFavorite,
   type RecipientFavorite,
 } from "../../services/recipientFavorites";
 
-const MAX_FAVORITES = 10;
+const CONNECTED_WALLET_LABEL = "연결된 지갑";
+
+type DisplayFavorite = RecipientFavorite & { readOnly?: boolean };
 
 function shortenAddress(address: `0x${string}`) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -26,6 +31,8 @@ export function IssueLicenseCard() {
   const [expiry, setExpiry] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<RecipientFavorite[]>([]);
+  const [favoriteLabel, setFavoriteLabel] = useState("");
+  const [isLabelEditorVisible, setIsLabelEditorVisible] = useState(false);
 
   const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
 
@@ -33,54 +40,118 @@ export function IssueLicenseCard() {
     useLicenseManagerWrite("issueLicense");
 
   useEffect(() => {
-    const stored = readRecipientFavorites();
-    const normalizedConnected = account.address
-      ? (getAddress(account.address) as `0x${string}`)
-      : null;
+    setFavorites(readRecipientFavorites());
+  }, []);
 
-    const initial = normalizedConnected
-      ? dedupeFavorites([{ address: normalizedConnected, label: "내 지갑" }, ...stored])
-      : dedupeFavorites(stored);
+  const normalizedAccount = useMemo(
+    () => (account.address ? (getAddress(account.address) as `0x${string}`) : null),
+    [account.address],
+  );
 
-    setFavorites(initial.slice(0, MAX_FAVORITES));
-
-    if (initial.length !== stored.length && normalizedConnected) {
-      writeRecipientFavorites(initial.slice(0, MAX_FAVORITES));
-    }
-  }, [account.address]);
+  const normalizedRecipient = useMemo(
+    () => (recipient && isAddress(recipient) ? (getAddress(recipient) as `0x${string}`) : null),
+    [recipient],
+  );
 
   useEffect(() => {
-    if (account.address) {
-      const normalized = getAddress(account.address) as `0x${string}`;
-      setRecipient((prev) => (prev ? prev : normalized));
+    if (normalizedAccount) {
+      setRecipient((prev) => (prev ? prev : normalizedAccount));
+      return;
     }
-  }, [account.address]);
+    setRecipient("");
+  }, [normalizedAccount]);
 
   const hasOwnedCodes = ownedCodes.length > 0;
   const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
+  const isFavoritesFull = favorites.length >= RECIPIENT_FAVORITES_LIMIT;
+
+  const existingFavoriteForRecipient = useMemo(() => {
+    if (!normalizedRecipient) {
+      return null;
+    }
+    return (
+      favorites.find(
+        (favorite) => favorite.address.toLowerCase() === normalizedRecipient.toLowerCase(),
+      ) ?? null
+    );
+  }, [favorites, normalizedRecipient]);
+
+  const addFavoriteButtonText = isLabelEditorVisible ? "즐겨찾기 저장" : "즐겨찾기 추가";
+  const isAddButtonDisabled =
+    !isLabelEditorVisible && !existingFavoriteForRecipient && isFavoritesFull;
+
+  const displayFavorites: DisplayFavorite[] = useMemo(() => {
+    const persisted = normalizedAccount
+      ? favorites.filter(
+          (favorite) => favorite.address.toLowerCase() !== normalizedAccount.toLowerCase(),
+        )
+      : favorites;
+
+    if (!normalizedAccount) {
+      return persisted;
+    }
+
+    return [
+      {
+        address: normalizedAccount,
+        label: CONNECTED_WALLET_LABEL,
+        readOnly: true,
+      },
+      ...persisted,
+    ];
+  }, [favorites, normalizedAccount]);
 
   const handleAddFavorite = () => {
+    if (!isLabelEditorVisible) {
+      if (!normalizedRecipient) {
+        setStatus("올바른 수령자 주소를 먼저 입력해주세요.");
+        return;
+      }
+
+      setIsLabelEditorVisible(true);
+      setFavoriteLabel(
+        existingFavoriteForRecipient?.label ?? createDefaultFavoriteLabel(favorites.length),
+      );
+      setStatus(
+        existingFavoriteForRecipient
+          ? "즐겨찾기 이름을 수정하세요."
+          : "즐겨찾기 이름을 입력하세요.",
+      );
+      return;
+    }
+
+    if (!normalizedRecipient) {
+      setStatus("올바른 수령자 주소를 입력 후 즐겨찾기를 저장하세요.");
+      return;
+    }
+
+    const isExistingFavorite = Boolean(existingFavoriteForRecipient);
+
+    if (!isExistingFavorite && isFavoritesFull) {
+      setStatus(`즐겨찾기는 최대 ${RECIPIENT_FAVORITES_LIMIT}개까지 저장할 수 있습니다.`);
+      return;
+    }
+
     if (!recipient || !isAddress(recipient)) {
       setStatus("올바른 수령자 주소를 입력 후 즐겨찾기에 추가하세요.");
       return;
     }
 
-    const normalized = getAddress(recipient) as `0x${string}`;
-    if (favorites.some((fav) => fav.address.toLowerCase() === normalized.toLowerCase())) {
-      setStatus("이미 즐겨찾기에 등록되어 있습니다.");
-      return;
-    }
-
-    const next = dedupeFavorites([{ address: normalized }, ...favorites]).slice(0, MAX_FAVORITES);
+    const next = saveRecipientFavorite({
+      address: normalizedRecipient,
+      label: favoriteLabel.trim() || undefined,
+    });
     setFavorites(next);
-    writeRecipientFavorites(next);
-    setStatus("즐겨찾기에 추가되었습니다.");
+    setFavoriteLabel("");
+    setIsLabelEditorVisible(false);
+    setStatus(
+      isExistingFavorite ? "즐겨찾기 정보가 업데이트되었습니다." : "즐겨찾기에 추가되었습니다.",
+    );
   };
 
   const handleRemoveFavorite = (address: `0x${string}`) => {
-    const next = favorites.filter((fav) => fav.address.toLowerCase() !== address.toLowerCase());
+    const next = removeRecipientFavorite(address);
     setFavorites(next);
-    writeRecipientFavorites(next);
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -158,23 +229,50 @@ export function IssueLicenseCard() {
             value={recipient}
             onChange={(event) => setRecipient(event.target.value as `0x${string}` | "")}
           />
+          {isLabelEditorVisible && (
+            <input
+              type="text"
+              maxLength={RECIPIENT_FAVORITE_LABEL_MAX_LENGTH}
+              className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
+              placeholder="즐겨찾기 이름을 입력하세요"
+              value={favoriteLabel}
+              onChange={(event) => setFavoriteLabel(event.target.value)}
+            />
+          )}
           <div className="flex gap-2">
             <button
               type="button"
               className="rounded bg-secondary-50 px-3 py-1 text-xs font-semibold text-primary-100 transition hover:bg-secondary-75 dark:text-text-dark-100"
               onClick={handleAddFavorite}
+              disabled={isAddButtonDisabled}
             >
-              즐겨찾기 추가
+              {addFavoriteButtonText}
             </button>
+            {isLabelEditorVisible && (
+              <button
+                type="button"
+                className="rounded border border-primary-25 px-3 py-1 text-xs text-text-light-75 transition hover:border-rose-300 hover:text-rose-400 dark:border-primary-50 dark:text-text-dark-75"
+                onClick={() => {
+                  setIsLabelEditorVisible(false);
+                  setFavoriteLabel("");
+                  setStatus(null);
+                }}
+              >
+                취소
+              </button>
+            )}
           </div>
         </label>
 
-        {favorites.length > 0 && (
+        {displayFavorites.length > 0 && (
           <div className="rounded-lg border border-primary-25 bg-background-light-50 p-3 text-xs text-text-light-75 shadow-sm dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-75">
             <p className="mb-2 font-semibold text-text-light-50 dark:text-text-dark-50">즐겨찾기</p>
             <div className="flex flex-wrap gap-2">
-              {favorites.map((favorite) => (
-                <div key={favorite.address} className="flex items-center gap-1">
+              {displayFavorites.map((favorite) => (
+                <div
+                  key={`${favorite.address}-${favorite.label ?? ""}`}
+                  className="flex items-center gap-1"
+                >
                   <button
                     type="button"
                     className="rounded-full border border-primary-25 px-3 py-1 font-mono text-[11px] text-primary-100 transition hover:bg-secondary-25 dark:border-primary-50 dark:text-text-dark-100"
@@ -182,7 +280,7 @@ export function IssueLicenseCard() {
                   >
                     {favorite.label ?? shortenAddress(favorite.address)}
                   </button>
-                  {favorite.label !== "내 지갑" && (
+                  {!favorite.readOnly && (
                     <button
                       type="button"
                       className="text-[10px] text-text-light-50 transition hover:text-rose-400 dark:text-text-dark-50"

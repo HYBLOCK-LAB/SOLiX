@@ -17,7 +17,7 @@ export default function Home() {
           구성되어 있습니다.
         </p>
 
-        <dl className="mt-6 grid gap-6 text-sm md:grid-cols-3">
+        <dl className="mt-6 grid gap-6 text-sm md:grid-cols-2">
           <div className="rounded-2xl border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-surface-dark-75 dark:bg-surface-dark-75">
             <dt className="text-text-light-50 dark:text-text-dark-50">체인</dt>
             <dd className="mt-1 text-lg font-semibold text-primary-100 dark:text-text-dark-100">
@@ -28,12 +28,6 @@ export default function Home() {
             <dt className="text-text-light-50 dark:text-text-dark-50">컨트랙트</dt>
             <dd className="mt-1 font-mono text-xs overflow-hidden text-ellipsis text-text-light-75 dark:text-text-dark-75">
               {clientEnv.NEXT_PUBLIC_CONTRACT_ADDRESS}
-            </dd>
-          </div>
-          <div className="rounded-2xl border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-surface-dark-75 dark:bg-surface-dark-75">
-            <dt className="text-text-light-50 dark:text-text-dark-50">가이드</dt>
-            <dd className="mt-1 text-text-light-75 dark:text-text-dark-75">
-              /session/week2/week2.md 참고
             </dd>
           </div>
         </dl>

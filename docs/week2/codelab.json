@@ -1,0 +1,26 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2025-11-03T23:32:39+09:00",
+  "id": "html",
+  "duration": 110,
+  "title": "Week 2: Smart Contract 개발",
+  "authors": "Jiseop Shin",
+  "summary": "프로젝트 요구사항에 알맞게 Smart Contract를 개발한다.",
+  "source": "week2.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "solidity"
+  ],
+  "tags": [
+    "blockchain",
+    "smartcontracts",
+    "solidity"
+  ],
+  "url": "html"
+}

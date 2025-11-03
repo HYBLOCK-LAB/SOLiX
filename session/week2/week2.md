@@ -29,7 +29,11 @@ Duration: 5
 
 코드 배포, 토큰 매매, 다운로드 요청 등 스마트 컨트랙트에 들어가야 할 기능을 구현합니다.
 
-#### 4. IPFS 사용법 익히기
+#### 4. 배포 및 테스트
+
+작성한 스마트 컨트랙트를 Testnet에 배포해보고 정상적으로 동작하는지 확인합니다.
+
+#### 5. IPFS 사용법 익히기
 
 IPFS에 대해 알아보고 사용법을 익힙니다.
 
@@ -1244,6 +1248,121 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     }
 }
 ```
+
+## 배포 및 테스트
+
+### 배포
+
+`LicenseManager` 컨트랙트는 `apps/contracts` 폴더 안에서 Hardhat으로 관리합니다. 배포 전에 의존성을 설치하고 네트워크 설정을 준비해 주세요.
+
+#### 1. 의존성 설치 및 환경 변수 설정
+
+```bash
+cd apps/contracts
+npm install # 또는 pnpm/yarn 사용 가능
+```
+
+#### 2. 컴파일
+
+```bash
+npx hardhat compile --profile production
+
+```
+
+`production` 프로필은 최적화 옵션을 켠 상태로 컴파일합니다. `--profile production` 플래그를 생략해도 됩니다.
+
+#### 3. 로컬 네트워크 배포
+
+먼저, Hardhat이 제공하는 로컬 네트워크에 컨트랙트를 올려봅시다. Ignition 모듈을 실행합니다.
+
+```bash
+npx hardhat ignition deploy ignition/modules/LicenseManager.ts
+```
+
+- 기본 `baseUri` 파라미터는 `ipfs://base/{id}.json`입니다. 커스터마이징이 필요하면 `--parameters LicenseManagerModule.baseUri="ipfs://.../{id}.json"` 옵션을 덧붙이세요.
+
+#### 4. Sepolia 테스트넷 배포
+
+Sepolia로 배포할 땐 .env에 입력한 RPC와 프라이빗키가 사용됩니다. `.env` 파일을 만들어주고 `SEPOLIA_RPC_URL`, `SEPOLIA_PRIVATE_KEY` 값을 채워주세요. 지난 세션때 넣은 것과 동일하게, `SEPOLIA_RPC_URL`는 **Infura에서 발급받은 RPC URL이고** `SEPOLIA_PRIVATE_KEY`는 **metamask에서 생성한 계정의 개인 키** 입니다.
+
+```bash
+cp .env.example .env
+```
+
+배포하기 전에 프라이빗키가 담긴 계정에 충분한 sepolia ETH가 있는지 꼭 확인하세요.
+
+```bash
+npx hardhat ignition deploy ignition/modules/LicenseManager.ts --network sepolia
+
+```
+
+<aside class="negative"><p>hardhat은 deployment-id를 기준으로 배포를 실행합니다. 즉, 동일한 deployment-id로 같은 모듈/파라미터를 가진다면 재실행하지 않습니다. 재배포가 필요한 경우 <code> --deployment-id license-manager-$(date +%s)</code> 옵션을 붙여서 재배포해주세요.</p></aside>
+
+![deployment sepolia](./images/deployment_sepolia.png)
+
+배포 후 콘솔에 출력되는 `licenseManager` 주소를 따로 기록해 두세요. 프론트엔드 연동 및 이후 트랜잭션 검증에 사용합니다.
+
+#### 5. Etherscan에서 contract verifying
+
+스마트 컨트랙트를 배포하면 주소로는 바이트코드만 확인할 수 있습니다. Etherscan에서 소스 코드를 검증(verify)해 두면 누구나 원본 코드를 열람하고 ABI를 재활용할 수 있어 서비스 신뢰도가 크게 높아집니다.
+
+- 투명성 확보: 코드 내용과 컴파일 설정이 공개되어 사용자와 감사자가 동작을 직접 확인할 수 있습니다.
+- 신뢰도 향상: 서드파티 툴과 지갑이 컨트랙트를 `verified` 상태로 인식해 경고 없이 호출할 수 있습니다.
+- 개발 편의: Etherscan이 ABI를 자동 생성해주므로 프론트엔드나 스크립트에서 재사용하기 쉽습니다.
+
+검증은 [Etherscan](https://sepolia.etherscan.io/)에서 컨트랙트 주소를 열고 `Contract` 탭 → `Verify & Publish` 버튼을 눌러 진행합니다. 다음과 같이 ㄴ배포에 사용한 컴파일러 버전, 최적화 설정, constructor 인자를 그대로 입력해 주세요.
+
+![etherscan verifying web0](./images/etherscan_verifying_web_1.png)
+
+완료가 되면 컴파일 옵션을 json 파일로 넘겨줘야합니다. json파일을 하나 만들어 넣어주세요. 안에 Standard JSON Input 붙여넣습니다. 컴파일 시 생성된 json 파일(`artifacts/build-info/<hash>.json`)에서 "input" 객체 전체를 통째로 복사해 붙여넣어주세요. 이제 Etherscan의 입력 박스에 붙여넣기 하세요.
+
+![etherscan verifying web0](./images/etherscan_verifying_web_2.png)
+
+<aside class="negative"><p>이 settings 안의 optimizer.enabled, runs, evmVersion 등이 실제 컴파일 설정이므로 반드시 원본 그대로 유지돼야 검증이 성공합니다.</p></aside>
+
+동일한 과정을 CLI로 자동화할 수도 있습니다. Hardhat 프로젝트 루트에서 다음 명령을 실행하면 Etherscan API를 통해 검증이 제출됩니다. `"ipfs://base/{id}.json"`는 컨트랙트로 전달할 argument입니다.
+
+```bash
+npx hardhat verify --build-profile production --network sepolia <DEPLOYED_ADDRESS> "ipfs://base/{id}.json"
+```
+
+검증이 완료되면 Etherscan의 `Contract` 탭에 Verified 뱃지가 표시되고, 코드/ABI가 공개됩니다.
+
+![etherscan verifying web0](./images/etherscan_verifying_web_3.png)
+
+### 테스트
+
+#### 1. 컨트랙트 테스트 실행
+
+```bash
+cd apps/contracts
+npx hardhat test
+```
+
+- 테스트는 `apps/contracts/test/*.test.ts`에 정의되어 있으며, 컨트랙트 배포, 기능 호출, 이벤트 검증까지 한 번에 진행합니다.
+- 에러 메시지를 확인하거나 특정 함수만 빠르게 검증하려면 `--grep` 옵션을 이용해 필터링 할 수 있습니다.
+
+```bash
+npx hardhat test test/LicenseManager.test.ts --grep "function_name"
+```
+
+#### 2. 웹 환경 변수 세팅
+
+License관리를 위한 대시보드는 `apps/web`에 위치합니다. 먼저 환경 변수를 설정합시다. 특히, 배포된 컨트랙트 주소와 RPC 정보를 공유해야 dApp에서 호출할 수 있습니다.
+
+```bash
+cd ../web
+cp .env.example .env
+```
+
+`.env`에서 아래 값을 필수로 갱신합니다.
+
+- `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다.. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
+- `NEXT_PUBLIC_CHAIN_ID`: 로컬은 31337, Sepolia는 11155111입니다.
+- `NEXT_PUBLIC_CONTRACT_ADDRESS`: 앞서 배포한 LicenseManager 컨트랙트 주소입니다.
+- `NEXT_PUBLIC_WALLETCONNECT_ID`: WalletConnect 프로젝트를 사용하면 고유 ID로 교체해주세요.
+
+설정을 마치면 `npm run dev`로 웹 UI를 실행하고, 지갑을 연결해 트랜잭션 흐름을 검증합니다. 로컬 네트워크를 띄운 상태에서 웹 UI를 실행하고, 메타마스크/지갑 연결 후 `registerCode`, `issueLicense`, `requestCodeExecution` 플로우를 직접 수행합니다. 트랜잭션이 실패하면 Hardhat 콘솔과 브라우저 개발자 도구에서 에러 로그를 확인하고, 컨트랙트 이벤트(`RunRequested`, `CodeRegistered` 등)를 통해 상태 변화를 검증하세요.
 
 ## IPFS 사용법 익히기
 

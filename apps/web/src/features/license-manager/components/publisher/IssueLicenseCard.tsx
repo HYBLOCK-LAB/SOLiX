@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
@@ -34,7 +34,11 @@ export function IssueLicenseCard() {
   const [favoriteLabel, setFavoriteLabel] = useState("");
   const [isLabelEditorVisible, setIsLabelEditorVisible] = useState(false);
 
-  const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
+  const {
+    codes: ownedCodes,
+    isLoading: isCodesLoading,
+    refetch: refetchOwnedCodes,
+  } = useOwnedCodes();
 
   const { execute, isPending, isSuccess, transactionHash, error } =
     useLicenseManagerWrite("issueLicense");
@@ -181,15 +185,34 @@ export function IssueLicenseCard() {
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    setStatus(null);
+    setFavorites(readRecipientFavorites());
+    setIsLabelEditorVisible(false);
+    setFavoriteLabel("");
+    setRuns(1);
+    setExpiry("");
+    void refetchOwnedCodes();
+  }, [refetchOwnedCodes]);
+
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
-          라이선스 발급
-        </h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
-          소유한 코드에 대해 실행권을 발급합니다.
-        </p>
+      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+            라이선스 발급
+          </h2>
+          <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+            소유한 코드에 대해 실행권을 발급합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary-50 bg-background-light-50 px-3 py-2 text-xs font-semibold text-primary-100 hover:border-primary-75 hover:text-primary-75 dark:border-primary-75 dark:bg-background-dark-75 dark:text-text-dark-75 dark:hover:border-primary-100 dark:hover:text-text-dark-100"
+        >
+          새로고침
+        </button>
       </header>
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>

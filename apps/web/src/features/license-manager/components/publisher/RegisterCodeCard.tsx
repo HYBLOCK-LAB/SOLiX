@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { createEncryptedArtifact, uploadEncryptedArtifact } from "../../services/artifact";
 import { storageMode } from "../../../../lib/storageConfig";
@@ -74,15 +74,32 @@ export function RegisterCodeCard() {
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    setCodeHash("");
+    setCipherCid("");
+    setStatus(null);
+    setEncryptionDetails(null);
+    setIsProcessingFile(false);
+  }, []);
+
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
-          코드 등록
-        </h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
-          코드를 해시하여 온체인에 등록하세요.
-        </p>
+      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+            코드 등록
+          </h2>
+          <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+            코드를 해시하여 온체인에 등록하세요.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary-50 bg-background-light-50 px-3 py-2 text-xs font-semibold text-primary-100 hover:border-primary-75 hover:text-primary-75 dark:border-primary-75 dark:bg-background-dark-75 dark:text-text-dark-75 dark:hover:border-primary-100 dark:hover:text-text-dark-100"
+        >
+          새로고침
+        </button>
       </header>
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>

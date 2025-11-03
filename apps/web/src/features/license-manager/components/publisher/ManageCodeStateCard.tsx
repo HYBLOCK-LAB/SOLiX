@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useCodeInfo } from "../../hooks/useCodeInfo";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { useOwnedCodes } from "../../hooks/useOwnedCodes";
@@ -12,12 +12,16 @@ export function ManageCodeStateCard() {
   const [cipherCid, setCipherCid] = useState("");
   const [codeHash, setCodeHash] = useState<`0x${string}` | "">("");
 
-  const { code, isLoading, refetch } = useCodeInfo(codeId);
+  const { code, isLoading, refetch: refetchCodeInfo } = useCodeInfo(codeId);
   const pause = useLicenseManagerWrite("pauseCodeExecution");
   const unpause = useLicenseManagerWrite("unpauseCodeExecution");
   const updateName = useLicenseManagerWrite("updateCodeMetadata");
   const updateCodeMutation = useLicenseManagerWrite("updateCode");
-  const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
+  const {
+    codes: ownedCodes,
+    isLoading: isCodesLoading,
+    refetch: refetchOwnedCodes,
+  } = useOwnedCodes();
 
   const hasOwnedCodes = ownedCodes.length > 0;
   const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
@@ -40,7 +44,7 @@ export function ManageCodeStateCard() {
     event.preventDefault();
     try {
       await updateName.execute([BigInt(codeId), name]);
-      await refetch();
+      await refetchCodeInfo();
     } catch {
       // 에러는 훅에서 노출됨
     }
@@ -55,7 +59,7 @@ export function ManageCodeStateCard() {
         (cipherCid || code?.cipherCid) ?? "",
         version || code?.version || "",
       ]);
-      await refetch();
+      await refetchCodeInfo();
     } catch {
       // 에러는 훅에서 노출됨
     }
@@ -64,7 +68,7 @@ export function ManageCodeStateCard() {
   const onPause = async () => {
     try {
       await pause.execute([BigInt(codeId)]);
-      await refetch();
+      await refetchCodeInfo();
     } catch {
       // handled by hook
     }
@@ -73,21 +77,34 @@ export function ManageCodeStateCard() {
   const onUnpause = async () => {
     try {
       await unpause.execute([BigInt(codeId)]);
-      await refetch();
+      await refetchCodeInfo();
     } catch {
       // handled by hook
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    void Promise.all([refetchOwnedCodes(), refetchCodeInfo()]);
+  }, [refetchCodeInfo, refetchOwnedCodes]);
+
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
-          코드 상태 관리
-        </h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
-          일시정지, 메타데이터 갱신을 수행합니다.
-        </p>
+      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+            코드 상태 관리
+          </h2>
+          <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+            일시정지, 메타데이터 갱신을 수행합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary-50 bg-background-light-50 px-3 py-2 text-xs font-semibold text-primary-100 hover:border-primary-75 hover:text-primary-75 dark:border-primary-75 dark:bg-background-dark-75 dark:text-text-dark-75 dark:hover:border-primary-100 dark:hover:text-text-dark-100"
+        >
+          새로고침
+        </button>
       </header>
 
       <div className="flex flex-col gap-4">

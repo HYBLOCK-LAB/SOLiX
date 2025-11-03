@@ -1,4 +1,4 @@
-import { toHex } from "../../utils/byte-encoding";
+import { toHex } from "../../utils/byteEncoding";
 import type { EncryptionResult } from "./types";
 
 const AES_ALGORITHM = "AES-GCM";

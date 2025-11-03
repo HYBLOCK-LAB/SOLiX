@@ -1,4 +1,4 @@
-import { hashFile } from "../../utils/hash-file";
+import { hashFile } from "../../utils/hashFile";
 import { encryptWithAesGcm } from "../encryption";
 import type { EncryptedArtifact } from "./types";
 

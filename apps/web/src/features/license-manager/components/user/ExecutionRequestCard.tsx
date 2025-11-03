@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useLicenseManagerWrite } from "../../hooks/use-license-manager-write";
-import { useRegisteredCodes } from "../../hooks/use-registered-codes";
+import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
+import { useRegisteredCodes } from "../../hooks/useRegisteredCodes";
 
 export function ExecutionRequestCard() {
   const [codeId, setCodeId] = useState(0);

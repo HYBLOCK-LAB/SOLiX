@@ -3,14 +3,14 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { useLicenseManagerWrite } from "../../hooks/use-license-manager-write";
-import { useOwnedCodes } from "../../hooks/use-owned-codes";
+import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
+import { useOwnedCodes } from "../../hooks/useOwnedCodes";
 import {
   dedupeFavorites,
   readRecipientFavorites,
   writeRecipientFavorites,
   type RecipientFavorite,
-} from "../../services/recipient-favorites";
+} from "../../services/recipientFavorites";
 
 const MAX_FAVORITES = 10;
 

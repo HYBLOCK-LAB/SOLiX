@@ -3,7 +3,7 @@ import type { AgentDataExport } from "@storacha/access/types";
 import { create as createStorachaClient } from "@storacha/client";
 import type { Client } from "@storacha/client";
 import { Buffer } from "buffer";
-import { requireStorachaAgentExport } from "../../lib/server-env";
+import { requireStorachaAgentExport } from "../../lib/serverEnv";
 
 type Serializable = AgentDataExport;
 

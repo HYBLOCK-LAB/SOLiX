@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useCodeInfo } from "../../hooks/use-code-info";
-import { useLicenseManagerWrite } from "../../hooks/use-license-manager-write";
-import { useOwnedCodes } from "../../hooks/use-owned-codes";
+import { useCodeInfo } from "../../hooks/useCodeInfo";
+import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
+import { useOwnedCodes } from "../../hooks/useOwnedCodes";
 
 export function ManageCodeStateCard() {
   const [codeId, setCodeId] = useState(0);

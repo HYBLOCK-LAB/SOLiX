@@ -12,7 +12,7 @@ import {
   loadLicenseSummary,
   pickCodeIdsFromTransferBatchLogs,
   pickCodeIdsFromTransferSingleLogs,
-} from "../services/license-summary";
+} from "../services/licenseSummary";
 
 export function useUserLicenses() {
   const account = useAccount();

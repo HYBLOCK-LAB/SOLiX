@@ -1,3 +1,3 @@
-export { createEncryptedArtifact } from "./create-encrypted-artifact";
-export { uploadEncryptedArtifact } from "./upload-encrypted-artifact";
+export { createEncryptedArtifact } from "./createEncryptedArtifact";
+export { uploadEncryptedArtifact } from "./uploadEncryptedArtifact";
 export type { EncryptedArtifact, UploadResponsePayload, CodeRegistrationArtifact } from "./types";

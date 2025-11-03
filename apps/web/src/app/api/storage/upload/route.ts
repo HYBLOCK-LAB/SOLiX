@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { addBytesToHelia } from "../../../../server/ipfs/add-bytes";
-import { createCarFromBytes } from "../../../../server/ipfs/create-car";
+import { addBytesToHelia } from "../../../../server/ipfs/addBytes";
+import { createCarFromBytes } from "../../../../server/ipfs/createCar";
 import { uploadCarToStoracha } from "../../../../server/storacha/upload";
-import { storageMode, STORAGE_MODES } from "../../../../lib/storage-config";
+import { storageMode, STORAGE_MODES } from "../../../../lib/storageConfig";
 
 const CIPHER_FIELD_NAME = "cipher";
 const MAX_UPLOAD_BYTES = 256 * 1024 * 1024;

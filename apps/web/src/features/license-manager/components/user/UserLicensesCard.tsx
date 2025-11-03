@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNowStrict, fromUnixTime } from "date-fns";
-import { useUserLicenses } from "../../hooks/use-user-licenses";
+import { useUserLicenses } from "../../hooks/useUserLicenses";
 
 function trimHash(value: string) {
   if (!value) return "-";

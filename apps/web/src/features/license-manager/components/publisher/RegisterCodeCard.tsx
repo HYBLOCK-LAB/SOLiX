@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useLicenseManagerWrite } from "../../hooks/use-license-manager-write";
+import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { createEncryptedArtifact, uploadEncryptedArtifact } from "../../services/artifact";
-import { storageMode } from "../../../../lib/storage-config";
+import { storageMode } from "../../../../lib/storageConfig";
 
 const MAX_FILE_SIZE_BYTES = 256 * 1024 * 1024;
 

@@ -95,6 +95,16 @@ export const licenseManagerAbi = [
   },
   {
     type: "function",
+    name: "balanceOfBatch",
+    stateMutability: "view",
+    inputs: [
+      { name: "accounts", type: "address[]" },
+      { name: "ids", type: "uint256[]" },
+    ],
+    outputs: [{ type: "uint256[]" }],
+  },
+  {
+    type: "function",
     name: "nextCodeId",
     stateMutability: "view",
     inputs: [],

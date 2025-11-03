@@ -1,142 +1,99 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import type { Address } from "viem";
 import { useAccount, usePublicClient, useWatchContractEvent } from "wagmi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { parseAbiItem } from "viem";
 import { LICENSE_MANAGER_ADDRESS } from "../constants";
 import { licenseManagerAbi } from "../abi";
-
-const TRANSFER_SINGLE_EVENT = parseAbiItem(
-  "event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)",
-);
-
-const TRANSFER_BATCH_EVENT = parseAbiItem(
-  "event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)",
-);
-
-export interface UserLicenseSummary {
-  codeId: number;
-  balance: number;
-  expiry: number;
-  codeHash: `0x${string}`;
-  cipherCid: string;
-  paused: boolean;
-}
+import type { UserLicenseSummary } from "../types";
+import {
+  collectUserLicenseIds,
+  loadLicenseSummary,
+  pickCodeIdsFromTransferBatchLogs,
+  pickCodeIdsFromTransferSingleLogs,
+} from "../services/license-summary";
 
 export function useUserLicenses() {
   const account = useAccount();
   const publicClient = usePublicClient();
   const queryClient = useQueryClient();
 
-  const queryKey = useMemo(
-    () => ["license-manager", "userLicenses", account.address, publicClient?.chain?.id],
-    [account.address, publicClient?.chain?.id],
-  );
+  const accountAddress = account.address as Address | undefined;
+
+  const queryKey = useMemo(() => {
+    return ["license-manager", "userLicenses", accountAddress, publicClient?.chain?.id];
+  }, [accountAddress, publicClient?.chain?.id]);
+
+  const loadSummaries = useCallback(async (): Promise<UserLicenseSummary[]> => {
+    if (!accountAddress || !publicClient) return [];
+
+    const codeIds = await collectUserLicenseIds({
+      client: publicClient,
+      account: accountAddress,
+    });
+
+    if (codeIds.length === 0) {
+      return [];
+    }
+
+    const summaries = await Promise.all(
+      codeIds.map((codeId) =>
+        loadLicenseSummary({
+          client: publicClient,
+          account: accountAddress,
+          codeId,
+        }),
+      ),
+    );
+
+    return summaries
+      .filter((summary): summary is UserLicenseSummary => summary !== null)
+      .sort((a, b) => b.codeId - a.codeId);
+  }, [accountAddress, publicClient]);
 
   const query = useQuery({
     queryKey,
-    enabled: Boolean(account.address && publicClient),
-    staleTime: 30_000,
-    queryFn: async (): Promise<UserLicenseSummary[]> => {
-      if (!account.address || !publicClient) return [];
-      const [singleLogs, batchLogs] = await Promise.all([
-        publicClient.getLogs({
-          address: LICENSE_MANAGER_ADDRESS,
-          event: TRANSFER_SINGLE_EVENT,
-          args: { to: account.address },
-          fromBlock: BigInt(0),
-          toBlock: "latest",
-        }),
-        publicClient.getLogs({
-          address: LICENSE_MANAGER_ADDRESS,
-          event: TRANSFER_BATCH_EVENT,
-          args: { to: account.address },
-          fromBlock: BigInt(0),
-          toBlock: "latest",
-        }),
-      ]);
-
-      const codeIds = new Set<number>();
-      for (const log of singleLogs) {
-        const id = (log.args?.id ?? BigInt(0)) as bigint;
-        if (id > BigInt(0)) {
-          codeIds.add(Number(id));
-        }
-      }
-      for (const log of batchLogs) {
-        const ids = (log.args?.ids ?? []) as readonly bigint[];
-        for (const id of ids) {
-          if (id > BigInt(0)) {
-            codeIds.add(Number(id));
-          }
-        }
-      }
-
-      if (codeIds.size === 0) {
-        return [];
-      }
-
-      const summaries = await Promise.all(
-        Array.from(codeIds).map(async (codeId) => {
-          const [balanceRaw, expiryRaw, codeInfoRaw] = await Promise.all([
-            publicClient.readContract({
-              address: LICENSE_MANAGER_ADDRESS,
-              abi: licenseManagerAbi,
-              functionName: "balanceOf",
-              args: [account.address!, BigInt(codeId)],
-            }),
-            publicClient.readContract({
-              address: LICENSE_MANAGER_ADDRESS,
-              abi: licenseManagerAbi,
-              functionName: "licenseExpiry",
-              args: [account.address!, BigInt(codeId)],
-            }),
-            publicClient.readContract({
-              address: LICENSE_MANAGER_ADDRESS,
-              abi: licenseManagerAbi,
-              functionName: "code",
-              args: [BigInt(codeId)],
-            }),
-          ]);
-
-          const balance = Number(balanceRaw);
-          const expiry = Number(expiryRaw);
-          const [codeHash, cipherCid, paused, exists] = codeInfoRaw as readonly [
-            string,
-            string,
-            boolean,
-            boolean,
-          ];
-
-          if (!exists || balance === 0) {
-            return null;
-          }
-
-          return {
-            codeId,
-            balance,
-            expiry,
-            codeHash: codeHash as `0x${string}`,
-            cipherCid: cipherCid ?? "",
-            paused,
-          };
-        }),
-      );
-
-      return summaries
-        .filter((summary): summary is UserLicenseSummary => summary !== null)
-        .sort((a, b) => b.codeId - a.codeId);
-    },
+    enabled: Boolean(accountAddress && publicClient),
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: true,
+    queryFn: loadSummaries,
   });
 
   useWatchContractEvent({
     address: LICENSE_MANAGER_ADDRESS,
     abi: licenseManagerAbi,
     eventName: "TransferSingle",
-    enabled: Boolean(account.address),
-    onLogs() {
-      queryClient.invalidateQueries({ queryKey });
+    enabled: Boolean(accountAddress && publicClient),
+    async onLogs(logs) {
+      if (!accountAddress || !publicClient || logs.length === 0) return;
+
+      const relevantCodeIds = pickCodeIdsFromTransferSingleLogs(accountAddress, logs);
+      if (relevantCodeIds.length === 0) return;
+
+      const uniqueCodeIds = new Set(relevantCodeIds);
+
+      const updates = await Promise.all(
+        Array.from(uniqueCodeIds).map((codeId) =>
+          loadLicenseSummary({
+            client: publicClient,
+            account: accountAddress,
+            codeId,
+          }),
+        ),
+      );
+
+      queryClient.setQueryData<UserLicenseSummary[] | undefined>(queryKey, (current = []) => {
+        const filtered = current.filter((item) => !uniqueCodeIds.has(item.codeId));
+        updates
+          .filter((summary): summary is UserLicenseSummary => summary !== null)
+          .forEach((summary) => {
+            filtered.push(summary);
+          });
+        return filtered.sort((a, b) => b.codeId - a.codeId);
+      });
     },
   });
 
@@ -144,15 +101,41 @@ export function useUserLicenses() {
     address: LICENSE_MANAGER_ADDRESS,
     abi: licenseManagerAbi,
     eventName: "TransferBatch",
-    enabled: Boolean(account.address),
-    onLogs() {
-      queryClient.invalidateQueries({ queryKey });
+    enabled: Boolean(accountAddress && publicClient),
+    async onLogs(logs) {
+      if (!accountAddress || !publicClient || logs.length === 0) return;
+
+      const relevantCodeIds = pickCodeIdsFromTransferBatchLogs(accountAddress, logs);
+      if (relevantCodeIds.length === 0) return;
+
+      const uniqueCodeIds = new Set(relevantCodeIds);
+
+      const updates = await Promise.all(
+        Array.from(uniqueCodeIds).map((codeId) =>
+          loadLicenseSummary({
+            client: publicClient,
+            account: accountAddress,
+            codeId,
+          }),
+        ),
+      );
+
+      queryClient.setQueryData<UserLicenseSummary[] | undefined>(queryKey, (current = []) => {
+        const filtered = current.filter((item) => !uniqueCodeIds.has(item.codeId));
+        updates
+          .filter((summary): summary is UserLicenseSummary => summary !== null)
+          .forEach((summary) => {
+            filtered.push(summary);
+          });
+        return filtered.sort((a, b) => b.codeId - a.codeId);
+      });
     },
   });
 
   return {
     licenses: query.data ?? [],
     isLoading: query.isLoading,
+    isRefetching: query.isRefetching,
     error: query.error,
     refetch: query.refetch,
   };

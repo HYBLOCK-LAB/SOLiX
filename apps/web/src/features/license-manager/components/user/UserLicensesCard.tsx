@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNowStrict, fromUnixTime } from "date-fns";
 import { useUserLicenses } from "../../hooks/use-user-licenses";
 
@@ -10,7 +10,7 @@ function trimHash(value: string) {
 }
 
 export function UserLicensesCard() {
-  const { licenses, isLoading, error } = useUserLicenses();
+  const { licenses, isLoading, isRefetching, error, refetch } = useUserLicenses();
   const [selectedCodeId, setSelectedCodeId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -35,15 +35,29 @@ export function UserLicensesCard() {
         })
       : "만료 없음";
 
+  const handleReload = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
   return (
     <section className="rounded-2xl border border-primary-25 bg-surface-light-100 p-6 shadow-lg dark:border-surface-dark-75 dark:bg-surface-dark-100">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
-          내 라이선스
-        </h2>
-        <p className="text-sm text-text-light-50 dark:text-text-dark-50">
-          보유 중인 실행권 목록과 상세 정보를 확인하세요.
-        </p>
+      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-primary-100 dark:text-text-dark-100">
+            내 라이선스
+          </h2>
+          <p className="text-sm text-text-light-50 dark:text-text-dark-50">
+            보유 중인 실행권 목록과 상세 정보를 확인하세요.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleReload}
+          disabled={isLoading || isRefetching}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary-50 bg-background-light-50 px-3 py-2 text-xs font-semibold text-primary-100 transition hover:border-primary-75 hover:text-primary-75 disabled:cursor-not-allowed disabled:border-surface-dark-50 disabled:text-text-light-50 dark:border-primary-75 dark:bg-background-dark-75 dark:text-text-dark-75 dark:hover:border-primary-100 dark:hover:text-text-dark-100"
+        >
+          {isRefetching ? "새로고침 중..." : "새로고침"}
+        </button>
       </header>
 
       <div className="rounded border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-50 dark:bg-background-dark-75">

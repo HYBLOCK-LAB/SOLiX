@@ -9,18 +9,10 @@
   "title": "Week 1: Smart Contract와 Solidity 익히기",
   "authors": "Jiseop Shin",
   "summary": "Solidity를 사용하여 Smart Contract 개발에 대해 이해한다.",
-  "source": "session/week1/week1.md",
+  "source": "week1.md",
   "theme": "",
-  "status": [
-    "published"
-  ],
-  "category": [
-    "solidity"
-  ],
-  "tags": [
-    "blockchain",
-    "smartcontracts",
-    "solidity"
-  ],
+  "status": ["published"],
+  "category": ["solidity"],
+  "tags": ["blockchain", "smartcontracts", "solidity"],
   "url": "html"
 }

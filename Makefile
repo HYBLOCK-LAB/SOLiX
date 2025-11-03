@@ -6,38 +6,15 @@ WEB_DIR := apps/web
 SESSION_DIR ?= session
 DOCS_DIR    ?= docs
 
-# 빌드할 주차 목록: 필요시 week1 week2 …를 추가하거나 자동탐색으로 교체 가능
-WEEKS ?= week1 week2
-
 .PHONY: help \
 	docs \
 	contracts-install contracts-clean contracts-test contracts-deploy contracts-deploy-sepolia \
 	web-install web-dev web-build web-start web-lint \
 	docker-up docker-down docker-build
 
-docs2: ## Create HTML files for codelabs
+docs: ## Create HTML files for codelabs
 	@cd ./session/week1 && claat export week1.md && cd ../../ && rm -rf ./docs/week1/** && mv ./session/week1/html/** ./docs/week1/
 	@cd ./session/week2 && claat export week2.md && cd ../../ && rm -rf ./docs/week2/** && mv ./session/week2/html/** ./docs/week2/
-
-# docs: ## Create HTML files for codelabs
-# 	@set -e; \
-# 	for week in $(WEEKS); do \
-# 		echo "==> Building $$week"; \
-# 		claat export "$(SESSION_DIR)/$$week/$$week.md"; \
-# 		mkdir -p "$(DOCS_DIR)/$$week"; \
-# 		rm -rf "$(DOCS_DIR)/$$week"/**; \
-# 		mv "$(SESSION_DIR)/$$week/html"/** "$(DOCS_DIR)/$$week/"; \
-# 	done
-docs:
-	@set -e; \
-	for week in $(WEEKS); do \
-	  src="$(SESSION_DIR)/$$week"; dst="$(DOCS_DIR)/$$week"; \
-	  echo "==> Building $$week"; \
-	  mkdir -p "$$src/html"; \
-	  claat export -o "$$src/html" "$$src/$$week.md"; \
-	  rm -rf "$$dst"; mkdir -p "$(DOCS_DIR)"; \
-	  mv "$$src/html" "$$dst"; \
-	done
 
 # 
 # Contracts

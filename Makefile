@@ -1,7 +1,7 @@
 
 -include .env
 
-CONTRACTS_DIR := apps/contracts
+CONTRACTS_DIR := apps/on-chain
 WEB_DIR := apps/web
 SESSION_DIR ?= session
 DOCS_DIR    ?= docs

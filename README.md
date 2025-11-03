@@ -44,10 +44,10 @@
 
 ### 로컬 실습 빠르게 시작하기
 
-주차별 실습 예제는 `apps/contracts` Hardhat 워크스페이스에 정리되어 있습니다. 아래 명령어로 실행해 볼 수 있습니다.
+주차별 실습 예제는 `apps/on-chain` Hardhat 워크스페이스에 정리되어 있습니다. 아래 명령어로 실행해 볼 수 있습니다.
 
 ```bash
-cd apps/contracts
+cd apps/on-chain
 npm install
 npx hardhat test
 npx hardhat run scripts/deploy.ts --network sepolia

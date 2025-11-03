@@ -128,7 +128,7 @@ git을 사용할 수 없는 환경이라면 [여기](https://github.com/HYBLOCK-
 ├── apps/ # 핵심 애플리케이션 모음
 │ ├── committee/
 │ │ └── ... # 키 관리를 위한 위원회 서버(off-chain)와 관련된 코드
-│ ├── contracts/ # 프로젝트의 핵심 규칙과 데이터를 담은 On-chain 코드
+│ ├── on-chain/ # 프로젝트의 핵심 규칙과 데이터를 담은 On-chain 코드
 │ │    ├── contracts/ # 실제 Smart Contract 소스 코드
 │ │    ├── ignition/ # 실제 Smart Contract 소스 코드
 │ │    ├── test/ # 테스트 코드
@@ -150,7 +150,7 @@ git을 사용할 수 없는 환경이라면 [여기](https://github.com/HYBLOCK-
 
 ### Contract 구조
 
-프로젝트의 `apps/contracts/contracts`를 확인해주세요. `interfaces`폴더와 `CommitteeManager.sol`, `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
+프로젝트의 `apps/on-chain/contracts`를 확인해주세요. `interfaces`폴더와 `CommitteeManager.sol`, `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
 
 **Interface**는 특정 스마트 컨트랙트와 상호작용하기 위한 함수들의 명세서 또는 설계도입니다. 컨트랙트가 어떤 함수들을 가지고 있는지 알려주지만, 실제 코드는 포함하지 않습니다.
 interface는 이미 On-chain에 배포된 다른 컨트랙트의 함수를 내 컨트랙트에서 호출하고 싶을 때 사용합니다. 상대방 컨트랙트의 전체 소스코드를 다 가져올 필요 없이, 인터페이스만 가지고 있으면 해당 컨트랙트의 함수를 안전하고 효율적으로 호출할 수 있습니다. 이는 코드의 크기를 줄여 가스비를 절약할 수 있습니다. 또한, Interface에 맞게 Contract가 구성되므로 Contract에 어떤 기능이 있는지 쉽게 확인이 가능합니다.
@@ -1411,12 +1411,12 @@ Duration: 25
 
 ### 배포
 
-`LicenseManager` 컨트랙트는 `apps/contracts` 폴더 안에서 Hardhat으로 관리합니다. 배포 전에 의존성을 설치하고 네트워크 설정을 준비해 주세요.
+`LicenseManager` 컨트랙트는 `apps/on-chain` 폴더 안에서 Hardhat으로 관리합니다. 배포 전에 의존성을 설치하고 네트워크 설정을 준비해 주세요.
 
 #### 1. 의존성 설치 및 환경 변수 설정
 
 ```bash
-cd apps/contracts
+cd apps/on-chain
 npm install # 또는 pnpm/yarn 사용 가능
 ```
 
@@ -1493,11 +1493,11 @@ npx hardhat verify --build-profile production --network sepolia <DEPLOYED_ADDRES
 #### 1. 컨트랙트 테스트 실행
 
 ```bash
-cd apps/contracts
+cd apps/on-chain
 npx hardhat test
 ```
 
-- 테스트는 `apps/contracts/test/*.test.ts`에 정의되어 있으며, 컨트랙트 배포, 기능 호출, 이벤트 검증까지 한 번에 진행합니다.
+- 테스트는 `apps/on-chain/test/*.test.ts`에 정의되어 있으며, 컨트랙트 배포, 기능 호출, 이벤트 검증까지 한 번에 진행합니다.
 - 에러 메시지를 확인하거나 특정 함수만 빠르게 검증하려면 `--grep` 옵션을 이용해 필터링 할 수 있습니다.
 
 ```bash

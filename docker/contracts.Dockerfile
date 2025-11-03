@@ -5,12 +5,12 @@ WORKDIR /workspace
 RUN apk add --no-cache python3 make g++ && \
     npm install --global npm@latest
 
-COPY apps/contracts/package.json ./package.json
-COPY apps/contracts/package-lock.json ./package-lock.json
+COPY apps/on-chain/package.json ./package.json
+COPY apps/on-chain/package-lock.json ./package-lock.json
 
 RUN npm install
 
-COPY apps/contracts .
+COPY apps/on-chain .
 
 EXPOSE 8545
 

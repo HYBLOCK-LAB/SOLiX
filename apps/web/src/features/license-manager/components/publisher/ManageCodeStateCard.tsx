@@ -7,13 +7,16 @@ import { useOwnedCodes } from "../../hooks/useOwnedCodes";
 
 export function ManageCodeStateCard() {
   const [codeId, setCodeId] = useState(0);
+  const [name, setName] = useState("");
+  const [version, setVersion] = useState("");
   const [cipherCid, setCipherCid] = useState("");
   const [codeHash, setCodeHash] = useState<`0x${string}` | "">("");
 
   const { code, isLoading, refetch } = useCodeInfo(codeId);
   const pause = useLicenseManagerWrite("pauseCodeExecution");
   const unpause = useLicenseManagerWrite("unpauseCodeExecution");
-  const updateMetadata = useLicenseManagerWrite("updateCodeMetadata");
+  const updateName = useLicenseManagerWrite("updateCodeMetadata");
+  const updateCodeMutation = useLicenseManagerWrite("updateCode");
   const { codes: ownedCodes, isLoading: isCodesLoading } = useOwnedCodes();
 
   const hasOwnedCodes = ownedCodes.length > 0;
@@ -25,13 +28,32 @@ export function ManageCodeStateCard() {
     }
   }, [codeId, ownedCodes]);
 
-  const onUpdateMetadata = async (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!code) return;
+    setName(code.name ?? "");
+    setVersion(code.version ?? "");
+    setCipherCid(code.cipherCid ?? "");
+    setCodeHash((code.codeHash ?? "") as `0x${string}` | "");
+  }, [code]);
+
+  const onUpdateName: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
     try {
-      await updateMetadata.execute([
+      await updateName.execute([BigInt(codeId), name]);
+      await refetch();
+    } catch {
+      // 에러는 훅에서 노출됨
+    }
+  };
+
+  const onUpdateCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      await updateCodeMutation.execute([
         BigInt(codeId),
         ((codeHash || code?.codeHash) ?? "0x0") as `0x${string}`,
         (cipherCid || code?.cipherCid) ?? "",
+        version || code?.version || "",
       ]);
       await refetch();
     } catch {
@@ -114,6 +136,18 @@ export function ManageCodeStateCard() {
                 </span>
               </li>
               <li>
+                <span className="text-text-light-50 dark:text-text-dark-50">이름:</span>{" "}
+                <span className="text-text-light-100 dark:text-text-dark-100">
+                  {code.name || "-"}
+                </span>
+              </li>
+              <li>
+                <span className="text-text-light-50 dark:text-text-dark-50">버전:</span>{" "}
+                <span className="text-text-light-100 dark:text-text-dark-100">
+                  {code.version || "-"}
+                </span>
+              </li>
+              <li>
                 <span className="text-text-light-50 dark:text-text-dark-50">상태:</span>{" "}
                 <span className="text-text-light-100 dark:text-text-dark-100">
                   {code.paused ? "일시정지됨" : "활성"}
@@ -146,10 +180,38 @@ export function ManageCodeStateCard() {
 
         <form
           className="flex flex-col gap-4 rounded border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-primary-50 dark:bg-background-dark-75"
-          onSubmit={onUpdateMetadata}
+          onSubmit={onUpdateName}
         >
           <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">
-            메타데이터 갱신
+            이름 갱신
+          </h3>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">새 이름</span>
+            <input
+              type="text"
+              className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
+              placeholder="코드 이름"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="rounded-lg bg-primary-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-primary-75 disabled:cursor-not-allowed disabled:bg-primary-50 disabled:text-text-dark-75"
+            disabled={updateName.isPending || !code?.exists}
+          >
+            {updateName.isPending ? "갱신 중..." : "이름 업데이트"}
+          </button>
+        </form>
+
+        <form
+          className="flex flex-col gap-4 rounded border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-primary-50 dark:bg-background-dark-75"
+          onSubmit={onUpdateCode}
+        >
+          <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">
+            코드 및 버전 갱신
           </h3>
 
           <label className="flex flex-col gap-2">
@@ -174,12 +236,23 @@ export function ManageCodeStateCard() {
             />
           </label>
 
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-text-light-75 dark:text-text-dark-75">새 버전</span>
+            <input
+              type="text"
+              className="rounded-lg border border-primary-25 bg-background-light-50 px-3 py-2 text-sm text-text-light-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary-50 dark:border-primary-50 dark:bg-background-dark-75 dark:text-text-dark-100"
+              placeholder="예: 1.0.1"
+              value={version}
+              onChange={(event) => setVersion(event.target.value)}
+            />
+          </label>
+
           <button
             type="submit"
             className="rounded-lg bg-primary-100 px-4 py-2 text-sm font-semibold text-text-dark-100 transition-colors hover:bg-primary-75 disabled:cursor-not-allowed disabled:bg-primary-50 disabled:text-text-dark-75"
-            disabled={updateMetadata.isPending || !code?.exists}
+            disabled={updateCodeMutation.isPending || !code?.exists}
           >
-            {updateMetadata.isPending ? "갱신 중..." : "메타데이터 업데이트"}
+            {updateCodeMutation.isPending ? "갱신 중..." : "코드 업데이트"}
           </button>
         </form>
       </div>

@@ -15,8 +15,19 @@ export const licenseManagerAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "codeId", type: "uint256" },
+      { name: "newName", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "updateCode",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "codeId", type: "uint256" },
       { name: "newCodeHash", type: "bytes32" },
       { name: "newCipherCid", type: "string" },
+      { name: "newVersion", type: "string" },
     ],
     outputs: [],
   },
@@ -71,7 +82,14 @@ export const licenseManagerAbi = [
     name: "code",
     stateMutability: "view",
     inputs: [{ name: "codeId", type: "uint256" }],
-    outputs: [{ type: "bytes32" }, { type: "string" }, { type: "bool" }, { type: "bool" }],
+    outputs: [
+      { type: "bytes32" },
+      { type: "string" },
+      { type: "string" },
+      { type: "string" },
+      { type: "bool" },
+      { type: "bool" },
+    ],
   },
   {
     type: "function",

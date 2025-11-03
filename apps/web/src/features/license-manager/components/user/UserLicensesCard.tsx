@@ -86,6 +86,9 @@ export function UserLicensesCard() {
                   onClick={() => setSelectedCodeId(license.codeId)}
                 >
                   <div className="font-semibold text-[11px]">#{license.codeId}</div>
+                  {license.name && (
+                    <div className="text-[10px]">{license.name}</div>
+                  )}
                   <div className="text-[10px]">runs {license.balance}</div>
                 </button>
               ))}
@@ -99,6 +102,22 @@ export function UserLicensesCard() {
                   </dt>
                   <dd className="mt-1 font-mono text-text-light-100 dark:text-text-dark-100">
                     #{selectedLicense.codeId}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    이름
+                  </dt>
+                  <dd className="mt-1 text-text-light-100 dark:text-text-dark-100">
+                    {selectedLicense.name || "-"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-light-50 dark:text-text-dark-50">
+                    버전
+                  </dt>
+                  <dd className="mt-1 text-text-light-100 dark:text-text-dark-100">
+                    {selectedLicense.version || "-"}
                   </dd>
                 </div>
                 <div>

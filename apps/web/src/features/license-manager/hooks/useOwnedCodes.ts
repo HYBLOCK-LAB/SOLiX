@@ -8,13 +8,15 @@ import { LICENSE_MANAGER_ADDRESS } from "../constants";
 import { licenseManagerAbi } from "../abi";
 
 const CODE_REGISTERED_EVENT = parseAbiItem(
-  "event CodeRegistered(uint256 indexed codeId, bytes32 codeHash, string cipherCid, address indexed publisher)",
+  "event CodeRegistered(uint256 indexed codeId, bytes32 codeHash, string cipherCid, string name, string version, address indexed publisher)",
 );
 
 export interface OwnedCode {
   codeId: number;
   codeHash: `0x${string}`;
   cipherCid: string;
+  name: string;
+  version: string;
 }
 
 export function useOwnedCodes() {
@@ -42,13 +44,15 @@ export function useOwnedCodes() {
 
       const codes = new Map<number, OwnedCode>();
       for (const log of logs) {
-        const { codeId, codeHash, cipherCid, publisher } = log.args;
+        const { codeId, codeHash, cipherCid, name, version, publisher } = log.args;
         if (!publisher || publisher.toLowerCase() !== account.address.toLowerCase()) continue;
         const numericCodeId = Number(codeId);
         codes.set(numericCodeId, {
           codeId: numericCodeId,
           codeHash: codeHash as `0x${string}`,
           cipherCid: typeof cipherCid === "string" ? cipherCid : "",
+          name: typeof name === "string" ? name : "",
+          version: typeof version === "string" ? version : "",
         });
       }
 

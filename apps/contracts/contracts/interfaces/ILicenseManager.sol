@@ -9,7 +9,17 @@ interface ILicenseManager is IERC165 {
     // code 조회
     function code(
         uint256 codeId
-    ) external view returns (bytes32, string memory, bool, bool);
+    )
+        external
+        view
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        );
 
     // 코드 소유자 조회
     function codeOwner(uint256 codeId) external view returns (address);
@@ -30,6 +40,15 @@ interface ILicenseManager is IERC165 {
         uint256 indexed codeId,
         bytes32 codeHash,
         string cipherCid,
+        string name,
+        string version,
+        address indexed publisher
+    );
+
+    // 코드 이름 갱신
+    event CodeNameUpdated(
+        uint256 indexed codeId,
+        string name,
         address indexed publisher
     );
 
@@ -38,6 +57,7 @@ interface ILicenseManager is IERC165 {
         uint256 indexed codeId,
         bytes32 codeHash,
         string cipherCid,
+        string version,
         address indexed publisher
     );
 
@@ -83,8 +103,15 @@ interface ILicenseManager is IERC165 {
     // 코드 메타데이터 갱신
     function updateCodeMetadata(
         uint256 codeId,
+        string calldata newName
+    ) external;
+
+    // 코드 버전 및 소스 갱신
+    function updateCode(
+        uint256 codeId,
         bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newCipherCid,
+        string calldata newVersion
     ) external;
 
     // 코드 실행 일시정지

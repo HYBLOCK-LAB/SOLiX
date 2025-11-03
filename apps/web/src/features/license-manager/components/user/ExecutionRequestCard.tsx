@@ -90,7 +90,7 @@ export function ExecutionRequestCard() {
             </option>
             {registeredCodes.map((code) => (
               <option key={code.codeId} value={code.codeId}>
-                #{code.codeId} · {code.cipherCid}
+                #{code.codeId} · {code.name || code.cipherCid}
               </option>
             ))}
           </select>

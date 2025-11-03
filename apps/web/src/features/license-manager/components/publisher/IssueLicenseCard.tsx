@@ -209,7 +209,7 @@ export function IssueLicenseCard() {
             </option>
             {ownedCodes.map((code) => (
               <option key={code.codeId} value={code.codeId}>
-                #{code.codeId} · {code.cipherCid}
+                #{code.codeId} · {code.name || code.cipherCid}
               </option>
             ))}
           </select>

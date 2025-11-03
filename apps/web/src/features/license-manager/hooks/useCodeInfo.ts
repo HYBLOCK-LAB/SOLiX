@@ -13,13 +13,15 @@ export function useCodeInfo(codeId: number | bigint) {
 
   const code = useMemo(() => {
     if (!data) return null;
-    const [codeHash, cipherCid, paused, exists] = data as readonly [
+    const [codeHash, cipherCid, name, version, paused, exists] = data as readonly [
+      string,
+      string,
       string,
       string,
       boolean,
       boolean,
     ];
-    return { codeHash, cipherCid, paused, exists };
+    return { codeHash, cipherCid, name, version, paused, exists };
   }, [data]);
 
   return { code, isLoading, error, refetch };

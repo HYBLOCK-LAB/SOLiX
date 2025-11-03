@@ -86,8 +86,10 @@ export async function loadLicenseSummary({
 
   const balance = Number(balanceRaw);
   const expiry = Number(expiryRaw);
-  const [codeHash, cipherCid, paused, exists] = codeInfo as readonly [
+  const [codeHash, cipherCid, name, version, paused, exists] = codeInfo as readonly [
     `0x${string}`,
+    string,
+    string,
     string,
     boolean,
     boolean,
@@ -101,8 +103,10 @@ export async function loadLicenseSummary({
     codeId,
     balance,
     expiry,
-    codeHash,
+    codeHash: (codeHash ?? "0x0") as `0x${string}`,
     cipherCid: cipherCid ?? "",
+    name: name ?? "",
+    version: version ?? "",
     paused,
   };
 }

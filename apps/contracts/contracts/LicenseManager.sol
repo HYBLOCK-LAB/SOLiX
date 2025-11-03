@@ -20,6 +20,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     struct CodeInfo {
         bytes32 codeHash; // code를 keccak256로 암호화한 값
         string cipherCid; // 암호화 파일의 IPFS CID
+        string name; // 코드 표시용 이름
+        string version; // 코드 버전 정보
         bool paused; // 실행 일시정지 여부
         bool exists; // 존재 플래그
         address owner; // 소유자 주소
@@ -44,9 +46,28 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // code 조회
     function code(
         uint256 codeId
-    ) external view override returns (bytes32, string memory, bool, bool) {
+    )
+        external
+        view
+        override
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        )
+    {
         CodeInfo storage c = _codes[codeId];
-        return (c.codeHash, c.cipherCid, c.paused, c.exists);
+        return (
+            c.codeHash,
+            c.cipherCid,
+            c.name,
+            c.version,
+            c.paused,
+            c.exists
+        );
     }
 
     // 코드 소유자 조회
@@ -96,19 +117,36 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         _codes[codeId] = CodeInfo({
             codeHash: codeHash,
             cipherCid: cipherCid,
+            name: "",
+            version: "1.0.0",
             paused: false,
             exists: true,
             owner: msg.sender
         });
 
-        emit CodeRegistered(codeId, codeHash, cipherCid, msg.sender);
+        emit CodeRegistered(codeId, codeHash, cipherCid, "", "1.0.0", msg.sender);
     }
 
     // 코드 메타데이터 갱신. 소유자만 갱신 가능
     function updateCodeMetadata(
         uint256 codeId,
+        string calldata newName
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+
+        CodeInfo storage c = _codes[codeId];
+        c.name = newName;
+
+        emit CodeNameUpdated(codeId, newName, msg.sender);
+    }
+
+    // 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+    function updateCode(
+        uint256 codeId,
         bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newCipherCid,
+        string calldata newVersion
     ) external override {
         _requireCodeExists(codeId);
         _requireCodeOwner(codeId);
@@ -116,8 +154,9 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         CodeInfo storage c = _codes[codeId];
         c.codeHash = newCodeHash;
         c.cipherCid = newCipherCid;
+        c.version = newVersion;
 
-        emit CodeUpdated(codeId, newCodeHash, newCipherCid, msg.sender);
+        emit CodeUpdated(codeId, newCodeHash, newCipherCid, newVersion, msg.sender);
         // ERC1155
         emit URI(newCipherCid, codeId);
     }

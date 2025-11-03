@@ -60,14 +60,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         )
     {
         CodeInfo storage c = _codes[codeId];
-        return (
-            c.codeHash,
-            c.cipherCid,
-            c.name,
-            c.version,
-            c.paused,
-            c.exists
-        );
+        return (c.codeHash, c.cipherCid, c.name, c.version, c.paused, c.exists);
     }
 
     // 코드 소유자 조회
@@ -124,7 +117,14 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             owner: msg.sender
         });
 
-        emit CodeRegistered(codeId, codeHash, cipherCid, "", "1.0.0", msg.sender);
+        emit CodeRegistered(
+            codeId,
+            codeHash,
+            cipherCid,
+            "",
+            "1.0.0",
+            msg.sender
+        );
     }
 
     // 코드 메타데이터 갱신. 소유자만 갱신 가능
@@ -156,7 +156,13 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         c.cipherCid = newCipherCid;
         c.version = newVersion;
 
-        emit CodeUpdated(codeId, newCodeHash, newCipherCid, newVersion, msg.sender);
+        emit CodeUpdated(
+            codeId,
+            newCodeHash,
+            newCipherCid,
+            newVersion,
+            msg.sender
+        );
         // ERC1155
         emit URI(newCipherCid, codeId);
     }

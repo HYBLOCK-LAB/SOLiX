@@ -39,6 +39,8 @@ IPFS에 대해 알아보고 사용법을 익힙니다.
 
 ## 요구사항 정리
 
+Duration: 15
+
 아래의 요구사항은 저번 세션에 살펴보았던 요구사항들입니다.
 
 #### 기능 요구사항
@@ -110,6 +112,8 @@ User flow는 다음과 같습니다.
 
 ## 코드 뼈대 작성
 
+Duration: 20
+
 본격적으로 코드를 작성해봅시다. 앞서 살펴보았던 기능을 구현하기 위해 Contract뿐만 아니라 코드를 배포하고 실행하기 위한 UI, key를 관리하기 위한 위원회 server등 다양한 요소가 필요합니다. Contract에 집중하기 위해 Contract를 제외한 부분의 코드는 사전에 작성되어 있습니다. 사전에 작성된 코드를 받아주도록 합시다.
 
 ```bash
@@ -179,7 +183,17 @@ interface ILicenseManager is IERC165 {
     // code 조회
     function code(
         uint256 codeId
-    ) external view returns (bytes32, string memory, bool, bool);
+    )
+        external
+        view
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        );
 
     // 코드 소유자 조회
     function codeOwner(uint256 codeId) external view returns (address);
@@ -199,6 +213,15 @@ interface ILicenseManager is IERC165 {
         uint256 indexed codeId,
         bytes32 codeHash,
         string cipherCid,
+        string name,
+        string version,
+        address indexed publisher
+    );
+
+    // 코드 이름 갱신
+    event CodeNameUpdated(
+        uint256 indexed codeId,
+        string name,
         address indexed publisher
     );
 
@@ -207,6 +230,7 @@ interface ILicenseManager is IERC165 {
         uint256 indexed codeId,
         bytes32 codeHash,
         string cipherCid,
+        string version,
         address indexed publisher
     );
 
@@ -252,8 +276,15 @@ interface ILicenseManager is IERC165 {
     // 코드 메타데이터 갱신
     function updateCodeMetadata(
         uint256 codeId,
+        string calldata newName
+    ) external;
+
+    // 코드 버전 및 소스 갱신
+    function updateCode(
+        uint256 codeId,
         bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newCipherCid,
+        string calldata newVersion
     ) external;
 
     // 코드 실행 일시정지
@@ -298,6 +329,8 @@ code를 조회하는 함수입니다. contract 내부에서 관리되는 `codeId
 
 - codeHash: 코드를 keccak256로 해시값.
 - cipherCid: 암호화된 코드의 IPFS CID.
+- name: 코드 표시용 이름.
+- version: 코드 버전 정보.
 - paused: 코드 실행 요청 일시정지 여부.
 - exists: 코드 등록 여부.
 
@@ -337,6 +370,8 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 - codeId: 새롭게 부여된 코드 id.
 - codeHash: 암호화된 코드의 keccak256 해시값.
 - cipherCid: 암호화된 코드 바이너리의 IPFS CID.
+- name: 사용자가 지정할 수 있는 코드 이름. 기본값은 ""
+- version: 코드 버전 문자열. 기본값은 `1.0.0`
 - publisher: 배포자의 주소.
 
 **CodeUpdated**
@@ -348,7 +383,18 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 - codeId: 새롭게 부여된 코드 id.
 - codeHash: 암호화된 코드의 keccak256 해시값.
 - cipherCid: 암호화된 코드 바이너리의 IPFS CID.
+- version: 갱신 후 적용된 코드 버전.
 - publisher: 배포자의 주소.
+
+**CodeNameUpdated**
+
+코드의 이름이 바뀌면 발생하는 이벤트입니다. 링크나 UI에서 보여줄 이름을 추적할 때 사용합니다.
+
+파라미터
+
+- codeId: 이름을 수정한 코드 id.
+- name: 새롭게 설정한 코드 명칭.
+- publisher: 실제 이름을 수정한 호출자(소유자) 주소.
 
 **LicenseIssued**
 
@@ -398,7 +444,7 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 - recipientPubKey: 코드를 복호화할 수 있도록 하는 키 조각를 받기 위해 사용되는 공개키.
 - blockTimestamp: 이벤트 발생 시점의 블록 타임스탬프.
 
-#### 외부 로직
+#### 함수
 
 `supportsInterface(bytes4 interfaceId) → bool`
 
@@ -408,9 +454,13 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 신규 코드를 등록하고, 호출자를 해당 코드의 소유자로 설정합니다.
 
-`updateCodeMetadata(uint256 codeId, bytes32 newCodeHash, string newCipherCid)`
+`updateCodeMetadata(uint256 codeId, string newName)`
 
-코드의 해시/CID를 갱신합니다.
+코드의 이름을 변경합니다.
+
+`updateCode(uint256 codeId, bytes32 newCodeHash, string newCipherCid, string newVersion)`
+
+코드의 해시/CID/버전을 함께 갱신합니다.
 
 `pauseCodeExecution(uint256 codeId)`
 
@@ -438,15 +488,15 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 **checkCodeActive(uint256 codeId) → bool**
 
-해당 코드가 활성화 상태(존재하며 일시정지 상태가 아님)인지 확인합니다.
+    해당 코드가 활성화 상태(존재하며 일시정지 상태가 아님)인지 확인합니다.
 
 **checkCodeExists(uint256 codeId) → bool**
 
-해당 코드가 등록되어 있는지 여부를 확인합니다.
+    해당 코드가 등록되어 있는지 여부를 확인합니다.
 
 **uri(uint256 id) → string**
 
-ERC-1155 표준 메타데이터 URI를 반환합니다.
+    ERC-1155 표준 메타데이터 URI를 반환합니다.
 
 이제 `LicenseManager.sol`을 작성해봅시다.
 
@@ -504,6 +554,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     struct CodeInfo {
         bytes32 codeHash; // code를 keccak256로 암호화한 값
         string cipherCid; // 암호화 파일의 IPFS CID
+        string name; // 코드 표시용 이름
+        string version; // 코드 버전 정보
         bool paused; // 실행 일시정지 여부
         bool exists; // 존재 플래그
         address owner; // 소유자 주소
@@ -541,7 +593,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
 
 `ADMIN_ROLE`는 AccessControl의 `DEFAULT_ADMIN_ROLE`을 그대로 이용합니다. 컨트랙트의 모든 관리 권한을 가진 주체를 구분하기 위해 사용됩니다.
 
-`CodeInfo` 구조체는 코드의 메타데이터를 저장하는 틀로, 코드의 해시(codeHash), 암호화된 파일의 IPFS 주소(cipherCid), 실행 일시정지 여부(paused), 등록 여부(exists), 그리고 코드 소유자 주소(owner)를 포함합니다.
+`CodeInfo` 구조체는 코드의 메타데이터를 저장하는 틀로, 코드의 해시(codeHash), 암호화된 파일의 IPFS 주소(cipherCid), 코드에 붙일 이름(name), 버전 문자열(version), 실행 일시정지 여부(paused), 등록 여부(exists), 그리고 코드 소유자 주소(owner)를 포함합니다.
 `_codes`는 각 코드 ID(codeId)에 대응하는 CodeInfo를 저장해 코드를 개별적으로 관리하며, `_expiry`는 사용자 주소와 코드 ID를 키로 하여 해당 라이선스의 만료 시점을 기록합니다. `_nextCodeId`는 새 코드를 등록할 때 부여할 다음 코드 ID를 추적하는 카운터입니다.
 
 constructor는 배포 시점에 한 번 실행되며, 상속받은 ERC1155의 생성자에 baseUri를 전달해 토큰 메타데이터의 기본 경로를 설정합니다. 또한 `_grantRole(ADMIN_ROLE, msg.sender)`를 호출하여 배포자에게 관리자 권한을 부여함합니다.
@@ -568,6 +620,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     struct CodeInfo {
         bytes32 codeHash; // code를 keccak256로 암호화한 값
         string cipherCid; // 암호화 파일의 IPFS CID
+        string name; // 코드 표시용 이름
+        string version; // 코드 버전 정보
         bool paused; // 실행 일시정지 여부
         bool exists; // 존재 플래그
         address owner; // 소유자 주소
@@ -592,7 +646,14 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // code 조회
     function code(
         uint256 codeId
-    ) external view override returns (bytes32, string memory, bool, bool) {
+    ) external view override returns (
+        bytes32,
+        string memory,
+        string memory,
+        string memory,
+        bool,
+        bool
+    ) {
         // TODO implement code getter
     }
 
@@ -712,6 +773,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
 
 ## 스마트 컨트랙트 작성
 
+Duration: 30
+
 앞서 구현한 코드 뼈대를 토대로 함수를 구현하겠습니다. 먼저 상태 조회하는 함수입니다.
 
 Solidity에서 public 상태 변수는 컴파일 시 자동으로 해당 변수명에 대한 getter가 생성됩니다. 외부 컨트랙트나 오프체인 클라이언트는 이 함수를 호출해 스토리지 값을 읽을 수 있고, internal 변수는 당연히 이렇게 노출되지 않습니다. 우리는 getter를 interface에서 명시적으로 정의해놓았기 때문에 getter를 구현하겠습니다. getter는 상태 변수의 값을 그대로 반환하면 됩니다.
@@ -722,13 +785,20 @@ Solidity에서 public 상태 변수는 컴파일 시 자동으로 해당 변수�
 // code 조회
 function code(
     uint256 codeId
-) external view override returns (bytes32, string memory, bool, bool) {
+) external view override returns (
+    bytes32,
+    string memory,
+    string memory,
+    string memory,
+    bool,
+    bool
+) {
     CodeInfo storage c = _codes[codeId];
-    return (c.codeHash, c.cipherCid, c.paused, c.exists);
+    return (c.codeHash, c.cipherCid, c.name, c.version, c.paused, c.exists);
 }
 ```
 
-codeId로 storage에 저장된 code를 조회하고 관련 정보를 반환하는 함수입니다.
+codeId로 storage에 저장된 code를 조회하고 관련 정보를 반환하는 함수입니다. 순서대로 codeHash, cipherCid, name, version, paused, exists를 튜플로 반환하니, 클라이언트에서는 필요한 조각만 골라 사용하면 됩니다.
 
 ### codeOwner
 
@@ -783,25 +853,55 @@ function registerCode(
     _codes[codeId] = CodeInfo({
         codeHash: codeHash,
         cipherCid: cipherCid,
+        name: "",
+        version: "1.0.0",
         paused: false,
         exists: true,
         owner: msg.sender
     });
 
-    emit CodeRegistered(codeId, codeHash, cipherCid, msg.sender);
+    emit CodeRegistered(
+        codeId,
+        codeHash,
+        cipherCid,
+        "",
+        "1.0.0",
+        msg.sender
+    );
 }
 ```
 
-이제 본격적으로 기능을 위한 함수를 작성해봅시다. `registerCode`는 새 code를 등록하는 함수입니다. 하는 일은 크게 3가지입니다. 먼저, code에 대한 정보를 저장합니다. codeHash와 cipherCid를 받아 그대로 사용하고 exists는 true, paused는 false로 하여 storage에 저장합니다. 또한 이 함수를 호출한 주소(`msg.sender`)를 소유자로 설정합니다. 두 번째로 다음번에 호출되었을 때 저장할 위치를 변경하기 위해서 `_nextCodeId`를 증가시킵니다. 마지막으로 이벤트 `CodeRegistered`를 발행해 신규 코드 등록을 추적할 수 있게 합니다.
+이제 본격적으로 기능을 위한 함수를 작성해봅시다. `registerCode`는 새 code를 등록하는 함수입니다. 하는 일은 크게 3가지입니다. 먼저, code에 대한 정보를 저장합니다. codeHash와 cipherCid를 받아 그대로 사용하고 exists는 true, paused는 false로 하여 storage에 저장합니다. 새롭게 이름(name)과 버전(version) 필드를 도입했기 때문에, 등록 시 기본 이름은 비워두고 버전은 `1.0.0`으로 초기화해 이후 갱신 시 기준 버전을 명확히 합니다. 또한 이 함수를 호출한 주소(`msg.sender`)를 소유자로 설정합니다. 두 번째로 다음번에 호출되었을 때 저장할 위치를 변경하기 위해서 `_nextCodeId`를 증가시킵니다. 마지막으로 이벤트 `CodeRegistered`를 발행해 신규 코드 등록을 추적할 수 있게 합니다.
 
 ### updateCodeMetadata
 
 ```solidity
-// 코드 메타데이터 갱신. 소유자만 갱신 가능
+// 코드 이름 갱신. 소유자만 가능
 function updateCodeMetadata(
     uint256 codeId,
+    string calldata newName
+) external override {
+    _requireCodeExists(codeId);
+    _requireCodeOwner(codeId);
+
+    CodeInfo storage c = _codes[codeId];
+    c.name = newName;
+
+    emit CodeNameUpdated(codeId, newName, msg.sender);
+}
+```
+
+`updateCodeMetadata`는 코드의 메타데이터를 수정하는 함수입니다. 현재는 이름만 수정합니다. 다른 메타데이터를 건드리지 않고 문자열만 교체한 뒤 `CodeNameUpdated` 이벤트로 변경 사실을 알립니다.
+
+### updateCode
+
+```solidity
+// 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+function updateCode(
+    uint256 codeId,
     bytes32 newCodeHash,
-    string calldata newCipherCid
+    string calldata newCipherCid,
+    string calldata newVersion
 ) external override {
     _requireCodeExists(codeId);
     _requireCodeOwner(codeId);
@@ -809,14 +909,25 @@ function updateCodeMetadata(
     CodeInfo storage c = _codes[codeId];
     c.codeHash = newCodeHash;
     c.cipherCid = newCipherCid;
+    c.version = newVersion;
 
-    emit CodeUpdated(codeId, newCodeHash, newCipherCid, msg.sender);
+    emit CodeUpdated(
+        codeId,
+        newCodeHash,
+        newCipherCid,
+        newVersion,
+        msg.sender
+    );
     // ERC1155
     emit URI(newCipherCid, codeId);
 }
 ```
 
-`updateCodeMetadata`는 등록된 코드의 온체인 메타데이터를 갱신합니다. 기존에 storage에 저장된 code의 데이터를 갱신한 후 `CodeUpdated`와 `URI` 이벤트를 보내 갱신 사실을 인지하도록 합니다. 물론 코드가 존재하는지 여부를 먼저 파악해야합니다. code가 존재하는지 여부와 code의 소유자인지 판단, 소유자 혹은 관리자인지 판단하는 로직은 앞으로 자주 쓰이게 될 기능이므로 함수로 만들도록 합니다. 컨트랙트 하단에 다음의 코드를 붙여넣어 주세요.
+새로운 `updateCode` 함수는 코드 변경할 때 사용합니다. 코드에 관한 정보인 해시와 암호화 CID를 교체하고 버전 문자열을 함께 기록해 배포 이력을 명확히 추적합니다. 기존과 동일하게 `CodeUpdated` 이벤트와 ERC-1155 `URI` 이벤트를 발행해 외부 시스템이 즉시 변화를 감지하도록 했습니다.
+
+### 유틸 함수
+
+code가 존재하는지 여부와 code의 소유자인지 판단, 소유자 혹은 관리자인지 판단하는 로직은 앞으로 자주 쓰이게 될 기능이므로 함수로 만들도록 합니다. 컨트랙트 하단에 다음의 코드를 붙여넣어 주세요.
 
 ```solidity
 /* ========= 내부 유틸 ========= */
@@ -1012,6 +1123,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     struct CodeInfo {
         bytes32 codeHash; // code를 keccak256로 암호화한 값
         string cipherCid; // 암호화 파일의 IPFS CID
+        string name; // 코드 표시용 이름
+        string version; // 코드 버전 정보
         bool paused; // 실행 일시정지 여부
         bool exists; // 존재 플래그
         address owner; // 소유자 주소
@@ -1036,9 +1149,21 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // code 조회
     function code(
         uint256 codeId
-    ) external view override returns (bytes32, string memory, bool, bool) {
+    )
+        external
+        view
+        override
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        )
+    {
         CodeInfo storage c = _codes[codeId];
-        return (c.codeHash, c.cipherCid, c.paused, c.exists);
+        return (c.codeHash, c.cipherCid, c.name, c.version, c.paused, c.exists);
     }
 
     // 코드 소유자 조회
@@ -1088,19 +1213,43 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         _codes[codeId] = CodeInfo({
             codeHash: codeHash,
             cipherCid: cipherCid,
+            name: "",
+            version: "1.0.0",
             paused: false,
             exists: true,
             owner: msg.sender
         });
 
-        emit CodeRegistered(codeId, codeHash, cipherCid, msg.sender);
+        emit CodeRegistered(
+            codeId,
+            codeHash,
+            cipherCid,
+            "",
+            "1.0.0",
+            msg.sender
+        );
     }
 
     // 코드 메타데이터 갱신. 소유자만 갱신 가능
     function updateCodeMetadata(
         uint256 codeId,
+        string calldata newName
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+
+        CodeInfo storage c = _codes[codeId];
+        c.name = newName;
+
+        emit CodeNameUpdated(codeId, newName, msg.sender);
+    }
+
+    // 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+    function updateCode(
+        uint256 codeId,
         bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newCipherCid,
+        string calldata newVersion
     ) external override {
         _requireCodeExists(codeId);
         _requireCodeOwner(codeId);
@@ -1108,8 +1257,15 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         CodeInfo storage c = _codes[codeId];
         c.codeHash = newCodeHash;
         c.cipherCid = newCipherCid;
+        c.version = newVersion;
 
-        emit CodeUpdated(codeId, newCodeHash, newCipherCid, msg.sender);
+        emit CodeUpdated(
+            codeId,
+            newCodeHash,
+            newCipherCid,
+            newVersion,
+            msg.sender
+        );
         // ERC1155
         emit URI(newCipherCid, codeId);
     }
@@ -1251,6 +1407,8 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
 
 ## 배포 및 테스트
 
+Duration: 25
+
 ### 배포
 
 `LicenseManager` 컨트랙트는 `apps/contracts` 폴더 안에서 Hardhat으로 관리합니다. 배포 전에 의존성을 설치하고 네트워크 설정을 준비해 주세요.
@@ -1364,7 +1522,23 @@ cp .env.example .env
 
 설정을 마치면 `npm run dev`로 웹 UI를 실행하고, 지갑을 연결해 트랜잭션 흐름을 검증합니다. 로컬 네트워크를 띄운 상태에서 웹 UI를 실행하고, 메타마스크/지갑 연결 후 `registerCode`, `issueLicense`, `requestCodeExecution` 플로우를 직접 수행합니다. 트랜잭션이 실패하면 Hardhat 콘솔과 브라우저 개발자 도구에서 에러 로그를 확인하고, 컨트랙트 이벤트(`RunRequested`, `CodeRegistered` 등)를 통해 상태 변화를 검증하세요.
 
+#### 3. 웹에서 테스트
+
+웹에서 code를 등록하고 라이센스를 발행하고 발행된 라이센스를 확인해보세요.
+
+![web code registered](./images/web_code_registered.png)
+![web license issued](./images/web_license_issued.png)
+![web licenses](./images/web_licenses.png)
+
+웹에서 실행한 결과를 etherscans에서 확인해보세요.
+
+![result transactions](./images/result_transactions.png)
+![result events](./images/result_events.png)
+![result tokens](./images/result_tokens.png)
+
 ## IPFS 사용법 익히기
+
+Duration: 14
 
 IPFS(InterPlanetary File System)는 콘텐츠 주소화(content addressing), 분산 P2P 네트워크(libp2p), DHT 기반 라우팅, IPLD(Merkle-DAG) 데이터 모델로 이루어진 분산 파일 시스템입니다. 핵심은 파일의 위치가 아니라 내용(CID) 으로 식별하고, 여러 피어가 데이터를 교환(Bitswap) 한다는 점입니다.
 

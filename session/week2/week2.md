@@ -150,7 +150,7 @@ git을 사용할 수 없는 환경이라면 [여기](https://github.com/HYBLOCK-
 
 ### Contract 구조
 
-프로젝트의 `apps/on-chain/contracts`를 확인해주세요. `interfaces`폴더와 `CommitteeManager.sol`, `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
+프로젝트의 `apps/on-chain/contracts`를 확인해주세요. `interfaces`폴더와 `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
 
 **Interface**는 특정 스마트 컨트랙트와 상호작용하기 위한 함수들의 명세서 또는 설계도입니다. 컨트랙트가 어떤 함수들을 가지고 있는지 알려주지만, 실제 코드는 포함하지 않습니다.
 interface는 이미 On-chain에 배포된 다른 컨트랙트의 함수를 내 컨트랙트에서 호출하고 싶을 때 사용합니다. 상대방 컨트랙트의 전체 소스코드를 다 가져올 필요 없이, 인터페이스만 가지고 있으면 해당 컨트랙트의 함수를 안전하고 효율적으로 호출할 수 있습니다. 이는 코드의 크기를 줄여 가스비를 절약할 수 있습니다. 또한, Interface에 맞게 Contract가 구성되므로 Contract에 어떤 기능이 있는지 쉽게 확인이 가능합니다.
@@ -704,10 +704,19 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // 코드 메타데이터 갱신. 소유자만 갱신 가능
     function updateCodeMetadata(
         uint256 codeId,
-        bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newName
     ) external override {
         // TODO implement updating code metadata
+    }
+
+    // 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+    function updateCode(
+        uint256 codeId,
+        bytes32 newCodeHash,
+        string calldata newCipherCid,
+        string calldata newVersion
+    ) external override {
+        // TODO implement updating code
     }
 
     // 코드 일시정지. 소유자 또는 관리자만 가능
@@ -1103,7 +1112,7 @@ function uri(
 }
 ```
 
-### 마무리 및 테스트
+### 마무리
 
 이제 LicenseManager 컨트랙트 작성을 완료했습니다. 전체 코드는 다음과 같습니다.
 
@@ -1515,10 +1524,14 @@ cp .env.example .env
 
 `.env`에서 아래 값을 필수로 갱신합니다.
 
-- `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다.. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
 - `NEXT_PUBLIC_CHAIN_ID`: 로컬은 31337, Sepolia는 11155111입니다.
+- `NEXT_PUBLIC_CHAIN_NAME`: UI에 표시될 Chain 명입니다.
+- `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
+- `NEXT_PUBLIC_CHAIN_SYMBOL`: UI에 표시될 Chain 심볼입니다.
 - `NEXT_PUBLIC_CONTRACT_ADDRESS`: 앞서 배포한 LicenseManager 컨트랙트 주소입니다.
 - `NEXT_PUBLIC_WALLETCONNECT_ID`: WalletConnect 프로젝트를 사용하면 고유 ID로 교체해주세요.
+- `NEXT_PUBLIC_STORAGE_MODE`: IPFS 스토리지 모드입니다. `local`로 설정하면 `Helia`만 사용하고 `production`으로 설정하면 `Helia` + `Pinata`를 사용합니다.
+- `PINATA_JWT`: Pinata에서 발급한 JWT토큰입니다. 선택 옵션입니다.
 
 설정을 마치면 `npm run dev`로 웹 UI를 실행하고, 지갑을 연결해 트랜잭션 흐름을 검증합니다. 로컬 네트워크를 띄운 상태에서 웹 UI를 실행하고, 메타마스크/지갑 연결 후 `registerCode`, `issueLicense`, `requestCodeExecution` 플로우를 직접 수행합니다. 트랜잭션이 실패하면 Hardhat 콘솔과 브라우저 개발자 도구에서 에러 로그를 확인하고, 컨트랙트 이벤트(`RunRequested`, `CodeRegistered` 등)를 통해 상태 변화를 검증하세요.
 
@@ -1689,6 +1702,12 @@ HTTP/Go 클라이언트 예시와 상세 API는 [레퍼런스 문서](https://st
 Duration: 1
 
 축하합니다! 성공적으로 License 관련 컨트랙트를 작성하고 IPFS에 대해 익혔습니다. 다음 시간에는 위원회 관련 컨트랙트 개발과 기존 컨트랙트에서 보안할 점을 확인하도록 하겠습니다.
+
+#### Pinata
+
+[Pinata](https://pinata.cloud/)는 IPFS 상에서 파일을 손쉽게 업로드하고 영구적으로 **고정(pin)** 시킬 수 있도록 도와주는 클라우드 기반의 IPFS 핀 서비스입니다. IPFS는 탈중앙화된 파일 저장 네트워크이기 때문에, 기본적으로 특정 노드가 파일을 보관하지 않으면 데이터가 사라질 수 있습니다. Pinata는 사용자가 업로드한 콘텐츠를 자사 노드에 고정해 두어 언제나 접근 가능하도록 유지해 주는 역할을 합니다.
+
+현재 웹 데모는 로컬 환경이거나 Pinata를 사용 불가능한 환경에서는 Helia를 이용해 브라우저에 파일을 저장하고, Pinata를 사용 가능한 환경에서 Helia로 업로드된 파일을 Pinata 스토리지에 다시 한 번 저장합니다. 이를 사용하려면 회원가입 후 [API Key](https://app.pinata.cloud/developers/api-keys)를 받아주세요.
 
 ### 도움이 될 만한 자료
 

@@ -1,8 +1,9 @@
+import * as dotenv from "dotenv";
 import hardhatIgnition from "@nomicfoundation/hardhat-ignition";
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import type { HardhatUserConfig } from "hardhat/config";
-import * as dotenv from "dotenv";
+
 dotenv.config();
 
 function getVar(name: string, opts?: { optional?: boolean }) {
@@ -12,6 +13,34 @@ function getVar(name: string, opts?: { optional?: boolean }) {
   }
   return v;
 }
+
+const networks: NonNullable<HardhatUserConfig["networks"]> = {
+  hardhatMainnet: {
+    type: "edr-simulated",
+    chainType: "l1",
+  },
+  hardhatOp: {
+    type: "edr-simulated",
+    chainType: "op",
+  },
+};
+
+if (process.env.SEPOLIA_RPC_URL && process.env.SEPOLIA_PRIVATE_KEY) {
+  networks.sepolia = {
+    type: "http",
+    chainType: "l1",
+    url: getVar("SEPOLIA_RPC_URL")!,
+    accounts: [getVar("SEPOLIA_PRIVATE_KEY")!],
+  };
+}
+
+const verify = process.env.ETHERSCAN_API_KEY
+  ? {
+      etherscan: {
+        apiKey: process.env.ETHERSCAN_API_KEY,
+      },
+    }
+  : undefined;
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViem, hardhatVerify, hardhatIgnition],
@@ -35,35 +64,13 @@ const config: HardhatUserConfig = {
       production: {
         version: "0.8.30",
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          optimizer: { enabled: true, runs: 200 },
         },
       },
     },
   },
-  networks: {
-    hardhatMainnet: {
-      type: "edr-simulated",
-      chainType: "l1",
-    },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
-    },
-    sepolia: {
-      type: "http",
-      chainType: "l1",
-      url: getVar("SEPOLIA_RPC_URL")!,
-      accounts: [getVar("SEPOLIA_PRIVATE_KEY")!],
-    },
-  },
-  verify: {
-    etherscan: {
-      apiKey: process.env.ETHERSCAN_API_KEY,
-    },
-  },
+  networks,
+  ...(verify ? { verify } : {}),
 };
 
 export default config;

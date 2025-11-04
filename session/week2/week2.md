@@ -31,7 +31,7 @@ Duration: 5
 
 #### 4. 배포 및 테스트
 
-작성한 스마트 컨트랙트를 Testnet에 배포해보고 정상적으로 동작하는지 확인합니다.
+작성한 스마트 컨트랙트를 Sepolia Testnet에 배포해보고 정상적으로 동작하는지 확인합니다.
 
 #### 5. IPFS 사용법 익히기
 
@@ -40,6 +40,51 @@ IPFS에 대해 알아보고 사용법을 익힙니다.
 ## 요구사항 정리
 
 Duration: 15
+
+### User flow
+
+User flow는 다음과 같습니다. 특히, 이번 세션에는 License 관련 Contract를 구현합니다.
+
+![architecture](./images/architecture.png)
+
+1. **코드 등록:**
+
+   - 배포자가 자신의 코드를 준비합니다.
+   - 코드를 난독화하고 AES-GCM으로 암호화합니다.
+   - 또한 코드를 keccak256로 암호화합니다. 온체인 데이터의 무결성 검증을 위해 사용되고, 이를 codeHash라고 부르겠습니다.
+   - AES-GCM로 암호화한 것은 IPFS에 업로드하여 위치를 나타내는 cipherCid를 얻습니다.
+   - AES 비밀키 키를 분할하여 n개 생성한 후, 각 조각을 서로 다른 위원회 멤버에게 분배합니다.
+   - codeHash, cipherCid 등의 정보를 포함해 온체인에 코드 배포에 대한 기록을 합니다.
+
+2. **라이선스 발급:**
+
+   - 배포자가 실행권 토큰(ERC-1155)을 발급하고 사용자에게 판매합니다. 이번 세션에서는 바로 사용자에게 발급하는 기능을 구현하겠습니다.
+
+3. **실행 요청:**
+
+   - 사용자가 트랜잭션을 통해 위원회에 실행 요청을 보냅니다.
+   - 이때 임시 공개키(recipientPubKey)를 새로 생성해 같이 보냅니다.
+   - 컨트랙트를 통해 실행 횟수가 1 소진 됩니다.
+   - 컨트랙트에서 누가, 언제, 어떤 키로 실행했는지 기록했는지에 대한 이벤트를 발생시켜 위원회에 알립니다.
+
+4. **위원회 승인:**
+
+   - 승인을 위해 위원회 자신이 보관하고 있는 암호화 키 조각을 사용자의 recipientPubKey로 암호화합니다.
+   - 이를 IPFS로 올려 사용자가 접근할 수 있도록 합니다.
+   - 위원회 N명 중 M명이 라이센스에 대해 승인합니다.
+
+5. **복원 및 실행:**
+
+   - 사용자는 IPFS에서 키 조각을 가져와, 자신의 임시 개인키로 복호화합니다.
+   - M개 이상의 키 조각을 합쳐서 원본 데이터 키(DEK)를 복원합니다.
+   - 해시값을 비교하여 무결성을 확보합니다. (keccak256(code.zip) == codeHash)
+   - 복호화하여 code를 획득해 실행합니다.
+
+6. **취소:**
+   - 특정 사용자의 라이센스를 취소하고 싶으면 컨트랙트로 실행권 토큰을 무효화합니다.
+   - 전체 라이센스를 취소하기 위해 컨트랙트로 라이선스 자체를 완전히 폐기합니다.
+
+### 요구사항
 
 아래의 요구사항은 저번 세션에 살펴보았던 요구사항들입니다.
 
@@ -66,49 +111,8 @@ Duration: 15
 - 저장 공간과 가스를 절약하기 위해 필요한 정보만 온체인에 기록합니다.
 - 표준 토큰(ERC-1155/721) 규격을 사용하여 호환성을 확보합니다.
 - 온체인에는 평문 코드를 저장하지 않고, 암호화된 파일만 IPFS에 저장합니다.
-- 실행은 오프체인 환경(안전한 장소)에서 이루어지며, 실행 후 민감한 데이터는 즉시 삭제합니다.(낮은 우선 순위)
-- 위원회 응답이 부족해도 서비스가 중단되지 않도록 여유 있게 구성합니다.(낮은 우선 순위)
-
-### User flow
-
-User flow는 다음과 같습니다.
-
-![architecture](./images/architecture.png)
-
-1. **코드 등록:**
-
-   - 배포자가 자신의 코드를 준비합니다.
-   - 코드를 난독화하고 각각 keccak256로 AES-GCM으로 암호화합니다.
-   - AES-GCM로 암호화한 것은 IPFS에 업로드하여 위치를 나타내는 cipherCid를 얻습니다.
-   - codeHash, cipherCid 등의 정보를 포함해 온체인에 코드 배포에 대한 기록을 합니다.
-
-2. **라이선스 발급:**
-
-   - 배포자가 실행권 토큰(ERC-1155)을 발급하고 사용자에게 판매합니다.
-
-3. **실행 요청:**
-
-   - 사용자가 트랜잭션을 통해 위원회에 실행 요청을 보냅니다.
-   - 이때 임시 공개키(recipientPubKey)를 새로 생성해 같이 보냅니다.
-   - 컨트랙트를 통해 실행 횟수가 1 소진 됩니다.
-   - 컨트랙트에서 누가, 언제, 어떤 키로 실행했는지 기록했는지에 대한 이벤트를 발생시켜 위원회에 알립니다.
-
-4. **위원회 승인:**
-
-   - 승인을 위해 위원회 자신이 보관하고 있는 암호화 키 조각을 사용자의 recipientPubKey로 암호화합니다.
-   - 이를 IPFS로 올려 사용자가 접근할 수 있도록 합니다.
-   - 위원회 N명 중 M명이 라이센스에 대해 승인합니다.
-
-5. **복원 및 실행:**
-
-   - 사용자는 IPFS에서 키 조각을 가져와, 자신의 임시 개인키로 복호화합니다.
-   - M개 이상의 키 조각을 합쳐서 원본 데이터 키(DEK)를 복원합니다.
-   - 해시값을 비교하여 무결성을 확보합니다. (keccak256(code.zip) == codeHash)
-   - 복호화하여 code를 획득해 실행합니다.
-
-6. **취소:**
-   - 특정 사용자의 라이센스를 취소하고 싶으면 컨트랙트로 실행권 토큰을 무효화합니다.
-   - 전체 라이센스를 취소하기 위해 컨트랙트로 라이선스 자체를 완전히 폐기합니다.
+- 실행은 오프체인 환경(안전한 장소)에서 이루어지며, 실행 후 민감한 데이터는 즉시 삭제합니다. (낮은 우선 순위)
+- 위원회 응답이 부족해도 서비스가 중단되지 않도록 여유 있게 구성합니다. (낮은 우선 순위)
 
 ## 코드 뼈대 작성
 
@@ -150,7 +154,7 @@ git을 사용할 수 없는 환경이라면 [여기](https://github.com/HYBLOCK-
 
 ### Contract 구조
 
-프로젝트의 `apps/on-chain/contracts`를 확인해주세요. `interfaces`폴더와 `CommitteeManager.sol`, `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
+프로젝트의 `apps/on-chain/contracts`를 확인해주세요. `interfaces`폴더와 `LicenseManager.sol`파일을 확인할 수 있을 겁니다.
 
 **Interface**는 특정 스마트 컨트랙트와 상호작용하기 위한 함수들의 명세서 또는 설계도입니다. 컨트랙트가 어떤 함수들을 가지고 있는지 알려주지만, 실제 코드는 포함하지 않습니다.
 interface는 이미 On-chain에 배포된 다른 컨트랙트의 함수를 내 컨트랙트에서 호출하고 싶을 때 사용합니다. 상대방 컨트랙트의 전체 소스코드를 다 가져올 필요 없이, 인터페이스만 가지고 있으면 해당 컨트랙트의 함수를 안전하고 효율적으로 호출할 수 있습니다. 이는 코드의 크기를 줄여 가스비를 절약할 수 있습니다. 또한, Interface에 맞게 Contract가 구성되므로 Contract에 어떤 기능이 있는지 쉽게 확인이 가능합니다.
@@ -163,7 +167,7 @@ Contract를 구현하기 위해 필요한 사항을 정리해봅시다.
 
 - contract는 code에 대한 정보를 알아야 합니다.
   - 등록된 code의 메타데이터와 등록된 code의 개수(다음에 등록할 코드에 대한 번호 부여 용도)
-  - code의 owner는 누구인지
+  - code의 owner는 누구인지 알아야합니다.
 - code를 등록할 수 있어야 합니다. 등록을 하면 owner로 설정되어야 합니다.
 - owner는 라이센스 토큰 발급할 수 있어야 합니다.
 - owner는 모든 코드 실행 요청을 중단, 허용할 수 있어야 합니다.
@@ -376,7 +380,7 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 **CodeUpdated**
 
-기존 코드나 메타데이터(CID)가 갱신되었을 때 발생하는 이벤트입니다. 핫픽스, 새 빌드 배포 시 기록됩니다.
+기존 코드가 갱신되었을 때 발생하는 이벤트입니다. 핫픽스, 새 빌드 배포 시 기록됩니다.
 
 파라미터
 
@@ -448,7 +452,7 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 `supportsInterface(bytes4 interfaceId) → bool`
 
-이 컨트랙트가 특정 인터페이스를 지원하는지 반환합니다.
+이 컨트랙트가 특정 인터페이스를 지원하는지 반환합니다. ERC165에서 정의된 함수로 이 컨트랙트가 특정 인터페이스를 구현했는지”를 온체인에서 표준적으로 물어보는 함수입니다.
 
 `registerCode(bytes32 codeHash, string cipherCid) → uint256 codeId`
 
@@ -488,15 +492,15 @@ code에 대한 소유자를 조회하는 함수입니다. `codeId`를 통해 조
 
 **checkCodeActive(uint256 codeId) → bool**
 
-    해당 코드가 활성화 상태(존재하며 일시정지 상태가 아님)인지 확인합니다.
+해당 코드가 활성화 상태(존재하며 일시정지 상태가 아님)인지 확인합니다.
 
 **checkCodeExists(uint256 codeId) → bool**
 
-    해당 코드가 등록되어 있는지 여부를 확인합니다.
+해당 코드가 등록되어 있는지 여부를 확인합니다.
 
 **uri(uint256 id) → string**
 
-    ERC-1155 표준 메타데이터 URI를 반환합니다.
+ERC-1155 표준 메타데이터 URI를 반환합니다.
 
 이제 `LicenseManager.sol`을 작성해봅시다.
 
@@ -704,10 +708,19 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // 코드 메타데이터 갱신. 소유자만 갱신 가능
     function updateCodeMetadata(
         uint256 codeId,
-        bytes32 newCodeHash,
-        string calldata newCipherCid
+        string calldata newName
     ) external override {
         // TODO implement updating code metadata
+    }
+
+    // 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+    function updateCode(
+        uint256 codeId,
+        bytes32 newCodeHash,
+        string calldata newCipherCid,
+        string calldata newVersion
+    ) external override {
+        // TODO implement updating code
     }
 
     // 코드 일시정지. 소유자 또는 관리자만 가능
@@ -1103,7 +1116,7 @@ function uri(
 }
 ```
 
-### 마무리 및 테스트
+### 마무리
 
 이제 LicenseManager 컨트랙트 작성을 완료했습니다. 전체 코드는 다음과 같습니다.
 
@@ -1515,10 +1528,14 @@ cp .env.example .env
 
 `.env`에서 아래 값을 필수로 갱신합니다.
 
-- `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다.. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
 - `NEXT_PUBLIC_CHAIN_ID`: 로컬은 31337, Sepolia는 11155111입니다.
+- `NEXT_PUBLIC_CHAIN_NAME`: UI에 표시될 Chain 명입니다.
+- `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
+- `NEXT_PUBLIC_CHAIN_SYMBOL`: UI에 표시될 Chain 심볼입니다.
 - `NEXT_PUBLIC_CONTRACT_ADDRESS`: 앞서 배포한 LicenseManager 컨트랙트 주소입니다.
 - `NEXT_PUBLIC_WALLETCONNECT_ID`: WalletConnect 프로젝트를 사용하면 고유 ID로 교체해주세요.
+- `NEXT_PUBLIC_STORAGE_MODE`: IPFS 스토리지 모드입니다. `local`로 설정하면 `Helia`만 사용하고 `production`으로 설정하면 `Helia` + `Pinata`를 사용합니다.
+- `PINATA_JWT`: Pinata에서 발급한 JWT토큰입니다. 선택 옵션입니다.
 
 설정을 마치면 `npm run dev`로 웹 UI를 실행하고, 지갑을 연결해 트랜잭션 흐름을 검증합니다. 로컬 네트워크를 띄운 상태에서 웹 UI를 실행하고, 메타마스크/지갑 연결 후 `registerCode`, `issueLicense`, `requestCodeExecution` 플로우를 직접 수행합니다. 트랜잭션이 실패하면 Hardhat 콘솔과 브라우저 개발자 도구에서 에러 로그를 확인하고, 컨트랙트 이벤트(`RunRequested`, `CodeRegistered` 등)를 통해 상태 변화를 검증하세요.
 
@@ -1540,7 +1557,7 @@ cp .env.example .env
 
 Duration: 14
 
-IPFS(InterPlanetary File System)는 콘텐츠 주소화(content addressing), 분산 P2P 네트워크(libp2p), DHT 기반 라우팅, IPLD(Merkle-DAG) 데이터 모델로 이루어진 분산 파일 시스템입니다. 핵심은 파일의 위치가 아니라 내용(CID) 으로 식별하고, 여러 피어가 데이터를 교환(Bitswap) 한다는 점입니다.
+[IPFS(InterPlanetary File System)](https://ipfs.tech/)는 콘텐츠 주소화(content addressing), 분산 P2P 네트워크(libp2p), DHT 기반 라우팅(BitSwap), IPLD(Merkle-DAG) 데이터 모델로 이루어진 분산 파일 시스템입니다. 핵심은 파일의 위치가 아니라 내용(CID) 으로 식별하고, 여러 피어가 데이터를 교환한다는 점입니다.
 
 ### IPFS 구조 및 동작 원리
 
@@ -1592,7 +1609,7 @@ IPFS 실행하는 과정은 다음과 같습니다.
 
 #### IPFS Desktop
 
-IPFS Desktop을 설치하면 다음과 같은 기본 대시보드를 볼 수 있습니다. 아래 사진처럼 로컬 Kubo 노드의 상태(Status), 피어 연결 수, 데이터 사용량, 게이트웨이 주소 등을 한눈에 확인할 수 있습니다.
+[IPFS Desktop](https://docs.ipfs.tech/install/ipfs-desktop)을 설치하면 다음과 같은 기본 대시보드를 볼 수 있습니다. 아래 사진처럼 로컬 Kubo 노드의 상태(Status), 피어 연결 수, 데이터 사용량, 게이트웨이 주소 등을 한눈에 확인할 수 있습니다.
 
 ![ipfs desktop status](./images/ipfs_desktop_status.png)
 
@@ -1689,6 +1706,12 @@ HTTP/Go 클라이언트 예시와 상세 API는 [레퍼런스 문서](https://st
 Duration: 1
 
 축하합니다! 성공적으로 License 관련 컨트랙트를 작성하고 IPFS에 대해 익혔습니다. 다음 시간에는 위원회 관련 컨트랙트 개발과 기존 컨트랙트에서 보안할 점을 확인하도록 하겠습니다.
+
+#### Pinata
+
+[Pinata](https://pinata.cloud/)는 IPFS 상에서 파일을 손쉽게 업로드하고 영구적으로 **고정(pin)** 시킬 수 있도록 도와주는 클라우드 기반의 IPFS 핀 서비스입니다. IPFS는 탈중앙화된 파일 저장 네트워크이기 때문에, 기본적으로 특정 노드가 파일을 보관하지 않으면 데이터가 사라질 수 있습니다. Pinata는 사용자가 업로드한 콘텐츠를 자사 노드에 고정해 두어 언제나 접근 가능하도록 유지해 주는 역할을 합니다.
+
+현재 웹 데모는 로컬 환경이거나 Pinata를 사용 불가능한 환경에서는 Helia를 이용해 브라우저에 파일을 저장하고, Pinata를 사용 가능한 환경에서 Helia로 업로드된 파일을 Pinata 스토리지에 다시 한 번 저장합니다. 이를 사용하려면 회원가입 후 [API Key](https://app.pinata.cloud/developers/api-keys)를 받아주세요.
 
 ### 도움이 될 만한 자료
 

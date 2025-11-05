@@ -48,7 +48,7 @@
       <google-codelab-step label="요구사항 정리" duration="15">
         <h2 is-upgraded>User flow</h2>
 <p>User flow는 다음과 같습니다. 특히, 이번 세션에는 License 관련 Contract를 구현합니다.</p>
-<p class="image-container"><img alt="architecture" src="img\\437e35a301729fe5.png"></p>
+<p class="image-container"><img alt="architecture" src="img/437e35a301729fe5.png"></p>
 <ol type="1">
 <li><strong>코드 등록:</strong><ul>
 <li>배포자가 자신의 코드를 준비합니다.</li>
@@ -1310,7 +1310,7 @@ npm install # 또는 pnpm/yarn 사용 가능
 </code></pre>
 <aside class="warning"><p>hardhat은 deployment-id를 기준으로 배포를 실행합니다. 즉, 동일한 deployment-id로 같은 모듈/파라미터를 가진다면 재실행하지 않습니다. 재배포가 필요한 경우  <code>--deployment-id license-manager-$(date +%s)</code> 옵션을 붙여서 재배포해주세요.</p>
 </aside>
-<p class="image-container"><img alt="deployment sepolia" src="img\\f493b499e279a036.png"></p>
+<p class="image-container"><img alt="deployment sepolia" src="img/f493b499e279a036.png"></p>
 <p>배포 후 콘솔에 출력되는 <code>licenseManager</code> 주소를 따로 기록해 두세요. 프론트엔드 연동 및 이후 트랜잭션 검증에 사용합니다.</p>
 <h3 is-upgraded>5. Etherscan에서 contract verifying</h3>
 <p>스마트 컨트랙트를 배포하면 주소로는 바이트코드만 확인할 수 있습니다. Etherscan에서 소스 코드를 검증(verify)해 두면 누구나 원본 코드를 열람하고 ABI를 재활용할 수 있어 서비스 신뢰도가 크게 높아집니다.</p>
@@ -1320,16 +1320,16 @@ npm install # 또는 pnpm/yarn 사용 가능
 <li>개발 편의: Etherscan이 ABI를 자동 생성해주므로 프론트엔드나 스크립트에서 재사용하기 쉽습니다.</li>
 </ul>
 <p>검증은 <a href="https://sepolia.etherscan.io/" target="_blank">Etherscan</a>에서 컨트랙트 주소를 열고 <code>Contract</code> 탭 → <code>Verify & Publish</code> 버튼을 눌러 진행합니다. 다음과 같이 ㄴ배포에 사용한 컴파일러 버전, 최적화 설정, constructor 인자를 그대로 입력해 주세요.</p>
-<p class="image-container"><img alt="etherscan verifying web0" src="img\\67412a7db369f57d.png"></p>
+<p class="image-container"><img alt="etherscan verifying web0" src="img/67412a7db369f57d.png"></p>
 <p>완료가 되면 컴파일 옵션을 json 파일로 넘겨줘야합니다. json파일을 하나 만들어 넣어주세요. 안에 Standard JSON Input 붙여넣습니다. 컴파일 시 생성된 json 파일(<code>artifacts/build-info/<hash>.json</code>)에서 &#34;input&#34; 객체 전체를 통째로 복사해 붙여넣어주세요. 이제 Etherscan의 입력 박스에 붙여넣기 하세요.</p>
-<p class="image-container"><img alt="etherscan verifying web0" src="img\\79baa7261d6bedf4.png"></p>
+<p class="image-container"><img alt="etherscan verifying web0" src="img/79baa7261d6bedf4.png"></p>
 <aside class="warning"><p>이 settings 안의 optimizer.enabled, runs, evmVersion 등이 실제 컴파일 설정이므로 반드시 원본 그대로 유지돼야 검증이 성공합니다.</p>
 </aside>
 <p>동일한 과정을 CLI로 자동화할 수도 있습니다. Hardhat 프로젝트 루트에서 다음 명령을 실행하면 Etherscan API를 통해 검증이 제출됩니다. <code>"ipfs://base/{id}.json"</code>는 컨트랙트로 전달할 argument입니다.</p>
 <pre><code language="language-bash" class="language-bash">npx hardhat verify --build-profile production --network sepolia &lt;DEPLOYED_ADDRESS&gt; &#34;ipfs://base/{id}.json&#34;
 </code></pre>
 <p>검증이 완료되면 Etherscan의 <code>Contract</code> 탭에 Verified 뱃지가 표시되고, 코드/ABI가 공개됩니다.</p>
-<p class="image-container"><img alt="etherscan verifying web0" src="img\\80d940eeecd08f86.png"></p>
+<p class="image-container"><img alt="etherscan verifying web0" src="img/80d940eeecd08f86.png"></p>
 <h2 is-upgraded>테스트</h2>
 <h3 is-upgraded>1. 컨트랙트 테스트 실행</h3>
 <pre><code language="language-bash" class="language-bash">cd apps/on-chain
@@ -1360,9 +1360,9 @@ cp .env.example .env
 <p>설정을 마치면 <code>npm run dev</code>로 웹 UI를 실행하고, 지갑을 연결해 트랜잭션 흐름을 검증합니다. 로컬 네트워크를 띄운 상태에서 웹 UI를 실행하고, 메타마스크/지갑 연결 후 <code>registerCode</code>, <code>issueLicense</code>, <code>requestCodeExecution</code> 플로우를 직접 수행합니다. 트랜잭션이 실패하면 Hardhat 콘솔과 브라우저 개발자 도구에서 에러 로그를 확인하고, 컨트랙트 이벤트(<code>RunRequested</code>, <code>CodeRegistered</code> 등)를 통해 상태 변화를 검증하세요.</p>
 <h3 is-upgraded>3. 웹에서 테스트</h3>
 <p>웹에서 code를 등록하고 라이센스를 발행하고 발행된 라이센스를 확인해보세요.</p>
-<p class="image-container"><img alt="web code registered" src="img\\fe8900d41d62ec1f.png"><img alt="web license issued" src="img\\b402ef0cfd9ebfb7.png"><img alt="web licenses" src="img\\8c356d31858e9015.png"></p>
+<p class="image-container"><img alt="web code registered" src="img/fe8900d41d62ec1f.png"><img alt="web license issued" src="img/b402ef0cfd9ebfb7.png"><img alt="web licenses" src="img/8c356d31858e9015.png"></p>
 <p>웹에서 실행한 결과를 etherscans에서 확인해보세요.</p>
-<p class="image-container"><img alt="result transactions" src="img\\2bd6ff603b0d93ab.png"><img alt="result events" src="img\\c24b8d2616546317.png"><img alt="result tokens" src="img\\7bd17b83a1d4b3d8.png"></p>
+<p class="image-container"><img alt="result transactions" src="img/2bd6ff603b0d93ab.png"><img alt="result events" src="img/c24b8d2616546317.png"><img alt="result tokens" src="img/7bd17b83a1d4b3d8.png"></p>
 
 
       </google-codelab-step>
@@ -1375,7 +1375,7 @@ cp .env.example .env
 <h3 is-upgraded>IPLD(Merkle-DAG) &amp; UnixFS</h3>
 <p>IPFS에서 Merkle DAG를 통해 내용 그 자체로 구분하고, 여러 조각(블록)들이 서로 연결된 형태로 저장되도록 만들고, UnixFS는 이 위에 파일/디렉터리 구조를 얹어 실질적인 파일 저장, 탐색이 가능하도록 만든 포맷입니다. 이 두 가지가 결합됨으로써 IPFS는 파일 단위 저장의 유연성과 블록 단위 저장의 효율성을 동시에 확보할 수 있습니다.</p>
 <p>데이터를 분할한 블록들 사이에 Merkle DAG(Directed Acyclic Graph) 구조를 구성하는데, 각 노드는 자신의 데이터(payload)와 자식 블록의 CID 리스트(links)를 포함하며, 이 두 정보를 해시한 값이 그 노드의 식별자가 됩니다. 이러한 방식 덕분에 중복되는 데이터 블록은 여러 위치에 저장되더라도 해시가 동일하기 때문에 자연스럽게 <strong>중복 제거(deduplication)가</strong> 이루어집니다.</p>
-<p class="image-container"><img alt="ipfs dag" src="img\\61fe0ca972a4ab88.svg"></p>
+<p class="image-container"><img alt="ipfs dag" src="img/b120bfe20247756e.svg"></p>
 <p>IPFS 내 파일·디렉터리 저장을 위해 설계된 계층이 UnixFS입니다. UnixFS는 이 Merkle DAG 위에 <strong>파일 시스템처럼 보이도록</strong> 청크(chunk) 분할, 링크 구조, 디렉터리 계층 등 메타데이터를 더해 구현된 데이터 포맷입니다.</p>
 <p>정리하자면, 크기가 큰 파일은 여러 블록으로 나뉘고 이 블록들은 Merkle DAG의 자식 노드로 연결되어 루트 노드가 전체 파일을 대표하게 됩니다. 이렇게 구성되면 파일의 각 부분을 개별적으로 검증하고, 블록 중 일부만 변경되어도 전체 CID가 변경되므로 변경 감지 및 무결성 관리가 수월해집니다.</p>
 <h3 is-upgraded>Bitswap</h3>
@@ -1396,9 +1396,9 @@ cp .env.example .env
 </ol>
 <h3 is-upgraded>IPFS Desktop</h3>
 <p><a href="https://docs.ipfs.tech/install/ipfs-desktop" target="_blank">IPFS Desktop</a>을 설치하면 다음과 같은 기본 대시보드를 볼 수 있습니다. 아래 사진처럼 로컬 Kubo 노드의 상태(Status), 피어 연결 수, 데이터 사용량, 게이트웨이 주소 등을 한눈에 확인할 수 있습니다.</p>
-<p class="image-container"><img alt="ipfs desktop status" src="img\\d9d35cf3c0bb9a22.png"></p>
+<p class="image-container"><img alt="ipfs desktop status" src="img/d9d35cf3c0bb9a22.png"></p>
 <p>Settings 화면의 맨 하단에는 <code>Kubo Config</code> 항목이 있습니다. 이는 로컬 IPFS 노드의 설정 파일(<code>~/.ipfs/config</code>)을 GUI 형태로 편집할 수 있는 영역입니다.</p>
-<p class="image-container"><img alt="ipfs desktop config" src="img\\1bd9a5c694e42124.png"></p>
+<p class="image-container"><img alt="ipfs desktop config" src="img/1bd9a5c694e42124.png"></p>
 <p>여기에서 Bootstrap이 <code>auto</code>로 되어 있으면 Kubo가 내장된 <code>공식 부트스트랩 피어 목록을</code> 자동으로 사용합니다. 이 피어들은 전 세계적으로 배포된 IPFS의 초기 진입 노드로, 노드가 처음 실행될 때 DHT 네트워크에 연결되도록 도와줍니다. 직접 네트워크(프라이빗 IPFS 클러스터 등)를 운영할 때는 여기에 커스텀 피어 리스트를 넣어주면 됩니다.</p>
 <pre><code language="language-text" class="language-text">&#34;Bootstrap&#34;: [
   &#34;/ip4/203.0.113.12/tcp/4001/p2p/QmExamplePeer&#34;
@@ -1413,7 +1413,7 @@ cp .env.example .env
 <li>루트 노드의 CID가 파일의 고유 주소가 됩니다.</li>
 </ul>
 <p>이 구조를 시각적으로 보고 싶다면, 파일을 선택한 후 <code>Inspect</code> 버튼을 클릭하면 됩니다.</p>
-<p class="image-container"><img alt="ipfs desktop explore" src="img\\1eed7b1ed7c58745.png"></p>
+<p class="image-container"><img alt="ipfs desktop explore" src="img/1eed7b1ed7c58745.png"></p>
 <h3 is-upgraded>Kubo</h3>
 <p>Kubo는 Go로 작성된 IPFS의 가장 널리 쓰이는 구현체이며, CLI/RPC API/게이트웨이를 제공합니다. 과거 이름은 go-ipfs입니다.</p>
 <ol type="1">
@@ -1423,7 +1423,7 @@ cp .env.example .env
 <pre><code language="language-bash" class="language-bash">ipfs init
 </code></pre>
 <p>다음과 같은 형태로 출력되면 됩니다.</p>
-<p class="image-container"><img alt="ipfs cli init" src="img\\acabd6760e662762.png"></p>
+<p class="image-container"><img alt="ipfs cli init" src="img/acabd6760e662762.png"></p>
 <ol type="1" start="2">
 <li>노드를 온라인으로 전환</li>
 </ol>
@@ -1446,21 +1446,21 @@ cp .env.example .env
 <pre><code language="language-bash" class="language-bash">ipfs add spaceship-launch.jpg
 </code></pre>
 <p>다음과 같이 추가됩니다.</p>
-<p class="image-container"><img alt="ipfs cli added" src="img\\865a6844823aea58.png"></p>
+<p class="image-container"><img alt="ipfs cli added" src="img/865a6844823aea58.png"></p>
 <h3 is-upgraded>web3.storage</h3>
 <p>web3.storage는 IPFS이나 Filecoin을 쉽게 사용할 수 있는 서비스입니다. 업로드 시 자동으로 CAR(내용 주소 가능 아카이브)로 패킹하고, IPFS에 배포하며 Filecoin 백업을 제공합니다. JS/Go/HTTP API를 지원합니다. 우리는 자체 노드를 운영하지 않고 암호화된 소스코드(데이터)를 보관하기 위해 사용할 예정입니다.</p>
 <p>HTTP/Go 클라이언트 예시와 상세 API는 <a href="https://staging.web3.storage/docs/reference/http-api/" target="_blank">레퍼런스 문서</a>에서 확인할 수 있습니다.</p>
 <h3 is-upgraded>Helia</h3>
 <p><a href="https://helia.io/" target="_blank">Helia</a>는 브라우저/Node.js 환경을 위한 모던 JS IPFS 구현체입니다. 모듈화가 잘 되어 있고, <code>@helia/*</code> 패키지와 <code>js-kubo-rpc-client</code> 등과 함께 사용할 수 있습니다. 공식 JS 레퍼런스는 Helia와 연동 도구들을 소개합니다.</p>
+<h3 is-upgraded>Pinata</h3>
+<p><a href="https://pinata.cloud/" target="_blank">Pinata</a>는 IPFS 상에서 파일을 손쉽게 업로드하고 영구적으로 <strong>고정(pin)</strong> 시킬 수 있도록 도와주는 클라우드 기반의 IPFS 핀 서비스입니다. IPFS는 탈중앙화된 파일 저장 네트워크이기 때문에, 기본적으로 특정 노드가 파일을 보관하지 않으면 데이터가 사라질 수 있습니다. Pinata는 사용자가 업로드한 콘텐츠를 자사 노드에 고정해 두어 언제나 접근 가능하도록 유지해 주는 역할을 합니다.</p>
+<p>현재 웹 데모는 로컬 환경이거나 Pinata를 사용 불가능한 환경에서는 Helia를 이용해 브라우저에 파일을 저장하고, Pinata를 사용 가능한 환경에서 Helia로 업로드된 파일을 Pinata 스토리지에 다시 한 번 저장합니다. 이를 사용하려면 회원가입 후 <a href="https://app.pinata.cloud/developers/api-keys" target="_blank">API Key</a>를 받아주세요.</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="축하합니다" duration="1">
         <p>축하합니다! 성공적으로 License 관련 컨트랙트를 작성하고 IPFS에 대해 익혔습니다. 다음 시간에는 위원회 관련 컨트랙트 개발과 기존 컨트랙트에서 보안할 점을 확인하도록 하겠습니다.</p>
-<h3 is-upgraded>Pinata</h3>
-<p><a href="https://pinata.cloud/" target="_blank">Pinata</a>는 IPFS 상에서 파일을 손쉽게 업로드하고 영구적으로 <strong>고정(pin)</strong> 시킬 수 있도록 도와주는 클라우드 기반의 IPFS 핀 서비스입니다. IPFS는 탈중앙화된 파일 저장 네트워크이기 때문에, 기본적으로 특정 노드가 파일을 보관하지 않으면 데이터가 사라질 수 있습니다. Pinata는 사용자가 업로드한 콘텐츠를 자사 노드에 고정해 두어 언제나 접근 가능하도록 유지해 주는 역할을 합니다.</p>
-<p>현재 웹 데모는 로컬 환경이거나 Pinata를 사용 불가능한 환경에서는 Helia를 이용해 브라우저에 파일을 저장하고, Pinata를 사용 가능한 환경에서 Helia로 업로드된 파일을 Pinata 스토리지에 다시 한 번 저장합니다. 이를 사용하려면 회원가입 후 <a href="https://app.pinata.cloud/developers/api-keys" target="_blank">API Key</a>를 받아주세요.</p>
 <h2 is-upgraded>도움이 될 만한 자료</h2>
 <ol type="1">
 <li><a href="https://www.litprotocol.com/" target="_blank">Lit Protocol</a>: Lit Protocol은 key와 secrets을 관리하기 위한 탈중앙화 네트워크 프로토콜입니다. 본 프로젝트는 이러한 Lit Protocol에서 영감을 받아, DKG(Distributed Key Generation) 개념을 기반으로 이를 솔리디티로 구현하였습니다. Lit Protocol에 대한 보다 자세한 내용은 <a href="https://github.com/LIT-Protocol/whitepaper" target="_blank">공식 백서</a>를 참고하시기 바랍니다.</li>

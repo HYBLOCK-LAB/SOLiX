@@ -1,0 +1,184 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Week 3: Smart Contract 개발 및 보안 사항 수정</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14" ga4id=""></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  codelab-ga4id=""
+                  id="html"
+                  title="Week 3: Smart Contract 개발 및 보안 사항 수정"
+                  environment="web"
+                  feedback-link="">
+    
+      <google-codelab-step label="세션 소개" duration="5">
+        <p>이번 세션에서는 Committee와 관련된Smart Contract를 작성하고 이 과정에서 발생하는 온체인&amp;오프체인 흐름을 이해합니다. 또한, Smart Contract 보안 취약점과 대응 전략을 학습을 진행합니다.</p>
+<h2 is-upgraded>목차</h2>
+<h3 is-upgraded>1. IPFS 구조 및 동작 원리</h3>
+<p>IPFS의 핵심 컴포넌트를 살펴보고 동작 방식을 익힙니다. 또한, 파일 추가·조회·핀(pinning) 등의 동작 흐름과 주요 사용법을 실습합니다.</p>
+<h3 is-upgraded>2. Shamir&#39;s Secret Sharing(SSS) Algorithm</h3>
+<p>샤미르 비밀 공유의 수학적 원리와 구현 방법을 다루고, Committee 환경에서 비밀 분할·복원 절차와 안전성 고려사항을 확인합니다.</p>
+<h3 is-upgraded>3. Committee Manager 구현</h3>
+<p>Shard 제출, 위원회 관리 등 <code>CommitteeManager</code>에 필요한 기능을 설계하고 Smart Contract를 구현합니다.</p>
+<h3 is-upgraded>4. 취약점 탐색 및 수정</h3>
+<p>기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 찾아 수정합니다.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="IPFS 구조 및 동작 원리" duration="14">
+        <p><a href="https://ipfs.tech/" target="_blank">IPFS(InterPlanetary File System)</a>는 콘텐츠 주소화(content addressing), 분산 P2P 네트워크(libp2p), DHT 기반 라우팅(BitSwap), IPLD(Merkle-DAG) 데이터 모델로 이루어진 분산 파일 시스템입니다. 핵심은 파일의 위치가 아니라 내용(CID) 으로 식별하고, 여러 피어가 데이터를 교환한다는 점입니다.</p>
+<h2 is-upgraded>IPFS 구조 및 동작 원리</h2>
+<h3 is-upgraded>콘텐츠 주소화 &amp; CID(Content Identifier)</h3>
+<p>IPFS는 파일이나 디렉터리를 저장할 때 먼저 데이터를 <strong>여러 블록으로</strong> 분할하고, 각 블록을 해시하여 <strong>고유한 식별자(CID)를</strong> 만듭니다. 해시를 통해 만들어졌으므로 같은 내용은 언제 어디서 저장되든 동일한 CID를 갖습니다. CID는 크기와 무관하게 짧고, 위치가 아닌 내용을 가리키는 주소입니다.</p>
+<h3 is-upgraded>IPLD(Merkle-DAG) &amp; UnixFS</h3>
+<p>IPFS에서 Merkle DAG를 통해 내용 그 자체로 구분하고, 여러 조각(블록)들이 서로 연결된 형태로 저장되도록 만들고, UnixFS는 이 위에 파일/디렉터리 구조를 얹어 실질적인 파일 저장, 탐색이 가능하도록 만든 포맷입니다. 이 두 가지가 결합됨으로써 IPFS는 파일 단위 저장의 유연성과 블록 단위 저장의 효율성을 동시에 확보할 수 있습니다.</p>
+<p>데이터를 분할한 블록들 사이에 Merkle DAG(Directed Acyclic Graph) 구조를 구성하는데, 각 노드는 자신의 데이터(payload)와 자식 블록의 CID 리스트(links)를 포함하며, 이 두 정보를 해시한 값이 그 노드의 식별자가 됩니다. 이러한 방식 덕분에 중복되는 데이터 블록은 여러 위치에 저장되더라도 해시가 동일하기 때문에 자연스럽게 <strong>중복 제거(deduplication)가</strong> 이루어집니다.</p>
+<p class="image-container"><img alt="ipfs dag" src="img/b120bfe20247756e.svg"></p>
+<p>IPFS 내 파일·디렉터리 저장을 위해 설계된 계층이 UnixFS입니다. UnixFS는 이 Merkle DAG 위에 <strong>파일 시스템처럼 보이도록</strong> 청크(chunk) 분할, 링크 구조, 디렉터리 계층 등 메타데이터를 더해 구현된 데이터 포맷입니다.</p>
+<p>정리하자면, 크기가 큰 파일은 여러 블록으로 나뉘고 이 블록들은 Merkle DAG의 자식 노드로 연결되어 루트 노드가 전체 파일을 대표하게 됩니다. 이렇게 구성되면 파일의 각 부분을 개별적으로 검증하고, 블록 중 일부만 변경되어도 전체 CID가 변경되므로 변경 감지 및 무결성 관리가 수월해집니다.</p>
+<h3 is-upgraded>Bitswap</h3>
+<p>노드들은 <strong>원하는 블록의 CID 리스트</strong>를 브로드캐스트하고, 연결된 피어로부터 직접 블록을 받습니다. 다수의 피어와 동시 교환이 가능합니다. 교환 전략은 기본적으로 tit-for-tat 정책을 사용합니다.</p>
+<p>IPFS의 노드들은 자신이 필요로 하는 데이터 블록의 CID(Content Identifier) 목록(want-list)를 주변 피어들에게 브로드캐스트합니다. 이 목록을 받은 피어들은 자신이 해당 블록을 보유하고 있을 경우 이를 제공하며, 요청한 노드는 동시에 여러 피어로부터 데이터를 전송받을 수 있습니다. 이러한 병렬 교환 구조 덕분에 전송 속도와 네트워크 활용 효율이 크게 향상됩니다. <strong>BitTorrent</strong>와 유사하게 <strong>tit-for-tat</strong> 전략을 사용하여, 네트워크 참여자들이 공정하게 자원을 교환하도록 유도하고, 결과적으로 IPFS 전체의 데이터 가용성과 신뢰성을 높여 줍니다.</p>
+<h3 is-upgraded>DHT</h3>
+<p>DHT(Distributed Hash Table)는 분산 네트워크 환경에서 데이터를 효율적으로 저장하고 검색하기 위한 해시 테이블 구조입니다. 네트워크 내의 특정 자원(resource)을 저장할 때, 해시 함수를 통해 자원의 정보를 암호화하여 고유한 키(key) 를 생성하고, 이 키를 담당할 노드를 일정한 규칙에 따라 선택하여 데이터를 분산 저장합니다. 즉, 각 노드는 전체 키 공간의 일부를 담당하며, 특정 키를 기반으로 <strong>어느 노드가 해당 데이터를 갖고 있는지</strong>를 계산할 수 있습니다. 이때 탐색 효율을 높이기 위해 각 노드는 다른 피어의 정보를 일정 부분만 알고 있으며, 대표적으로 Kademlia와 같은 알고리즘을 사용하여 O(log N) 단계 안에 원하는 데이터를 찾을 수 있습니다. IPFS에서는 Kademlia 기반 DHT를 사용하고 Content Routing을 위한 지도 역할이고, 실제 데이터 전송은 Bitswap으로 이루어집니다.</p>
+<p>IPFS에서 사용하는 DHT에 대해서는 <a href="https://docs.ipfs.tech/concepts/dht/#kademlia" target="_blank">공식 문서</a>에 잘 정리돼 있습니다.</p>
+<h2 is-upgraded>IPFS 사용하기</h2>
+<h3 is-upgraded>실행과정</h3>
+<p>IPFS 실행하는 과정은 다음과 같습니다.</p>
+<ol type="1">
+<li>IPFS 노드 설치: 먼저 사용할 컴퓨터 또는 장치에 IPFS 노드를 설치해야 합니다. CLI 환경이라면 <a href="https://docs.ipfs.tech/install/command-line/" target="_blank">Kubo</a>를, Desktop 환경에서 사용하고 싶으면 <a href="https://docs.ipfs.tech/install/ipfs-desktop" target="_blank">Desktop App</a>을 OS에 맞게 설치합니다.</li>
+<li>IPFS 노드 실행: <code>ipfs init</code>으로 로컬 리포를 만들고, <code>ipfs daemon</code>으로 노드를 실행해 네트워크에 참여합니다. 브라우저용 대시보드와 로컬 게이트웨이도 확인할 수 있습니다.</li>
+<li>파일 추가: 파일을 IPFS에 추가하기 위해 <code>ipfs add</code> 명령을 사용합니다. 이 명령을 사용하면 지정된 파일을 IPFS 네트워크에 추가하고 해당 파일의 해시 값을 반환합니다. 예를 들어, ipfs add example.txt 명령을 사용하여 &#34;example.txt&#34;라는 파일을 추가할 수 있습니다.</li>
+<li>해시 값 확인: 출력된 CID가 곧 파일의 식별자입니다. 같은 내용이면 CID가 동일합니다. <code>ipfs cat <CID></code> 으로 내용 조회가 가능합니다.</li>
+<li>파일 공유: CID만 알면 전 세계 어디서든 접속 가능하며, 게이트웨이를 통해 <code>https://ipfs.io/ipfs/<CID></code> 같은 URL로도 접근할 수 있습니다. 영구 보존을 원하면 pin 하거나 핀닝 서비스(web3.storage 등)를 사용합니다.</li>
+</ol>
+<h3 is-upgraded>IPFS Desktop</h3>
+<p><a href="https://docs.ipfs.tech/install/ipfs-desktop" target="_blank">IPFS Desktop</a>을 설치하면 다음과 같은 기본 대시보드를 볼 수 있습니다. 아래 사진처럼 로컬 Kubo 노드의 상태(Status), 피어 연결 수, 데이터 사용량, 게이트웨이 주소 등을 한눈에 확인할 수 있습니다.</p>
+<p class="image-container"><img alt="ipfs desktop status" src="img/d9d35cf3c0bb9a22.png"></p>
+<p>Settings 화면의 맨 하단에는 <code>Kubo Config</code> 항목이 있습니다. 이는 로컬 IPFS 노드의 설정 파일(<code>~/.ipfs/config</code>)을 GUI 형태로 편집할 수 있는 영역입니다.</p>
+<p class="image-container"><img alt="ipfs desktop config" src="img/1bd9a5c694e42124.png"></p>
+<p>여기에서 Bootstrap이 <code>auto</code>로 되어 있으면 Kubo가 내장된 <code>공식 부트스트랩 피어 목록을</code> 자동으로 사용합니다. 이 피어들은 전 세계적으로 배포된 IPFS의 초기 진입 노드로, 노드가 처음 실행될 때 DHT 네트워크에 연결되도록 도와줍니다. 직접 네트워크(프라이빗 IPFS 클러스터 등)를 운영할 때는 여기에 커스텀 피어 리스트를 넣어주면 됩니다.</p>
+<pre><code language="language-text" class="language-text">&#34;Bootstrap&#34;: [
+  &#34;/ip4/203.0.113.12/tcp/4001/p2p/QmExamplePeer&#34;
+]
+</code></pre>
+<p>이렇게 하면 Kubo가 공용 네트워크 대신 지정된 피어를 우선 연결 대상으로 사용합니다. 즉, 특정 조직·프로젝트 내에서만 콘텐츠를 공유하는 <strong>폐쇄형 IPFS 네트워크를</strong> 구성할 수 있습니다.</p>
+<p>IPFS Desktop의 <code>Files</code> 탭에서는 로컬에서 업로드한 파일을 IPFS 네트워크에 추가하고 관리할 수 있습니다. 파일을 업로드하면 내부적으로 다음 과정이 일어납니다:</p>
+<ul>
+<li>파일이 여러 블록(block)으로 분할합니다.</li>
+<li>각 블록에 대해 CID가 계산됩니다.</li>
+<li>블록들이 Merkle DAG 형태로 연결되어 파일 전체를 표현합니다.</li>
+<li>루트 노드의 CID가 파일의 고유 주소가 됩니다.</li>
+</ul>
+<p>이 구조를 시각적으로 보고 싶다면, 파일을 선택한 후 <code>Inspect</code> 버튼을 클릭하면 됩니다.</p>
+<p class="image-container"><img alt="ipfs desktop explore" src="img/1eed7b1ed7c58745.png"></p>
+<h3 is-upgraded>Kubo</h3>
+<p>Kubo는 Go로 작성된 IPFS의 가장 널리 쓰이는 구현체이며, CLI/RPC API/게이트웨이를 제공합니다. 과거 이름은 go-ipfs입니다.</p>
+<ol type="1">
+<li>저장소 초기화</li>
+</ol>
+<p>ipfsKubo는 모든 설정과 내부 데이터를 저장소라는 디렉터리에 저장합니다. Kubo를 처음 사용하기 전에 저장소를 초기화해야 합니다.</p>
+<pre><code language="language-bash" class="language-bash">ipfs init
+</code></pre>
+<p>다음과 같은 형태로 출력되면 됩니다.</p>
+<p class="image-container"><img alt="ipfs cli init" src="img/acabd6760e662762.png"></p>
+<ol type="1" start="2">
+<li>노드를 온라인으로 전환</li>
+</ol>
+<p>노드를 온라인으로 전환하고 IPFS 네트워크와 상호 작용합니다. 다른 터미널 창을 열어 IPFS 데몬을 시작합니다.</p>
+<pre><code language="language-bash" class="language-bash">ipfs daemon
+</code></pre>
+<p>원래 터미널 창으로 돌아가 ipfs swarm peers피어의 IPFS 주소를 확인합니다.</p>
+<pre><code language="language-bash" class="language-bash">ipfs swarm peers
+</code></pre>
+<ol type="1" start="3">
+<li>파일 가져오기</li>
+</ol>
+<p>다음의 명령어를 입력하여 우주선 발사 사진을 가져옵니다. <code>QmSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq</code>는 <a href="https://docs.ipfs.tech/how-to/command-line-quick-start/#take-your-node-online" target="_blank">공식 문서</a>에서 소개된 CID입니다.</p>
+<pre><code language="language-bash" class="language-bash"> ipfs cat /ipfs/QmSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq &gt; ~/Desktop/spaceship-launch.jpg
+</code></pre>
+<ol type="1" start="4">
+<li>파일 업로드</li>
+</ol>
+<p>원하는 파일을 다음의 명령어를 통해 업로드합니다.</p>
+<pre><code language="language-bash" class="language-bash">ipfs add spaceship-launch.jpg
+</code></pre>
+<p>다음과 같이 추가됩니다.</p>
+<p class="image-container"><img alt="ipfs cli added" src="img/865a6844823aea58.png"></p>
+<h3 is-upgraded>web3.storage</h3>
+<p>web3.storage는 IPFS이나 Filecoin을 쉽게 사용할 수 있는 서비스입니다. 업로드 시 자동으로 CAR(내용 주소 가능 아카이브)로 패킹하고, IPFS에 배포하며 Filecoin 백업을 제공합니다. JS/Go/HTTP API를 지원합니다. 우리는 자체 노드를 운영하지 않고 암호화된 소스코드(데이터)를 보관하기 위해 사용할 예정입니다.</p>
+<p>HTTP/Go 클라이언트 예시와 상세 API는 <a href="https://staging.web3.storage/docs/reference/http-api/" target="_blank">레퍼런스 문서</a>에서 확인할 수 있습니다.</p>
+<h3 is-upgraded>Helia</h3>
+<p><a href="https://helia.io/" target="_blank">Helia</a>는 브라우저/Node.js 환경을 위한 모던 JS IPFS 구현체입니다. 모듈화가 잘 되어 있고, <code>@helia/*</code> 패키지와 <code>js-kubo-rpc-client</code> 등과 함께 사용할 수 있습니다. 공식 JS 레퍼런스는 Helia와 연동 도구들을 소개합니다.</p>
+<h3 is-upgraded>Pinata</h3>
+<p><a href="https://pinata.cloud/" target="_blank">Pinata</a>는 IPFS 상에서 파일을 손쉽게 업로드하고 영구적으로 <strong>고정(pin)</strong> 시킬 수 있도록 도와주는 클라우드 기반의 IPFS 핀 서비스입니다. IPFS는 탈중앙화된 파일 저장 네트워크이기 때문에, 기본적으로 특정 노드가 파일을 보관하지 않으면 데이터가 사라질 수 있습니다. Pinata는 사용자가 업로드한 콘텐츠를 자사 노드에 고정해 두어 언제나 접근 가능하도록 유지해 주는 역할을 합니다.</p>
+<p>현재 웹 데모는 로컬 환경이거나 Pinata를 사용 불가능한 환경에서는 Helia를 이용해 브라우저에 파일을 저장하고, Pinata를 사용 가능한 환경에서 Helia로 업로드된 파일을 Pinata 스토리지에 다시 한 번 저장합니다. 이를 사용하려면 회원가입 후 <a href="https://app.pinata.cloud/developers/api-keys" target="_blank">API Key</a>를 받아주세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Shamir&#39;s Secret Sharing(SSS) Algorithm" duration="20">
+        <p>샤미르 비밀 공유의 수학적 원리와 구현 방법을 다루고, Committee 환경에서 비밀 분할·복원 절차와 안전성 고려사항을 확인합니다.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Committee Manager 구현" duration="30">
+        <p>Shard 제출, 위원회 관리 등 <code>CommitteeManager</code>에 필요한 기능을 설계하고 Smart Contract를 구현합니다.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="취약점 탐색 및 수정" duration="49">
+        
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="축하합니다" duration="1">
+        <p>축하합니다! 성공적으로 License 관련 컨트랙트를 작성하고 IPFS에 대해 익혔습니다. 다음 시간에는 위원회 관련 컨트랙트 개발과 기존 컨트랙트에서 보안할 점을 확인하도록 하겠습니다.</p>
+<h2 is-upgraded>도움이 될 만한 자료</h2>
+<ol type="1">
+<li><a href="https://www.litprotocol.com/" target="_blank">Lit Protocol</a>: Lit Protocol은 key와 secrets을 관리하기 위한 탈중앙화 네트워크 프로토콜입니다. 본 프로젝트는 이러한 Lit Protocol에서 영감을 받아, DKG(Distributed Key Generation) 개념을 기반으로 이를 솔리디티로 구현하였습니다. Lit Protocol에 대한 보다 자세한 내용은 <a href="https://github.com/LIT-Protocol/whitepaper" target="_blank">공식 백서</a>를 참고하시기 바랍니다.</li>
+<li><a href="https://docs.ipfs.tech/concepts/" target="_blank">IPFS Concepts</a>: <a href="https://github.com/ipfs" target="_blank">IPFS</a>는 Web3 생태계에서는 중대형 오픈소스 프로젝트입니다. 또한, 이에 대한 구현 원리를 이해하기 위해서 Merkle DAG, UnixFS, DHT, Pub/Sub 모델(Gossip), BitSwap 등 Computer Sicence 관련 배경지식을 많이 요구합니다.</li>
+<li><a href="https://proto.school/tutorials" target="_blank">proto school</a>: IPFS나 filecoin과 같은 분산형 웹 스토리지 시스템에 관한 기술 튜토리얼입니다.</li>
+</ol>
+<h2 is-upgraded>참고 자료</h2>
+<ol type="1">
+<li><a href="https://docs.openzeppelin.com/contracts" target="_blank">openzeppelin의 contract관련 개발 문서</a></li>
+<li><a href="https://eips.ethereum.org/EIPS/eip-20" target="_blank">EIP-20: ERC-20(Token Standard)</a></li>
+<li><a href="https://eips.ethereum.org/EIPS/eip-165" target="_blank">EIP-165: ERC-165(Standard Interface Detection)</a></li>
+<li><a href="https://eips.ethereum.org/EIPS/eip-721" target="_blank">EIP-721: ERC-721(Non-Fungible Token Standard)</a></li>
+<li><a href="https://eips.ethereum.org/EIPS/eip-1155" target="_blank">EIP-1155: ERC-1155(Multi Token Standa)</a></li>
+</ol>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

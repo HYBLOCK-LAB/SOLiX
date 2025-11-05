@@ -3,13 +3,13 @@
   "format": "html",
   "prefix": "https://storage.googleapis.com",
   "mainga": "UA-49880327-14",
-  "updated": "2025-10-15T14:19:04+09:00",
+  "updated": "2025-11-05T01:40:38+09:00",
   "id": "html",
-  "duration": 110,
-  "title": "Week 1: Smart Contract와 Solidity 익히기",
+  "duration": 119,
+  "title": "Week 3: Smart Contract 개발 및 보안 사항 수정",
   "authors": "Jiseop Shin",
-  "summary": "Solidity를 사용하여 Smart Contract 개발에 대해 이해한다.",
-  "source": "week1.md",
+  "summary": "프로젝트 요구사항에 알맞게 Smart Contract를 개발한다.",
+  "source": "week3.md",
   "theme": "",
   "status": [
     "published"

@@ -9,7 +9,6 @@ contract CommitteeManager is AccessControl {
 
     bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
 
-    /// @notice 코드/라이선스 코어 컨트랙트 (읽기 의존)
     ILicenseManager public immutable licenseManager;
 
     constructor(address licenseManager_) {
@@ -61,8 +60,6 @@ contract CommitteeManager is AccessControl {
         _revokeRole(COMMITTEE_ROLE, who);
     }
 
-    /* ========= Shard 제출 ========= */
-
     // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
     function submitShard(
         uint256 codeId,
@@ -70,7 +67,6 @@ contract CommitteeManager is AccessControl {
         string calldata shardCid
     ) external onlyRole(COMMITTEE_ROLE) {
         require(licenseManager.checkCodeExists(codeId), "code !exist");
-        // 활성 코드만 허용
         require(licenseManager.checkCodeActive(codeId), "code paused");
 
         bytes32 runKey = keccak256(abi.encodePacked(codeId, runNonce));

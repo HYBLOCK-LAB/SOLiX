@@ -313,13 +313,13 @@ function submitShard(
 2. `LicenseManager`에 위임해 코드 존재 여부와 정지 상태를 검증합니다.
 3. `(codeId, runNonce)` 조합을 해시해 카운터 키를 만들고 제출 횟수를 1 증가시킵니다.
 4. `ShardSubmitted` 이벤트에는 shard를 저장한 IPFS CID와 현재 카운트가 기록됩니다.
-5. 카운트가 `committeeThreshold` 이상이 되면 `ExecutionApproved` 이벤트로 승인 상태를 방송합니다.
+5. 카운트가 `committeeThreshold` 이상이 되면 `ExecutionApproved` 이벤트로 승인 상태를 알립니다.
 
 ### 오프체인 연동
 
 - `ShardSubmitted` 이벤트를 인덱싱하면 특정 실행 요청(runNonce)에 대해 누가 몇 번째로 shard를 업로드했는지 추적할 수 있습니다.
 - `ExecutionApproved` 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.
-- 중복 제출 방지를 위해 Off-chain 레이어에서 `(committee, runNonce)` 중복 여부를 체크하고, 추후 온체인 보강을 위해 매핑을 추가하는 방식을 고려합니다(보안 섹션 참고).
+- 중복 제출 방지를 위해 Off-chain 레이어에서 `(committee, runNonce)` 중복 여부를 체크합니다.
 
 ### 하드햇 환경에서 검증하기
 

@@ -29,12 +29,12 @@
                   feedback-link="">
     
       <google-codelab-step label="세션 소개" duration="5">
-        <p>이번 세션에서는 Committee와 관련된Smart Contract를 작성하고 이 과정에서 발생하는 온체인&amp;오프체인 흐름을 이해합니다. 또한, Smart Contract 보안 취약점과 대응 전략을 학습을 진행합니다.</p>
+        <p>이번 세션에서는 Committee와 관련된 Smart Contract를 작성하고 이 과정에서 발생하는 온체인&amp;오프체인 흐름을 이해합니다. 또한, Smart Contract 보안 취약점과 대응 전략을 학습을 진행합니다.</p>
 <h2 is-upgraded>목차</h2>
 <h3 is-upgraded>1. IPFS 구조 및 동작 원리</h3>
-<p>IPFS의 핵심 컴포넌트를 살펴보고 동작 방식을 익힙니다. 또한, 파일 추가·조회·핀(pinning) 등의 동작 흐름과 주요 사용법을 실습합니다.</p>
+<p>IPFS의 핵심 컴포넌트를 살펴보고 파일 추가, 조회 등의 동작 흐름과 주요 사용법을 실습합니다.</p>
 <h3 is-upgraded>2. Shamir&#39;s Secret Sharing(SSS) Algorithm</h3>
-<p>샤미르 비밀 공유의 수학적 원리와 구현 방법을 다루고, Committee 환경에서 비밀 분할·복원 절차와 안전성 고려사항을 확인합니다.</p>
+<p>샤미르 비밀 공유의 수학적 원리를 다루고, Committee 환경에서 비밀 분할, 복원 절차와 안전성 고려사항을 확인합니다.</p>
 <h3 is-upgraded>3. Committee Manager 구현</h3>
 <p>Shard 제출, 위원회 관리 등 <code>CommitteeManager</code>에 필요한 기능을 설계하고 Smart Contract를 구현합니다.</p>
 <h3 is-upgraded>4. 취약점 탐색 및 수정</h3>
@@ -58,7 +58,12 @@
 <p>노드들은 <strong>원하는 블록의 CID 리스트</strong>를 브로드캐스트하고, 연결된 피어로부터 직접 블록을 받습니다. 다수의 피어와 동시 교환이 가능합니다. 교환 전략은 기본적으로 tit-for-tat 정책을 사용합니다.</p>
 <p>IPFS의 노드들은 자신이 필요로 하는 데이터 블록의 CID(Content Identifier) 목록(want-list)를 주변 피어들에게 브로드캐스트합니다. 이 목록을 받은 피어들은 자신이 해당 블록을 보유하고 있을 경우 이를 제공하며, 요청한 노드는 동시에 여러 피어로부터 데이터를 전송받을 수 있습니다. 이러한 병렬 교환 구조 덕분에 전송 속도와 네트워크 활용 효율이 크게 향상됩니다. <strong>BitTorrent</strong>와 유사하게 <strong>tit-for-tat</strong> 전략을 사용하여, 네트워크 참여자들이 공정하게 자원을 교환하도록 유도하고, 결과적으로 IPFS 전체의 데이터 가용성과 신뢰성을 높여 줍니다.</p>
 <h3 is-upgraded>DHT</h3>
-<p>DHT(Distributed Hash Table)는 분산 네트워크 환경에서 데이터를 효율적으로 저장하고 검색하기 위한 해시 테이블 구조입니다. 네트워크 내의 특정 자원(resource)을 저장할 때, 해시 함수를 통해 자원의 정보를 암호화하여 고유한 키(key) 를 생성하고, 이 키를 담당할 노드를 일정한 규칙에 따라 선택하여 데이터를 분산 저장합니다. 즉, 각 노드는 전체 키 공간의 일부를 담당하며, 특정 키를 기반으로 <strong>어느 노드가 해당 데이터를 갖고 있는지</strong>를 계산할 수 있습니다. 이때 탐색 효율을 높이기 위해 각 노드는 다른 피어의 정보를 일정 부분만 알고 있으며, 대표적으로 Kademlia와 같은 알고리즘을 사용하여 O(log N) 단계 안에 원하는 데이터를 찾을 수 있습니다. IPFS에서는 Kademlia 기반 DHT를 사용하고 Content Routing을 위한 지도 역할이고, 실제 데이터 전송은 Bitswap으로 이루어집니다.</p>
+<p>DHT(Distributed Hash Table)는 분산 네트워크 환경에서 데이터를 효율적으로 저장하고 검색하기 위한 해시 테이블 구조입니다. libp2p에서 구현한 Kademlia 변형을 사용하며, 각 노드는 특정 CID 또는 피어 ID의 프리픽스를 기반으로 라우팅 테이블(bucket)을 유지합니다. 노드는 자신이 보유한 블록의 <code>provider record</code>를 DHT에 등록하고, 다른 노드는 이 테이블을 순회하여 해당 CID를 제공할 수 있는 피어를 발견합니다.</p>
+<p>라우팅은 두 단계로 진행됩니다.</p>
+<ol type="1">
+<li><strong>탐색:</strong> 질의 노드는 CID를 해시한 키와 XOR 거리가 가까운 피어를 재귀적으로 찾으며 라우팅 테이블을 최신 상태로 유지합니다.</li>
+<li><strong>제공자 조회:</strong> 탐색된 피어에게 <code>FIND_PROVIDERS</code> 메시지를 보내 원하는 CID를 제공할 수 있는 피어 리스트와 주소를 받습니다.</li>
+</ol>
 <p>IPFS에서 사용하는 DHT에 대해서는 <a href="https://docs.ipfs.tech/concepts/dht/#kademlia" target="_blank">공식 문서</a>에 잘 정리돼 있습니다.</p>
 <h2 is-upgraded>IPFS 사용하기</h2>
 <h3 is-upgraded>실행과정</h3>
@@ -70,6 +75,8 @@
 <li>해시 값 확인: 출력된 CID가 곧 파일의 식별자입니다. 같은 내용이면 CID가 동일합니다. <code>ipfs cat <CID></code> 으로 내용 조회가 가능합니다.</li>
 <li>파일 공유: CID만 알면 전 세계 어디서든 접속 가능하며, 게이트웨이를 통해 <code>https://ipfs.io/ipfs/<CID></code> 같은 URL로도 접근할 수 있습니다. 영구 보존을 원하면 pin 하거나 핀닝 서비스(web3.storage 등)를 사용합니다.</li>
 </ol>
+<aside class="special"><p><strong>TIP</strong> CLI에서는 <code>ipfs dht findpeer {PeerID}</code> 또는 <code>ipfs dht findprovs {CID}</code> 명령으로 같은 과정을 추적할 수 있습니다. provider record에는 TTL이 있어 주기적으로 재등록(refresh)을 해야 하며, 프라이빗 네트워크를 구성할 때는 부트스트랩 노드 리스트를 고정해 라우팅을 안정화시키는 것이 중요합니다.</p>
+</aside>
 <h3 is-upgraded>IPFS Desktop</h3>
 <p><a href="https://docs.ipfs.tech/install/ipfs-desktop" target="_blank">IPFS Desktop</a>을 설치하면 다음과 같은 기본 대시보드를 볼 수 있습니다. 아래 사진처럼 로컬 Kubo 노드의 상태(Status), 피어 연결 수, 데이터 사용량, 게이트웨이 주소 등을 한눈에 확인할 수 있습니다.</p>
 <p class="image-container"><img alt="ipfs desktop status" src="img/d9d35cf3c0bb9a22.png"></p>
@@ -91,11 +98,11 @@
 <p>이 구조를 시각적으로 보고 싶다면, 파일을 선택한 후 <code>Inspect</code> 버튼을 클릭하면 됩니다.</p>
 <p class="image-container"><img alt="ipfs desktop explore" src="img/1eed7b1ed7c58745.png"></p>
 <h3 is-upgraded>Kubo</h3>
-<p>Kubo는 Go로 작성된 IPFS의 가장 널리 쓰이는 구현체이며, CLI/RPC API/게이트웨이를 제공합니다. 과거 이름은 go-ipfs입니다.</p>
+<p>Kubo는 Go로 작성된 IPFS의 가장 널리 쓰이는 구현체이며, CLI/RPC API/게이트웨이를 제공합니다. 과거 이름은 <strong>go-ipfs</strong>입니다.</p>
 <ol type="1">
 <li>저장소 초기화</li>
 </ol>
-<p>ipfsKubo는 모든 설정과 내부 데이터를 저장소라는 디렉터리에 저장합니다. Kubo를 처음 사용하기 전에 저장소를 초기화해야 합니다.</p>
+<p>Kubo는 모든 설정과 내부 데이터를 저장소라는 디렉터리에 저장합니다. Kubo를 처음 사용하기 전에 저장소를 초기화해야 합니다.</p>
 <pre><code language="language-bash" class="language-bash">ipfs init
 </code></pre>
 <p>다음과 같은 형태로 출력되면 됩니다.</p>
@@ -136,19 +143,206 @@
       </google-codelab-step>
     
       <google-codelab-step label="Shamir&#39;s Secret Sharing(SSS) Algorithm" duration="20">
-        <p>샤미르 비밀 공유의 수학적 원리와 구현 방법을 다루고, Committee 환경에서 비밀 분할·복원 절차와 안전성 고려사항을 확인합니다.</p>
+        <p>샤미르 비밀 공유는 1979년 Adi Shamir의 논문 <a href="https://dl.acm.org/doi/pdf/10.1145/359168.359176" target="_blank">How to Share a Secret</a>에서 제안된 <code>(k, n)</code> 임계값 기반 분산 방법(threshold Scheme)입니다. &#34;k개 이상이면 비밀을 복원하고, k-1개 이하로는 아무 정보도 얻지 못한다&#34;는 목표를 수학적으로 보장합니다.</p>
+<h2 is-upgraded>왜 SSS가 필요한가</h2>
+<ul>
+<li>단일 노드가 DEK를 보관하면 단일 장애 지점(Single Point of Failure)이 되지만, 단순 복제는 유출 가능성을 높입니다.</li>
+<li>논문에서 제시한 대로 <code>n = 2k - 1</code>로 구성하면 최대 <code>k-1</code>개의 조각이 파괴돼도 복원이 가능하며, 공격자가 <code>k-1</code>개를 탈취해도 비밀은 완전히 무작위로 남습니다.</li>
+<li>기업 서명·위원회 의사결정처럼 <strong>안전성과 편의를</strong> 동시에 확보해야 하는 환경에서 다수결 규칙을 자연스럽게 구현할 수 있습니다.</li>
+</ul>
+<h2 is-upgraded>알고리즘</h2>
+<ol type="1">
+<li><strong>유한체 선택:</strong> 비밀 <code>S</code>와 조각 수 <code>n</code>보다 큰 소수 <code>p</code>를 골라 Fₚ(정수 모듈러 p)를 작업 공간으로 사용합니다.</li>
+<li><strong>다항식 구성:</strong> 무작위 계수 <code>a₁ ... a_{k-1}</code>을 균등 분포에서 뽑고 <code>f(x) = S + a₁x + a₂x² + ... + a_{k-1}x^{k-1}</code>을 정의합니다. 상수항이 곧 S입니다.</li>
+<li><strong>조각 생성:</strong> 서로 다른 인덱스 <code>xᵢ ∈ {1,...,n}</code>에 대해 <code>yᵢ = f(xᵢ) mod p</code>를 계산합니다. 조각은 <code>(xᵢ, yᵢ)</code> 쌍이며 인덱스가 반드시 포함됩니다.</li>
+<li><strong>복원:</strong> 임의의 <code>k</code>개 조각으로 라그랑주 보간을 수행해 <code>f(0)</code>을 계산하면 원래 비밀 <code>S</code>를 얻습니다.</li>
+</ol>
+<h2 is-upgraded>정보 이론적 안전성</h2>
+<ul>
+<li><code>k-1</code>개의 조각을 알고 있어도 가능한 비밀 후보 <code>S'</code>(0 ≤ <code>S'</code> &lt; <code>p</code>)마다 정확히 하나의 차수 <code>k-1</code> 다항식이 존재합니다.</li>
+<li>계수는 균등 난수이므로 모든 다항식이 같은 확률로 생성됩니다. 공격자가 관찰한 조각은 어떤 <code>S'</code>에도 동일하게 부합하기 때문에 비밀은 완전히 무작위로 남습니다.</li>
+</ul>
+<h2 is-upgraded>구현과 관련된 이슈</h2>
+<ul>
+<li><code>p ≥ n + 1</code>이어야 서로 다른 인덱스를 안전하게 할당할 수 있습니다.</li>
+<li>긴 비밀은 블록 단위로 나누어 각각 SSS를 적용하면 Multi Precision 연산 부담을 줄일 수 있습니다.</li>
+<li>다항식 평가/보간은 O(n log² n) 알고리즘도 있지만, 일반적인 환경에서는 O(n²) 구현으로도 충분합니다.</li>
+</ul>
+<h2 is-upgraded>Committee 환경에서의 분할 &amp; 복원 절차</h2>
+<ol type="1">
+<li><code>n</code>, <code>k</code>, <code>p</code>를 결정하고 무작위 다항식을 생성합니다. 이번 세션에서는 n은 5, k는 3으로 잡습니다.</li>
+<li>각 <code>(xᵢ, yᵢ)</code> 조각에 <code>runNonce</code>, 만료 시간, codeId 같은 메타데이터를 붙여 JSON/CBOR로 직렬화합니다.</li>
+<li>조각을 각 위원회 멤버의 공개키로 암호화한 뒤 IPFS에 업로드하고 CID를 확보합니다.</li>
+<li>온체인에서는 조각 본문 대신 <code>runNonce</code>, CID, 제출자 주소만 기록합니다(<code>ShardSubmitted</code> 이벤트 참고).</li>
+<li>복원 시에는 동일 <code>runNonce</code>를 가진 <code>k</code>개 이상 조각을 모아 아래의 식으로 <code>f(0)</code>을 계산한 뒤, 복호화 및 <code>codeHash</code> 검증을 수행합니다.</li>
+</ol>
+<p class="image-container"><img alt="lagrange" src="img/ea07dc565052fe8b.png"></p>
+<pre><code language="language-text" class="language-text">f(0) = Σ yᵢ · Π ( xⱼ / (xⱼ - xᵢ) )  (mod p)   ,  i ≠ j
+</code></pre>
+<p>이때 IPFS에서 내려받은 조각에 서명 또는 MAC이 포함돼야 위변조 여부를 판별할 수 있습니다.</p>
+<h2 is-upgraded>실무적 장점 (논문 요약)</h2>
+<ul>
+<li><strong>조각 크기 최소화:</strong> 각 조각의 크기가 원본 비밀을 넘지 않습니다.</li>
+<li><strong>유연한 인원 변동:</strong> 새로운 다항식만 발급하면 기존 비밀을 유지하면서 조각을 교체할 수 있습니다.</li>
+<li><strong>버전 관리:</strong> 주기적으로 다항식을 재발급하면 공격자가 과거 조각을 누적해도 결합할 수 없습니다.</li>
+<li><strong>계층 정책:</strong> 한 멤버에게 여러 개의 <code>f(x)</code> 값을 주면 가중치 기반 의사결정(예: 사장은 3표)을 구성할 수 있습니다.</li>
+</ul>
+<h2 is-upgraded>다른 스킴과의 비교</h2>
+<p>동시기에 발표된 G.R. Blakley의 하이퍼플레인 기반 임계값 스킴도 있지만, Shamir 방식은 계산이 단순하고 조각 크기가 작아 블록체인 워크로드에 더 적합합니다.</p>
+<h2 is-upgraded>TypeScript 예시</h2>
+<pre><code language="language-ts" class="language-ts">import { randomBytes } from &#34;crypto&#34;;
+import { split, combine } from &#34;shamirs-secret-sharing&#34;;
+
+const dek = randomBytes(32); // AES-256 키
+const quorum = { shares: 5, threshold: 3 };
+
+// 분할
+const shards = split(dek, quorum);
+// 각 shard에 runNonce, committeeId, 만료 시간 메타데이터를 붙여 IPFS에 업로드
+
+// 복원
+const recovered = combine(shards.slice(0, 3));
+console.assert(dek.equals(recovered));
+</code></pre>
+<p>온체인 컨트랙트는 shard 원문 대신 제출 이벤트만 추적하고, 실 데이터 결합은 오프체인 서비스에서 수행해야 가스 비용을 아낄 수 있습니다.</p>
+<h2 is-upgraded>운영 체크리스트</h2>
+<ul>
+<li>계수 생성은 CSPRNG 또는 HSM에서 수행하고, 프로세스가 감사 가능하도록 로그를 남깁니다.</li>
+<li>각 조각에 고유 <code>runNonce</code>와 제출자 서명을 포함해 재생 공격을 차단합니다.</li>
+<li>IPFS CID와 함께 <code>keccak256</code> 해시를 기록해 조작 여부를 검증합니다.</li>
+<li>만료 정책과 롤오버 절차를 마련해 탈퇴 멤버의 조각을 즉시 무효화합니다.</li>
+<li>주기적으로 <code>n</code>, <code>k</code> 파라미터를 재평가하고, 변경 시 새 다항식을 배포합니다.</li>
+</ul>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Committee Manager 구현" duration="30">
         <p>Shard 제출, 위원회 관리 등 <code>CommitteeManager</code>에 필요한 기능을 설계하고 Smart Contract를 구현합니다.</p>
+<h2 is-upgraded>컨트랙트 구조 살펴보기</h2>
+<p><code>CommitteeManager</code>는 <code>AccessControl</code>을 상속해 역할 기반 권한 관리를 사용합니다. 핵심 상태는 다음과 같습니다.</p>
+<pre><code language="language-solidity" class="language-solidity">bytes32 public constant COMMITTEE_ROLE = keccak256(&#34;COMMITTEE_ROLE&#34;);
+ILicenseManager public immutable licenseManager;
+mapping(bytes32 =&gt; uint256) public shardCountForRun;
+uint256 public committeeThreshold = 2;
+</code></pre>
+<ul>
+<li><code>licenseManager</code>는 <code>LicenseManager</code>에 대한 읽기 전용 포인터로, 코드 존재 여부와 일시정지 상태를 검증합니다.</li>
+<li><code>shardCountForRun</code>은 <code>(codeId, runNonce)</code> 쌍을 해시한 키 별로 제출된 shard 개수를 카운트합니다.</li>
+<li><code>committeeThreshold</code>는 실행 승인을 위해 필요한 최소 위원 수입니다. 기본값은 2이며 관리자만 변경할 수 있습니다.</li>
+</ul>
+<h2 is-upgraded>접근 제어와 초기화</h2>
+<p>생성자에서 <code>DEFAULT_ADMIN_ROLE</code>을 배포자에게 부여하고, 외부에서 전달 받은 <code>licenseManager</code> 주소를 immutable 변수에 저장합니다. 관리자 권한은 다음과 같은 기능에 적용됩니다.</p>
+<ul>
+<li><code>setCommitteeThreshold</code>: 위원회 합의 임계값을 업데이트합니다. 0은 허용하지 않습니다.</li>
+<li><code>addCommittee</code> / <code>removeCommittee</code>: 특정 주소에 <code>COMMITTEE_ROLE</code>을 부여하거나 회수합니다.</li>
+</ul>
+<p>운영팀은 최초 배포 후 다음 순서를 따라야 합니다.</p>
+<ol type="1">
+<li><code>LicenseManager</code> 주소를 인자로 넘겨 <code>CommitteeManager</code>를 배포합니다.</li>
+<li><code>DEFAULT_ADMIN_ROLE</code> 보유자가 멤버 주소를 등록합니다.</li>
+<li>필요 시 <code>setCommitteeThreshold</code>를 호출해 요구 합의 인원 수를 설정합니다.</li>
+</ol>
+<h2 is-upgraded>Shard 제출 흐름</h2>
+<p>핵심 로직은 <code>submitShard</code> 함수입니다.</p>
+<pre><code language="language-solidity" class="language-solidity">function submitShard(
+    uint256 codeId,
+    bytes32 runNonce,
+    string calldata shardCid
+) external onlyRole(COMMITTEE_ROLE) {
+    require(licenseManager.checkCodeExists(codeId), &#34;code !exist&#34;);
+    require(licenseManager.checkCodeActive(codeId), &#34;code paused&#34;);
+
+    bytes32 runKey = keccak256(abi.encodePacked(codeId, runNonce));
+    uint256 newCount = ++shardCountForRun[runKey];
+
+    emit ShardSubmitted(codeId, runNonce, msg.sender, shardCid, newCount);
+
+    if (newCount &gt;= committeeThreshold) {
+        emit ExecutionApproved(codeId, runNonce, committeeThreshold, newCount);
+    }
+}
+</code></pre>
+<ol type="1">
+<li><code>COMMITTEE_ROLE</code>을 가진 계정만 호출이 가능합니다.</li>
+<li><code>LicenseManager</code>에 위임해 코드 존재 여부와 정지 상태를 검증합니다.</li>
+<li><code>(codeId, runNonce)</code> 조합을 해시해 카운터 키를 만들고 제출 횟수를 1 증가시킵니다.</li>
+<li><code>ShardSubmitted</code> 이벤트에는 shard를 저장한 IPFS CID와 현재 카운트가 기록됩니다.</li>
+<li>카운트가 <code>committeeThreshold</code> 이상이 되면 <code>ExecutionApproved</code> 이벤트로 승인 상태를 방송합니다.</li>
+</ol>
+<h2 is-upgraded>오프체인 연동</h2>
+<ul>
+<li><code>ShardSubmitted</code> 이벤트를 인덱싱하면 특정 실행 요청(runNonce)에 대해 누가 몇 번째로 shard를 업로드했는지 추적할 수 있습니다.</li>
+<li><code>ExecutionApproved</code> 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.</li>
+<li>중복 제출 방지를 위해 Off-chain 레이어에서 <code>(committee, runNonce)</code> 중복 여부를 체크하고, 추후 온체인 보강을 위해 매핑을 추가하는 방식을 고려합니다(보안 섹션 참고).</li>
+</ul>
+<h2 is-upgraded>하드햇 환경에서 검증하기</h2>
+<ol type="1">
+<li><code>apps/on-chain</code> 디렉터리에서 종속성을 설치합니다. <pre><code language="language-bash" class="language-bash">npm install
+</code></pre>
+</li>
+<li>Committee와 LicenseManager를 배포해 상호 의존성을 설정한 뒤 아래 테스트 스켈레톤을 참고해 시나리오를 작성합니다. <pre><code language="language-bash" class="language-bash">npx hardhat test test/CommitteeManager.test.ts
+</code></pre>
+</li>
+<li>테스트 시나리오 예시 <ul>
+<li>관리자만이 임계치와 위원회 구성을 변경할 수 있는지 확인</li>
+<li><code>licenseManager.pauseCodeExecution</code> 이후 shard 제출이 거부되는지 확인</li>
+<li>동일 runNonce에 대해 threshold 이상 shard가 모였을 때 <code>ExecutionApproved</code> 이벤트가 발생하는지 확인</li>
+</ul>
+</li>
+</ol>
+<p>이 과정을 통해 스마트 컨트랙트가 설계 의도대로 동작하는지 조기에 검증할 수 있습니다.</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="취약점 탐색 및 수정" duration="49">
-        
+        <p>이번 단계에서는 기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 식별하고, 대응 전략을 수립합니다. 테스트와 코드 리뷰를 반복해 보안 수준을 끌어올리는 것이 목표입니다.</p>
+<h2 is-upgraded>온체인 공통 점검 항목</h2>
+<ul>
+<li><strong>권한 제어: </strong><code>onlyRole</code> 또는 커스텀 modifier가 모든 상태 변경 함수에 적용돼 있는지 확인합니다.</li>
+<li><strong>입력 검증:</strong> CID, runNonce, runs 값 등 외부 입력에 대한 길이·범위 체크를 수행합니다.</li>
+<li><strong>이벤트 로깅:</strong> 민감한 상태 변화를 모두 이벤트로 노출해 오프체인 모니터링이 가능하도록 합니다.</li>
+<li><strong>재진입 보호:</strong> 외부 컨트랙트 호출이 있는 함수는 Checks-Effects-Interactions 패턴을 따르거나 <code>ReentrancyGuard</code>를 적용합니다.</li>
+<li><strong>정수 오버플로우:</strong> Solidity ^0.8.0부터 기본적으로 체크되지만, 카운터가 예상보다 빨리 증가하지 않는지 논리적으로 검토합니다.</li>
+</ul>
+<h2 is-upgraded>LicenseManager에서 살펴볼 부분</h2>
+<ol type="1">
+<li><strong>라이선스 발급 제한: </strong><code>issueLicense</code> 호출 시 runs 값이 0인지 검증하고, 잔여 실행 횟수 <code>_balances</code>가 정상적으로 관리되는지 확인합니다.</li>
+<li><strong>만료 시간 관리:</strong> 만료 시간이 과거 값으로 설정되는 것을 막아야 합니다. 또한 만료가 지난 라이선스는 실행 시 즉시 차단하도록 가드가 필요합니다.</li>
+<li><strong>이벤트 일관성: </strong><code>updateCode</code> 호출 후 <code>URI</code> 이벤트를 누락하면 ERC-1155 소비자들이 메타데이터를 최신 상태로 동기화하지 못합니다.</li>
+<li><strong>서명 기반 위임:</strong> 오프체인 서명을 도입할 경우 <code>EIP-712 도메인</code>, nonce, 만료 시간 등을 포함하고 재사용 방지를 위한 <code>usedNonce</code> 맵을 추가해야 합니다.</li>
+</ol>
+<h2 is-upgraded>CommitteeManager 개선 포인트</h2>
+<ul>
+<li><strong>중복 제출 방지:</strong> 현재 구현은 동일한 위원회 멤버가 여러 번 <code>submitShard</code>를 호출해 카운트를 임의로 늘릴 수 있습니다. 아래와 같이 <code>(runKey, committee)</code> 조합을 기록해 이중 제출을 차단하세요.<pre><code language="language-solidity" class="language-solidity">mapping(bytes32 =&gt; mapping(address =&gt; bool)) public shardSubmitted;
+
+function submitShard(...) external onlyRole(COMMITTEE_ROLE) {
+    ...
+    require(!shardSubmitted[runKey][msg.sender], &#34;duplicate shard&#34;);
+    shardSubmitted[runKey][msg.sender] = true;
+    uint256 newCount = ++shardCountForRun[runKey];
+    ...
+}
+</code></pre>
+</li>
+<li><strong>CID 검증:</strong> shardCid 길이를 제한하고, 필요 시 <code>bytes32</code> 해시 값과 페어로 제출하도록 강제하면 조작 가능성을 낮출 수 있습니다.</li>
+<li><strong>임계치 조정 이벤트: </strong><code>setCommitteeThreshold</code> 실행 시 이벤트를 발행하면 오프체인 서비스가 새로운 quorum을 반영하기 쉽습니다.</li>
+</ul>
+<h2 is-upgraded>오프체인 및 운영 측면</h2>
+<ul>
+<li><strong>IPFS 신뢰성:</strong> Pinning 서비스가 실패할 경우를 대비해 다중 게이트웨이와 백업 노드를 준비합니다.</li>
+<li><strong>감사 로그:</strong> 이벤트 스트림을 서명된 로그로 별도 저장해 사후 감사가 가능하도록 합니다.</li>
+<li><strong>키 보관 정책:</strong> Committee 멤버는 HSM 또는 MPC 지갑을 사용해 shard에 접근하는 개인키를 보호해야 합니다.</li>
+<li><strong>런북 작성:</strong> 승인 실패 시 재시도 절차, shard 재업로드 정책, 키 회수 프로세스를 문서화합니다.</li>
+</ul>
+<h2 is-upgraded>실습 과제</h2>
+<ol type="1">
+<li>중복 제출 방지 로직과 임계치 변경 이벤트를 구현하고 단위 테스트를 작성합니다.</li>
+<li><code>LicenseManager</code>에 만료 시간 검증 로직을 추가하고, 만료된 라이선스로 <code>requestCodeExecution</code>이 호출될 때 revert되는지 테스트합니다.</li>
+<li>Hardhat Network에서 위 시나리오를 모두 검증한 뒤, Sepolia에 배포하고 이벤트 로그를 확인해 봅니다.</li>
+</ol>
+
 
       </google-codelab-step>
     

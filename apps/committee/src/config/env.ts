@@ -27,7 +27,11 @@ const envSchema = z.object({
     .number()
     .optional()
     .default(60 * 60 * 24),
-  PINATA_JWT: z.string().optional(),
+  PINATA_JWT: z.string().min(1, "PINATA_JWT is required"),
+  EVENT_POLL_INTERVAL_MS: z.coerce
+    .number()
+    .optional()
+    .default(5_000),
 });
 
 const rawEnv = envSchema.safeParse(process.env);
@@ -50,7 +54,8 @@ export type AppConfig = {
   operatorPrivateKey: `0x${string}`;
   redisUrl: string;
   runTtlSeconds: number;
-  web3StorageToken?: string;
+  pinataJwt: string;
+  eventPollIntervalMs: number;
 };
 
 const parsed = rawEnv.data;
@@ -63,5 +68,6 @@ export const env: AppConfig = {
   operatorPrivateKey: parsed.WALLET_PRIVATE_KEY as `0x${string}`,
   redisUrl: parsed.REDIS_URL,
   runTtlSeconds: parsed.RUN_TTL_SECONDS,
-  web3StorageToken: parsed.PINATA_JWT,
+  pinataJwt: parsed.PINATA_JWT,
+  eventPollIntervalMs: parsed.EVENT_POLL_INTERVAL_MS,
 };

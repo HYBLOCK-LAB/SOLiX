@@ -1,5 +1,6 @@
 import { Run } from "../../domain/entities/run";
 import type { RunRepository } from "../../domain/repositories/run-repository";
+import type { ShardRepository } from "../../domain/repositories/shard-repository";
 import type {
   SecretShare,
   SecretSharingService,
@@ -52,7 +53,8 @@ export class PrepareSecretShards {
 
   constructor(
     private readonly runRepository: RunRepository,
-    private readonly secretSharing: SecretSharingService
+    private readonly secretSharing: SecretSharingService,
+    private readonly shardRepository: ShardRepository
   ) {}
 
   async execute(input: PrepareSecretShardsInput): Promise<PrepareSecretShardsResult> {
@@ -83,14 +85,18 @@ export class PrepareSecretShards {
       this.buildShardPayload(share, input.members[index], input.defaultExpiresInSeconds, run)
     );
 
-    return {
+    const shardNonceHex = `0x${run.shardNonce.toString(16)}` as `0x${string}`;
+    const result = {
       runId: run.runId,
       codeId: run.codeId.toString(),
-      shardNonce: run.shardNonce.toString(),
+      shardNonce: shardNonceHex,
       totalShares: shares.length,
       threshold: run.threshold,
       shards,
     };
+
+    await this.shardRepository.saveMany(result.shards);
+    return result;
   }
 
   private buildShardPayload(

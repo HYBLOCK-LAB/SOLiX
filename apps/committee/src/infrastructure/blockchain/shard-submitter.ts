@@ -1,8 +1,8 @@
 import type { Account, PublicClient, WalletClient } from "viem";
+import type { ShardSubmitParams, ShardSubmitter } from "../../domain/services/shard-submitter";
 import { committeeAbi } from "./committee-abi";
-import type { ExecutionApprover } from "../../domain/services/execution-approver";
 
-export class BlockchainExecutionApprover implements ExecutionApprover {
+export class BlockchainShardSubmitter implements ShardSubmitter {
   constructor(
     private readonly walletClient: WalletClient,
     private readonly publicClient: PublicClient,
@@ -10,12 +10,12 @@ export class BlockchainExecutionApprover implements ExecutionApprover {
     private readonly account: Account
   ) {}
 
-  async approve(runId: string, codeId: bigint, encryptedPieceCids: string[]): Promise<void> {
+  async submitShard(params: ShardSubmitParams): Promise<void> {
     const hash = await this.walletClient.writeContract({
       address: this.contractAddress,
       abi: committeeAbi,
-      functionName: "approveExecution",
-      args: [runId as `0x${string}`, codeId, encryptedPieceCids],
+      functionName: "submitShard",
+      args: [params.codeId, params.runNonce, params.shardCid],
       account: this.account,
       chain: undefined,
     });

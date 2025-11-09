@@ -4,17 +4,16 @@ import { serverEnv } from "../../../../lib/serverEnv";
 
 const requestSchema = z.object({
   runId: z.string().min(1),
-  secret: z.string().min(1),
-  encoding: z.enum(["hex", "base64"]).default("hex"),
   totalShares: z.number().int().min(1),
   threshold: z.number().int().min(1),
-  defaultExpiresInSeconds: z.number().int().positive().optional(),
-  members: z
+  shards: z
     .array(
       z.object({
-        address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+        committee: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+        shareIndex: z.number().int().min(1),
+        shareValue: z.string().regex(/^0x[a-fA-F0-9]+$/),
+        byteLength: z.number().int().positive(),
         expiresAt: z.string().optional(),
-        expiresInSeconds: z.number().int().positive().optional(),
         note: z.string().max(256).optional(),
       })
     )

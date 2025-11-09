@@ -37,16 +37,15 @@ export class RunController {
         try {
           const result = await this.prepareSecretShards.execute({
             runId: request.params.runId,
-            secret: parsed.secret,
-            encoding: parsed.encoding,
             totalShares: parsed.totalShares,
             threshold: parsed.threshold,
-            defaultExpiresInSeconds: parsed.defaultExpiresInSeconds,
-            members: parsed.members.map((member) => ({
-              address: member.address as `0x${string}`,
-              expiresAt: member.expiresAt ? new Date(member.expiresAt) : undefined,
-              expiresInSeconds: member.expiresInSeconds,
-              note: member.note,
+            shards: parsed.shards.map((shard) => ({
+              committee: shard.committee as `0x${string}`,
+              shareIndex: shard.shareIndex,
+              shareValue: shard.shareValue as `0x${string}`,
+              byteLength: shard.byteLength,
+              expiresAt: shard.expiresAt,
+              note: shard.note,
             })),
           });
 

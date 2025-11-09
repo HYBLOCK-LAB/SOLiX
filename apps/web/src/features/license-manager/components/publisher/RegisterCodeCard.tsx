@@ -9,6 +9,7 @@ import { LICENSE_MANAGER_ADDRESS } from "../../constants";
 import { licenseManagerAbi } from "../../abi";
 import { getCommitteeMembers } from "../../../../lib/env";
 import { registerShards } from "../../services/shards/registerShards";
+import { splitSecret } from "../../services/shards/shamirSplit";
 
 const MAX_FILE_SIZE_BYTES = 256 * 1024 * 1024;
 const DEFAULT_SHARD_EXPIRY_SECONDS = 60 * 60; // 1 hour
@@ -77,14 +78,32 @@ export function RegisterCodeCard() {
         await publicClient.waitForTransactionReceipt({ hash: txHash });
       }
 
+      const shares = splitSecret(encryptionDetails.keyHex as `0x${string}`, committeeMembers.length, threshold);
+      if (shares.length !== committeeMembers.length) {
+        throw new Error("Shard 생성에 실패했습니다.");
+      }
+      const expiresAt = new Date(Date.now() + DEFAULT_SHARD_EXPIRY_SECONDS * 1000).toISOString();
+
       setShardStatus({ state: "pending", message: "위원회 shard 등록 중..." });
+      const shardPayloads = committeeMembers.map((committee, index) => {
+        const share = shares[index];
+        if (!share) {
+          throw new Error("모든 위원에게 shard를 매핑할 수 없습니다.");
+        }
+        return {
+          committee,
+          shareIndex: share.index,
+          shareValue: share.value,
+          byteLength: share.byteLength,
+          expiresAt,
+        };
+      });
+
       await registerShards({
         runId: `code-${nextCodeId.toString()}`,
-        secret: encryptionDetails.keyHex,
         totalShares: committeeMembers.length,
         threshold,
-        defaultExpiresInSeconds: DEFAULT_SHARD_EXPIRY_SECONDS,
-        members: committeeMembers.map((address) => ({ address })),
+        shards: shardPayloads,
       });
       setShardStatus({ state: "success", message: "위원회 shard 등록이 완료되었습니다." });
     } catch (err) {

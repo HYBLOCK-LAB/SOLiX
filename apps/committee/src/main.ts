@@ -9,7 +9,6 @@ import { SubmitShard } from "./application/use-cases/submit-shard";
 import { GetRunStatus } from "./application/use-cases/get-run-status";
 import { HttpServer } from "./interfaces/http/http-server";
 import { RunController } from "./interfaces/http/controllers/run-controller";
-import { ShamirSecretSharingService } from "./infrastructure/crypto/shamir-secret-sharing-service";
 import { PrepareSecretShards } from "./application/use-cases/prepare-secret-shards";
 import { RedisShardRepository } from "./infrastructure/cache/redis-shard-repository";
 import { EcdhShardEncryptor } from "./infrastructure/crypto/ecdh-shard-encryptor";
@@ -46,8 +45,7 @@ async function bootstrap() {
   );
   shardSubmissionQueue.startWorker(async (job) => shardWorker.process(job));
 
-  const secretSharingService = new ShamirSecretSharingService();
-  const prepareSecretShards = new PrepareSecretShards(runRepository, secretSharingService, shardRepository);
+  const prepareSecretShards = new PrepareSecretShards(runRepository, shardRepository);
 
   const handleRunRequested = new HandleRunRequested(runRepository);
   const runRequestSubscriber = new RunRequestSubscriber(

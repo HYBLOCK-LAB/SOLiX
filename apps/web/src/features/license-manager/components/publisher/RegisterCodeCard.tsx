@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useMemo, useState } from "react";
-import { usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { createEncryptedArtifact, uploadEncryptedArtifact } from "../../services/artifact";
 import { storageMode } from "../../../../lib/storageConfig";
@@ -22,6 +22,7 @@ type ShardStatusState = {
 
 export function RegisterCodeCard() {
   const publicClient = usePublicClient();
+  const { address } = useAccount();
   const committeeMembers = useMemo(() => getCommitteeMembers(), []);
   const threshold = Math.min(DEFAULT_THRESHOLD, committeeMembers.length || DEFAULT_THRESHOLD);
 
@@ -62,6 +63,11 @@ export function RegisterCodeCard() {
       return;
     }
 
+    if (!address) {
+      setStatus("지갑을 연결해야 합니다.");
+      return;
+    }
+
     try {
       setStatus(null);
       setShardStatus({ state: "idle" });
@@ -85,6 +91,7 @@ export function RegisterCodeCard() {
       const expiresAt = new Date(Date.now() + DEFAULT_SHARD_EXPIRY_SECONDS * 1000).toISOString();
 
       setShardStatus({ state: "pending", message: "위원회 shard 등록 중..." });
+      const shardNonce = `code-${nextCodeId.toString()}`;
       const shardPayloads = committeeMembers.map((committee, index) => {
         const share = shares[index];
         if (!share) {
@@ -92,6 +99,7 @@ export function RegisterCodeCard() {
         }
         return {
           committee,
+          shardNonce,
           shareIndex: share.index,
           shareValue: share.value,
           byteLength: share.byteLength,
@@ -100,9 +108,8 @@ export function RegisterCodeCard() {
       });
 
       await registerShards({
-        runId: `code-${nextCodeId.toString()}`,
-        totalShares: committeeMembers.length,
-        threshold,
+        codeId: nextCodeId.toString(),
+        wallet: address,
         shards: shardPayloads,
       });
       setShardStatus({ state: "success", message: "위원회 shard 등록이 완료되었습니다." });

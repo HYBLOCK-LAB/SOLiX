@@ -8,6 +8,12 @@ export interface ShardRepository {
     codeId: string,
     committee: `0x${string}`
   ): Promise<StoredShard | null>;
+  savePlainShards(
+    codeId: string,
+    wallet: `0x${string}`,
+    shards: StoredShard[]
+  ): Promise<void>;
+  saveRawShard(payload: StoredShard): Promise<void>;
   markSubmitted(
     runId: string,
     codeId: string,

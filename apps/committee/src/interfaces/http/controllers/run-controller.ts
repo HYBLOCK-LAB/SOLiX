@@ -4,7 +4,14 @@ import type { GetRunStatus } from "../../../application/use-cases/get-run-status
 import type { RunApprovalQueue } from "../../../infrastructure/queue/run-approval-queue";
 import type { PrepareSecretShards } from "../../../application/use-cases/prepare-secret-shards";
 import { shardSubmissionSchema } from "../validators/shard-schema";
-import { prepareShardSchema, type PrepareShardRequest } from "../validators/prepare-shards-schema";
+import {
+  prepareShardSchema,
+  type PrepareShardRequest,
+} from "../validators/prepare-shards-schema";
+import {
+  plainShardSchema,
+  type PlainShardRequest,
+} from "../validators/plain-shards-schema";
 
 interface ShardRequestBody {
   runId: string;
@@ -23,40 +30,39 @@ export class RunController {
 
   registerRoutes(server: FastifyInstance) {
     server.post(
-      "/runs/:runId/prepare-shards",
+      "/codes/:codeId/shards/plain",
       async (
-        request: FastifyRequest<{ Params: { runId: string }; Body: PrepareShardRequest }>,
+        request: FastifyRequest<{
+          Params: { codeId: string };
+          Body: PlainShardRequest;
+        }>,
         reply: FastifyReply
       ) => {
         if (!this.prepareSecretShards) {
-          return reply.status(501).send({ message: "Shard preparation is disabled" });
+          return reply
+            .status(501)
+            .send({ message: "Shard storage is disabled" });
         }
 
-        const parsed = prepareShardSchema.parse(request.body);
+        const parsed = plainShardSchema.parse(request.body);
 
         try {
-          const result = await this.prepareSecretShards.execute({
-            runId: request.params.runId,
-            totalShares: parsed.totalShares,
-            threshold: parsed.threshold,
-            shards: parsed.shards.map((shard) => ({
+          await this.prepareSecretShards.storePlainShards(
+            request.params.codeId,
+            parsed.wallet as `0x${string}`,
+            parsed.shards.map((shard) => ({
               committee: shard.committee as `0x${string}`,
+              shardNonce: shard.shardNonce,
               shareIndex: shard.shareIndex,
               shareValue: shard.shareValue as `0x${string}`,
               byteLength: shard.byteLength,
               expiresAt: shard.expiresAt,
               note: shard.note,
-            })),
-          });
-
-          return reply.send(result);
+            }))
+          );
+          return reply.status(201).send({ status: "stored" });
         } catch (error) {
-          const message = (error as Error).message;
-          if (message.includes("not found")) {
-            return reply.status(404).send({ message });
-          }
-
-          return reply.status(400).send({ message });
+          return reply.status(400).send({ message: (error as Error).message });
         }
       }
     );
@@ -101,32 +107,6 @@ export class RunController {
 
           throw error;
         }
-      }
-    );
-
-    server.get(
-      "/runs/:runId",
-      async (
-        request: FastifyRequest<{ Params: { runId: string } }>,
-        reply: FastifyReply
-      ) => {
-        const runId = request.params.runId;
-        const status = await this.getRunStatus.execute(runId);
-
-        if (!status.run) {
-          return reply.status(404).send({ message: "Run not found" });
-        }
-
-        return reply.send({
-          runId: status.run.runId,
-          codeId: status.run.codeId.toString(),
-          shardNonce: status.run.shardNonce.toString(),
-          requester: status.run.requester,
-          status: status.run.status,
-          pieceCount: status.pieceCount,
-          threshold: status.run.threshold,
-          approvedAt: status.run.approvedAt?.toISOString() ?? null,
-        });
       }
     );
 

@@ -50,6 +50,32 @@ export class RedisShardRepository implements ShardRepository {
     return JSON.parse(payload) as StoredShard;
   }
 
+  async saveRawShard(payload: StoredShard): Promise<void> {
+    await this.redis.set(
+      this.key(payload.runId, payload.codeId, payload.committee),
+      JSON.stringify(payload),
+      "EX",
+      this.ttlSeconds
+    );
+  }
+
+  async savePlainShards(
+    codeId: string,
+    wallet: `0x${string}`,
+    shards: StoredShard[]
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    for (const shard of shards) {
+      pipeline.set(
+        this.key(wallet, codeId, shard.committee),
+        JSON.stringify(shard),
+        "EX",
+        this.ttlSeconds
+      );
+    }
+    await pipeline.exec();
+  }
+
   async markSubmitted(
     runId: string,
     codeId: string,

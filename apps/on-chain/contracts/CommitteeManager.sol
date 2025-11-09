@@ -9,9 +9,9 @@ contract CommitteeManager is AccessControl {
 
     error InvalidThreshold();
     error NotAuthorized();
-    error RunAlreadyRegistered(uint256 codeId, bytes32 runNonce);
-    error RunNotRegistered(uint256 codeId, bytes32 runNonce);
-    error DuplicateShard(uint256 codeId, bytes32 runNonce, address committee);
+    error RunAlreadyRegistered(uint256 codeId, address requester);
+    error RunNotRegistered(uint256 codeId, address requester);
+    error DuplicateShard(uint256 codeId, address requester, address committee);
 
     /* ========= 전역 변수 ========= */
 
@@ -41,15 +41,15 @@ contract CommitteeManager is AccessControl {
 
     event RunRegistered(
         uint256 indexed codeId,
-        bytes32 indexed runNonce,
+        address indexed requester,
         uint256 threshold
     );
 
-    event RunCleared(uint256 indexed codeId, bytes32 indexed runNonce);
+    event RunCleared(uint256 indexed codeId, address indexed requester);
 
     event ShardSubmitted(
         uint256 indexed codeId,
-        bytes32 indexed runNonce,
+        address indexed requester,
         address indexed committee,
         string shardCid,
         uint256 approvals,
@@ -58,7 +58,7 @@ contract CommitteeManager is AccessControl {
 
     event ExecutionApproved(
         uint256 indexed codeId,
-        bytes32 indexed runNonce,
+        address indexed requester,
         uint256 threshold,
         uint256 approvals
     );
@@ -98,36 +98,36 @@ contract CommitteeManager is AccessControl {
 
     function registerRun(
         uint256 codeId,
-        bytes32 runNonce,
+        address requester,
         uint256 threshold
     ) external onlyAdminOrLicenseManager {
         require(licenseManager.checkCodeExists(codeId), "code !exist");
         require(licenseManager.checkCodeActive(codeId), "code paused");
 
-        bytes32 runKey = _runKey(codeId, runNonce);
+        bytes32 runKey = _runKey(codeId, requester);
         if (runStates[runKey].exists) {
-            revert RunAlreadyRegistered(codeId, runNonce);
+            revert RunAlreadyRegistered(codeId, requester);
         }
 
-        _createRun(runKey, codeId, runNonce, threshold);
+        _createRun(runKey, codeId, requester, threshold);
     }
 
     function clearRun(
         uint256 codeId,
-        bytes32 runNonce
+        address requester
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        bytes32 runKey = _runKey(codeId, runNonce);
+        bytes32 runKey = _runKey(codeId, requester);
         RunState storage state = runStates[runKey];
         if (!state.exists) {
-            revert RunNotRegistered(codeId, runNonce);
+            revert RunNotRegistered(codeId, requester);
         }
         delete runStates[runKey];
-        emit RunCleared(codeId, runNonce);
+        emit RunCleared(codeId, requester);
     }
 
     function getRunState(
         uint256 codeId,
-        bytes32 runNonce
+        address requester
     )
         external
         view
@@ -138,31 +138,34 @@ contract CommitteeManager is AccessControl {
             bool exists
         )
     {
-        RunState storage state = runStates[_runKey(codeId, runNonce)];
+        RunState storage state = runStates[_runKey(codeId, requester)];
         return (state.threshold, state.approvals, state.approved, state.exists);
     }
 
     function hasCommitteeSubmitted(
         uint256 codeId,
-        bytes32 runNonce,
+        address requester,
         address committee
     ) external view returns (bool) {
-        return hasSubmitted[_runKey(codeId, runNonce)][committee];
+        return hasSubmitted[_runKey(codeId, requester)][committee];
     }
 
     // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
     function submitShard(
         uint256 codeId,
-        bytes32 runNonce,
+        address requester,
         string calldata shardCid
     ) external onlyRole(COMMITTEE_ROLE) {
         require(licenseManager.checkCodeExists(codeId), "code !exist");
         require(licenseManager.checkCodeActive(codeId), "code paused");
 
-        (bytes32 runKey, RunState storage state) = _ensureRun(codeId, runNonce);
+        (bytes32 runKey, RunState storage state) = _ensureRun(
+            codeId,
+            requester
+        );
 
         if (hasSubmitted[runKey][msg.sender]) {
-            revert DuplicateShard(codeId, runNonce, msg.sender);
+            revert DuplicateShard(codeId, requester, msg.sender);
         }
         hasSubmitted[runKey][msg.sender] = true;
 
@@ -170,7 +173,7 @@ contract CommitteeManager is AccessControl {
 
         emit ShardSubmitted(
             codeId,
-            runNonce,
+            requester,
             msg.sender,
             shardCid,
             newCount,
@@ -179,18 +182,23 @@ contract CommitteeManager is AccessControl {
 
         if (!state.approved && newCount >= state.threshold) {
             state.approved = true;
-            emit ExecutionApproved(codeId, runNonce, state.threshold, newCount);
+            emit ExecutionApproved(
+                codeId,
+                requester,
+                state.threshold,
+                newCount
+            );
         }
     }
 
     function _ensureRun(
         uint256 codeId,
-        bytes32 runNonce
+        address requester
     ) private returns (bytes32 runKey, RunState storage state) {
-        runKey = _runKey(codeId, runNonce);
+        runKey = _runKey(codeId, requester);
         state = runStates[runKey];
         if (!state.exists) {
-            state = _createRun(runKey, codeId, runNonce, committeeThreshold);
+            state = _createRun(runKey, codeId, requester, committeeThreshold);
         }
         return (runKey, state);
     }
@@ -198,7 +206,7 @@ contract CommitteeManager is AccessControl {
     function _createRun(
         bytes32 runKey,
         uint256 codeId,
-        bytes32 runNonce,
+        address requester,
         uint256 threshold
     ) private returns (RunState storage state) {
         if (threshold == 0 || threshold > type(uint32).max) {
@@ -206,21 +214,21 @@ contract CommitteeManager is AccessControl {
         }
         state = runStates[runKey];
         if (state.exists) {
-            revert RunAlreadyRegistered(codeId, runNonce);
+            revert RunAlreadyRegistered(codeId, requester);
         }
         state.threshold = uint32(threshold);
         state.approvals = 0;
         state.approved = false;
         state.exists = true;
 
-        emit RunRegistered(codeId, runNonce, threshold);
+        emit RunRegistered(codeId, requester, threshold);
         return state;
     }
 
     function _runKey(
         uint256 codeId,
-        bytes32 runNonce
+        address requester
     ) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(codeId, runNonce));
+        return keccak256(abi.encodePacked(codeId, requester));
     }
 }

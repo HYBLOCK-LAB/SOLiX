@@ -37,25 +37,24 @@ describe("CommitteeManager", async () => {
     const committeeManager = await deployCommitteeManager(licenseManager.address);
 
     const codeId = await prepareCode(licenseManager, "code-v1");
-    const runNonce = keccak256(stringToBytes("run-1"));
-
-    const [admin] = await viem.getWalletClients();
+    const [admin, requester] = await viem.getWalletClients();
+    const requesterAddress = getAddress(requester.account.address);
 
     await viem.assertions.emitWithArgs(
-      committeeManager.write.registerRun([codeId, runNonce, 3n], { account: admin.account }),
+      committeeManager.write.registerRun([codeId, requesterAddress, 3n], { account: admin.account }),
       committeeManager,
       "RunRegistered",
-      [codeId, runNonce, 3n]
+      [codeId, requesterAddress, 3n]
     );
 
-    const state = await committeeManager.read.getRunState([codeId, runNonce]);
+    const state = await committeeManager.read.getRunState([codeId, requesterAddress]);
     assert.equal(state[0], 3n); // threshold
     assert.equal(state[1], 0n); // approvals
     assert.equal(state[2], false); // approved
     assert.equal(state[3], true); // exists
 
     await expectCustomError(
-      committeeManager.write.registerRun([codeId, runNonce, 2n], { account: admin.account }),
+      committeeManager.write.registerRun([codeId, requesterAddress, 2n], { account: admin.account }),
       "RunAlreadyRegistered"
     );
   });
@@ -65,39 +64,40 @@ describe("CommitteeManager", async () => {
     const committeeManager = await deployCommitteeManager(licenseManager.address);
 
     const codeId = await prepareCode(licenseManager, "code-v2");
-    const runNonce = keccak256(stringToBytes("run-2"));
 
     const wallets = await viem.getWalletClients();
     const admin = wallets[0];
     const committeeOne = wallets[1];
     const committeeTwo = wallets[2];
+    const requester = wallets[3];
 
     await committeeManager.write.addCommittee([committeeOne.account.address], { account: admin.account });
     await committeeManager.write.addCommittee([committeeTwo.account.address], { account: admin.account });
 
     const committeeOneAddress = getAddress(committeeOne.account.address);
     const committeeTwoAddress = getAddress(committeeTwo.account.address);
+    const requesterAddress = getAddress(requester.account.address);
 
     await viem.assertions.emitWithArgs(
-      committeeManager.write.submitShard([codeId, runNonce, "ipfs://shard-1"], { account: committeeOne.account }),
+      committeeManager.write.submitShard([codeId, requesterAddress, "ipfs://shard-1"], { account: committeeOne.account }),
       committeeManager,
       "ShardSubmitted",
-      [codeId, runNonce, committeeOneAddress, "ipfs://shard-1", 1n, 2n]
+      [codeId, requesterAddress, committeeOneAddress, "ipfs://shard-1", 1n, 2n]
     );
 
     await expectCustomError(
-      committeeManager.write.submitShard([codeId, runNonce, "ipfs://duplicate"], { account: committeeOne.account }),
+      committeeManager.write.submitShard([codeId, requesterAddress, "ipfs://duplicate"], { account: committeeOne.account }),
       "DuplicateShard"
     );
 
     await viem.assertions.emitWithArgs(
-      committeeManager.write.submitShard([codeId, runNonce, "ipfs://shard-2"], { account: committeeTwo.account }),
+      committeeManager.write.submitShard([codeId, requesterAddress, "ipfs://shard-2"], { account: committeeTwo.account }),
       committeeManager,
       "ExecutionApproved",
-      [codeId, runNonce, 2n, 2n]
+      [codeId, requesterAddress, 2n, 2n]
     );
 
-    const state = await committeeManager.read.getRunState([codeId, runNonce]);
+    const state = await committeeManager.read.getRunState([codeId, requesterAddress]);
     assert.equal(state[1], 2n);
     assert.equal(state[2], true);
   });

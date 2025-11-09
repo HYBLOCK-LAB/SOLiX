@@ -1,9 +1,9 @@
 export interface RegisterShardsParams {
-  runId: string;
-  totalShares: number;
-  threshold: number;
+  codeId: string;
+  wallet: `0x${string}`;
   shards: Array<{
     committee: `0x${string}`;
+    shardNonce: string;
     shareIndex: number;
     shareValue: `0x${string}`;
     byteLength: number;
@@ -13,10 +13,10 @@ export interface RegisterShardsParams {
 }
 
 export async function registerShards(params: RegisterShardsParams): Promise<void> {
-  const response = await fetch("/api/committee/shards", {
+  const response = await fetch(`/api/committee/codes/${params.codeId}/shards`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(params),
+    body: JSON.stringify({ wallet: params.wallet, shards: params.shards }),
   });
 
   if (!response.ok) {

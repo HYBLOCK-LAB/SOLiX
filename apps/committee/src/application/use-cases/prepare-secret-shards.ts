@@ -44,7 +44,9 @@ export class PrepareSecretShards {
     private readonly shardRepository: ShardRepository
   ) {}
 
-  async execute(input: PrepareSecretShardsInput): Promise<PrepareSecretShardsResult> {
+  async execute(
+    input: PrepareSecretShardsInput
+  ): Promise<PrepareSecretShardsResult> {
     const run = await this.runRepository.find(input.runId);
     if (!run) {
       throw new Error(`Run ${input.runId} not found`);
@@ -58,7 +60,9 @@ export class PrepareSecretShards {
       throw new Error("Shard count must match totalShares");
     }
 
-    const shards = input.shards.map((share) => this.buildShardPayload(share, run));
+    const shards = input.shards.map((share) =>
+      this.buildShardPayload(share, run)
+    );
 
     const shardNonceHex = `0x${run.shardNonce.toString(16)}` as `0x${string}`;
     const result = {
@@ -72,6 +76,36 @@ export class PrepareSecretShards {
 
     await this.shardRepository.saveMany(result.shards);
     return result;
+  }
+
+  async storePlainShards(
+    codeId: string,
+    wallet: `0x${string}`,
+    shards: Array<{
+      committee: `0x${string}`;
+      shardNonce: string;
+      shareIndex: number;
+      shareValue: `0x${string}`;
+      byteLength: number;
+      expiresAt?: string;
+      note?: string;
+    }>
+  ): Promise<void> {
+    await this.shardRepository.savePlainShards(
+      codeId,
+      wallet,
+      shards.map((shard) => ({
+        runId: wallet,
+        codeId,
+        shardNonce: shard.shardNonce,
+        committee: shard.committee,
+        shareIndex: shard.shareIndex,
+        shareValue: shard.shareValue,
+        byteLength: shard.byteLength,
+        expiresAt: shard.expiresAt ?? new Date().toISOString(),
+        note: shard.note,
+      }))
+    );
   }
 
   private buildShardPayload(

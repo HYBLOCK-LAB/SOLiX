@@ -28,16 +28,22 @@ export class RedisShardRepository implements ShardRepository {
         note: shard.payload.note,
       };
 
-      pipeline.set(this.key(record.runId, record.committee), JSON.stringify(record), "EX", this.ttlSeconds);
+      pipeline.set(
+        this.key(record.runId, record.codeId, record.committee),
+        JSON.stringify(record),
+        "EX",
+        this.ttlSeconds
+      );
     }
     await pipeline.exec();
   }
 
-  async findByRunAndCommittee(
+  async findByRun(
     runId: string,
+    codeId: string,
     committee: `0x${string}`
   ): Promise<StoredShard | null> {
-    const payload = await this.redis.get(this.key(runId, committee));
+    const payload = await this.redis.get(this.key(runId, codeId, committee));
     if (!payload) {
       return null;
     }
@@ -46,11 +52,12 @@ export class RedisShardRepository implements ShardRepository {
 
   async markSubmitted(
     runId: string,
+    codeId: string,
     committee: `0x${string}`,
     shardCid: string,
     submittedAt: Date
   ): Promise<void> {
-    const key = this.key(runId, committee);
+    const key = this.key(runId, codeId, committee);
     const payload = await this.redis.get(key);
     if (!payload) {
       return;
@@ -61,7 +68,7 @@ export class RedisShardRepository implements ShardRepository {
     await this.redis.set(key, JSON.stringify(parsed), "EX", this.ttlSeconds);
   }
 
-  private key(runId: string, committee: `0x${string}`) {
-    return `shard:${runId}:${committee.toLowerCase()}`;
+  private key(runId: string, codeId: string, committee: `0x${string}`) {
+    return `shard:${committee.toLowerCase()}:${codeId}:${runId}`;
   }
 }

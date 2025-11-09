@@ -3,9 +3,14 @@ import type { StoredShard } from "../entities/shard";
 
 export interface ShardRepository {
   saveMany(shards: PreparedShard[]): Promise<void>;
-  findByRunAndCommittee(runId: string, committee: `0x${string}`): Promise<StoredShard | null>;
+  findByRun(
+    runId: string,
+    codeId: string,
+    committee: `0x${string}`
+  ): Promise<StoredShard | null>;
   markSubmitted(
     runId: string,
+    codeId: string,
     committee: `0x${string}`,
     shardCid: string,
     submittedAt: Date

@@ -71,7 +71,11 @@ export class RunRequestSubscriber {
             continue;
           }
 
-          const shard = await this.shardRepository.findByRunAndCommittee(run.runId, this.committeeAddress);
+          const shard = await this.shardRepository.findByRun(
+            run.runId,
+            run.codeId.toString(),
+            this.committeeAddress
+          );
           if (!shard) {
             logger.debug({ runId }, "No shard assigned to this committee for run");
             continue;

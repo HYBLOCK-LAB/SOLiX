@@ -32,6 +32,9 @@ const envSchema = z.object({
     .number()
     .optional()
     .default(5_000),
+  COMMITTEE_ID: z
+    .string()
+    .min(1, "COMMITTEE_ID is required"),
 });
 
 const rawEnv = envSchema.safeParse(process.env);
@@ -56,6 +59,7 @@ export type AppConfig = {
   runTtlSeconds: number;
   pinataJwt: string;
   eventPollIntervalMs: number;
+  committeeId: string;
 };
 
 const parsed = rawEnv.data;
@@ -70,4 +74,5 @@ export const env: AppConfig = {
   runTtlSeconds: parsed.RUN_TTL_SECONDS,
   pinataJwt: parsed.PINATA_JWT,
   eventPollIntervalMs: parsed.EVENT_POLL_INTERVAL_MS,
+  committeeId: parsed.COMMITTEE_ID,
 };

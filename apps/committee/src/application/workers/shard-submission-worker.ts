@@ -15,7 +15,7 @@ export class ShardSubmissionWorker {
   ) {}
 
   async process(job: ShardSubmissionJob) {
-    const shard = await this.shardRepository.findByRunAndCommittee(job.runId, this.committeeAddress);
+    const shard = await this.shardRepository.findByRun(job.runId, job.codeId, this.committeeAddress);
     if (!shard) {
       logger.warn(
         {
@@ -67,7 +67,7 @@ export class ShardSubmissionWorker {
       shardCid: cid,
     });
 
-    await this.shardRepository.markSubmitted(shard.runId, this.committeeAddress, cid, now);
+    await this.shardRepository.markSubmitted(shard.runId, shard.codeId, this.committeeAddress, cid, now);
     logger.info(
       {
         runId: shard.runId,

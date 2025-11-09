@@ -30,11 +30,12 @@ async function bootstrap() {
   }
 
   const { publicClient, walletClient, account } = createViemClients(env);
+  const committeeId = env.committeeId;
 
   const shardEncryptor = new EcdhShardEncryptor();
   const shardPublisher = new PinataShardPublisher(env.pinataJwt);
   const shardSubmitter = new BlockchainShardSubmitter(walletClient, publicClient, env.contractAddress, account);
-  const shardQueueName = `shard-submission:${account.address.toLowerCase()}`;
+  const shardQueueName = `shard-submission:${committeeId}`;
   const shardSubmissionQueue = new ShardSubmissionQueue(env.redisUrl, shardQueueName);
   const shardWorker = new ShardSubmissionWorker(
     shardRepository,

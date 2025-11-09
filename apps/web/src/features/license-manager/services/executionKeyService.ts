@@ -84,6 +84,12 @@ export function storeExecutionKeyPair(pair: ExecutionKeyPair): ExecutionKeyRecor
   return updated;
 }
 
+export function findExecutionKey(publicKey: `0x${string}`): ExecutionKeyRecord | null {
+  if (!publicKey) return null;
+  const normalized = publicKey.toLowerCase();
+  return listExecutionKeys().find((record) => record.publicKey.toLowerCase() === normalized) ?? null;
+}
+
 export function removeExecutionKey(publicKey: `0x${string}`): ExecutionKeyRecord[] {
   if (!publicKey || !publicKey.startsWith("0x")) {
     return readRecords();

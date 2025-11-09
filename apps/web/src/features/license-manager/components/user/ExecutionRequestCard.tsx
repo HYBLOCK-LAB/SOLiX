@@ -9,6 +9,7 @@ import {
   storeExecutionKeyPair,
   type ExecutionKeyPair,
 } from "../../services/executionKeyService";
+import { ShardStatusCard } from "./ShardStatusCard";
 
 function truncateKey(value: `0x${string}`): string {
   return `${value.slice(0, 10)}…${value.slice(-6)}`;
@@ -126,6 +127,10 @@ export function ExecutionRequestCard() {
           </p>
         )}
       </footer>
+
+      {codeId > 0 && (
+        <ShardStatusCard codeId={codeId} recipientPublicKey={latestPublicKey} />
+      )}
     </section>
   );
 }

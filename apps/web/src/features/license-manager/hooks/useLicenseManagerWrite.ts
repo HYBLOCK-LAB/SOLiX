@@ -2,11 +2,7 @@
 
 import { useCallback } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, usePublicClient, useAccount } from "wagmi";
-import type {
-  ContractFunctionArgs,
-  ContractFunctionName,
-  EstimateContractGasParameters,
-} from "viem";
+import type { ContractFunctionArgs, ContractFunctionName } from "viem";
 import { licenseManagerAbi } from "../abi";
 import { LICENSE_MANAGER_ADDRESS } from "../constants";
 

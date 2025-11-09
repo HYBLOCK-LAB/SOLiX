@@ -56,6 +56,7 @@ export class ShardSubmissionWorker {
       shardNonce: shard.shardNonce,
       committee: this.committeeAddress,
       shareIndex: shard.shareIndex,
+      byteLength: shard.byteLength,
       payload: encrypted,
       note: shard.note,
       createdAt: now.toISOString(),

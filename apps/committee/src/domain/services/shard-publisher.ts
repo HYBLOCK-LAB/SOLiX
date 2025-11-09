@@ -6,6 +6,7 @@ export interface ShardPublication {
   shardNonce: string;
   committee: `0x${string}`;
   shareIndex: number;
+  byteLength: number;
   payload: EncryptedShardPayload;
   note?: string;
   createdAt: string;

@@ -1,20 +1,52 @@
 version: "3.9"
 
 services:
-  # committee:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/committee.Dockerfile
-  #   env_file: .env.committee
-  #   ports:
-  #     - "4001:4000"
-  #   depends_on:
-  #     - redis
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  committee:
+    build:
+      context: .
+      dockerfile: docker/committee.Dockerfile
+    env_file:
+      - apps/committee/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      COMMITTEE_INSTANCES: ${COMMITTEE_INSTANCES:-1}
+      PORT_BASE: ${COMMITTEE_PORT_BASE:-4000}
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+      - "4002:4002"
+      - "4003:4003"
+      - "4004:4004"
+    depends_on:
+      redis:
+        condition: service_healthy
 
   license-web:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-11155111}
+        NEXT_PUBLIC_CHAIN_NAME: ${NEXT_PUBLIC_CHAIN_NAME:-Sepolia}
+        NEXT_PUBLIC_CHAIN_RPC_URL: ${NEXT_PUBLIC_CHAIN_RPC_URL:-https://sepolia.example-rpc.invalid}
+        NEXT_PUBLIC_CHAIN_SYMBOL: ${NEXT_PUBLIC_CHAIN_SYMBOL:-ETH}
+        NEXT_PUBLIC_CHAIN_EXPLORER_URL: ${NEXT_PUBLIC_CHAIN_EXPLORER_URL:-https://sepolia.etherscan.io}
+        NEXT_PUBLIC_CONTRACT_ADDRESS: ${NEXT_PUBLIC_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000000}
+        NEXT_PUBLIC_WALLETCONNECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_ID:-demo}
+        NEXT_PUBLIC_STORAGE_MODE: ${NEXT_PUBLIC_STORAGE_MODE:-local}
     env_file: .env.license
     ports:
       - "3000:3000"

@@ -1,8 +1,6 @@
 
 -include .env
 
-CONTRACTS_DIR := apps/on-chain
-WEB_DIR := apps/web
 SESSION_DIR ?= session
 DOCS_DIR    ?= docs
 
@@ -10,6 +8,7 @@ DOCS_DIR    ?= docs
 	docs \
 	contracts-install contracts-clean contracts-test contracts-deploy contracts-deploy-sepolia \
 	web-install web-dev web-build web-start web-lint \
+	committee-install committee-dev committee-build committee-start \
 	docker-up docker-down docker-build
 
 docs: ## Create HTML files for codelabs
@@ -21,39 +20,55 @@ docs: ## Create HTML files for codelabs
 # Contracts
 # 
 
-contracts-install: ## Install contract dependencies
-	@cd $(CONTRACTS_DIR) && npm install
+contracts-install: ## Build contracts-node Docker image
+	@docker compose build contracts-node
 
 contracts-clean: ## Clean contract artifacts
-	@cd $(CONTRACTS_DIR) && npx hardhat clean
+	@docker compose run --rm contracts-node npx hardhat clean
 
 contracts-test: ## Run contract tests
-	@cd $(CONTRACTS_DIR) && npx hardhat test
+	@docker compose run --rm contracts-node npx hardhat test
 
 contracts-deploy: ## Deploy contracts to local network
-	@cd $(CONTRACTS_DIR) && npx hardhat ignition deploy ignition/modules/LicenseManager.ts
+	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts
 
 contracts-deploy-sepolia: ## Deploy contracts to Sepolia network
-	@cd $(CONTRACTS_DIR) && npx hardhat ignition deploy ignition/modules/LicenseManager.ts --network sepolia
+	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts --network sepolia
 
 # 
 # Web
 # 
 
-web-install: ## Install web dependencies
-	@cd $(WEB_DIR) && npm install
+web-install: ## Build license-web Docker image
+	@docker compose build license-web
 
 web-dev: ## Start web dev server
-	@cd $(WEB_DIR) && npm run dev
+	@docker compose up license-web
 
 web-build: ## Build web app
-	@cd $(WEB_DIR) && npm run build
+	@docker compose build license-web
 
 web-start: ## Start web app (production)
-	@cd $(WEB_DIR) && npm run start
+	@docker compose up -d license-web
 
 web-lint: ## Lint web project
-	@cd $(WEB_DIR) && npm run lint
+	@cd apps/web && npm run lint
+
+# 
+# Committee
+#
+
+committee-install: ## Build committee Docker image
+	@docker compose build committee
+
+committee-dev: ## Start committee dev server
+	@docker compose up committee
+
+committee-build: ## Build committee app
+	@docker compose build committee
+
+committee-start: ## Start committee app (production)
+	@docker compose up -d committee
 
 # 
 # Docker helpers

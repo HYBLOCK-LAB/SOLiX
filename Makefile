@@ -57,15 +57,13 @@ web-lint: ## Lint web project
 # 
 # Committee
 #
-
-committee-install: ## Build committee Docker image
+committee-build: ## Build committee app
 	@docker compose build committee
 
 committee-dev: ## Start committee dev server
 	@docker compose up committee
 
-committee-build: ## Build committee app
-	@docker compose build committee
+
 
 committee-start: ## Start committee app (production)
 	@docker compose up -d committee
@@ -77,8 +75,11 @@ committee-start: ## Start committee app (production)
 build: ## Build web/contract containers
 	@docker compose build
 
-start: ## Start web/contract containers
+dev: ## Start web/contract containers
 	@docker compose up
+
+start: ## Start web/contract containers
+	@docker compose up -d
 
 stop: ## Stop web/contract containers
 	@docker compose down

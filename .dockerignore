@@ -11,3 +11,4 @@ yarn-error.log
 docker-compose.override.yml
 .env
 **/.env
+!apps/web/.env

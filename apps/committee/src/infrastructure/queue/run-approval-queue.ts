@@ -1,6 +1,5 @@
 import { Queue, Worker, QueueEvents, type JobsOptions } from "bullmq";
-import type { RedisOptions } from "ioredis";
-import IORedis from "ioredis";
+import { Redis, type RedisOptions } from "ioredis";
 import { logger } from "../../shared/logger";
 
 const QUEUE_NAME = "run-approval";
@@ -17,11 +16,11 @@ export class RunApprovalQueue {
     this.connectionOptions = { lazyConnect: false, maxRetriesPerRequest: null };
 
     this.queue = new Queue(QUEUE_NAME, {
-      connection: new IORedis(redisUrl, this.connectionOptions),
+      connection: new Redis(redisUrl, this.connectionOptions),
     });
 
     this.events = new QueueEvents(QUEUE_NAME, {
-      connection: new IORedis(redisUrl, this.connectionOptions),
+      connection: new Redis(redisUrl, this.connectionOptions),
     });
 
     this.events.on("failed", ({ jobId, failedReason }) => {
@@ -61,7 +60,7 @@ export class RunApprovalQueue {
         await process(runId);
       },
       {
-        connection: new IORedis(this.redisUrl, this.connectionOptions),
+        connection: new Redis(this.redisUrl, this.connectionOptions),
       }
     );
 

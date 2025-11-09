@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY apps/committee/package*.json ./
 COPY apps/committee/tsconfig.json .
+COPY apps/committee/scripts ./scripts
 
 RUN npm ci
 

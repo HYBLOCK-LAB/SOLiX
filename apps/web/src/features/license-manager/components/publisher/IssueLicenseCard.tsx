@@ -181,7 +181,7 @@ export function IssueLicenseCard() {
         BigInt(expiryTimestamp),
       ]);
     } catch (err) {
-      setStatus(`트랜잭션 실패: ${(err as Error).message}`);
+      setStatus((err as Error).message);
     }
   };
 

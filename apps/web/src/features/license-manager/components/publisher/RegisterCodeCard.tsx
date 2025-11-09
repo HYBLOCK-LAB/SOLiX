@@ -33,7 +33,7 @@ export function RegisterCodeCard() {
       setStatus(null);
       await execute([codeHash, cipherCid]);
     } catch (err) {
-      setStatus(`트랜잭션 실패: ${(err as Error).message}`);
+      setStatus((err as Error).message);
     }
   };
 

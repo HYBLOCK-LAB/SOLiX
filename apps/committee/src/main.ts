@@ -1,4 +1,4 @@
-import IORedis from "ioredis";
+import { Redis } from "ioredis";
 import { env } from "./config/env";
 import { logger } from "./shared/logger";
 import { createViemClients } from "./infrastructure/blockchain/viem-clients";
@@ -20,7 +20,7 @@ import { PrepareSecretShards } from "./application/use-cases/prepare-secret-shar
 async function bootstrap() {
   logger.info("Bootstrapping committee backend");
 
-  const redis = new IORedis(env.redisUrl);
+  const redis = new Redis(env.redisUrl);
   const runRepository = new RedisRunRepository(redis, env.runTtlSeconds);
 
   const { publicClient, walletClient, account } = createViemClients(env);

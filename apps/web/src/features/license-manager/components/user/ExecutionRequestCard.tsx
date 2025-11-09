@@ -55,7 +55,7 @@ export function ExecutionRequestCard() {
       if (keyPair) {
         removeExecutionKey(keyPair.publicKey);
       }
-      setStatus(`트랜잭션 실패: ${(err as Error).message}`);
+      setStatus((err as Error).message);
     } finally {
       setIsPreparing(false);
     }

@@ -2,7 +2,6 @@ import IORedis from "ioredis";
 import { env } from "./config/env";
 import { logger } from "./shared/logger";
 import { createViemClients } from "./infrastructure/blockchain/viem-clients";
-import { BlockchainThresholdService } from "./infrastructure/blockchain/blockchain-threshold-service";
 import { RedisRunRepository } from "./infrastructure/cache/redis-run-repository";
 import { HandleRunRequested } from "./application/use-cases/handle-run-requested";
 import { RunRequestSubscriber } from "./infrastructure/blockchain/run-request-subscriber";
@@ -15,6 +14,8 @@ import { NoopEvidenceUploader } from "./infrastructure/evidence/noop-evidence-up
 import { Web3StorageEvidenceUploader } from "./infrastructure/evidence/web3-storage-evidence-uploader";
 import { HttpServer } from "./interfaces/http/http-server";
 import { RunController } from "./interfaces/http/controllers/run-controller";
+import { ShamirSecretSharingService } from "./infrastructure/crypto/shamir-secret-sharing-service";
+import { PrepareSecretShards } from "./application/use-cases/prepare-secret-shards";
 
 async function bootstrap() {
   logger.info("Bootstrapping committee backend");
@@ -22,9 +23,8 @@ async function bootstrap() {
   const redis = new IORedis(env.redisUrl);
   const runRepository = new RedisRunRepository(redis, env.runTtlSeconds);
 
-  const { publicClient, walletClient } = createViemClients(env);
-  const thresholdService = new BlockchainThresholdService(publicClient, env.contractAddress);
-  const executionApprover = new BlockchainExecutionApprover(walletClient, publicClient, env.contractAddress);
+  const { publicClient, walletClient, account } = createViemClients(env);
+  const executionApprover = new BlockchainExecutionApprover(walletClient, publicClient, env.contractAddress, account);
 
   const evidenceUploader = env.web3StorageToken
     ? new Web3StorageEvidenceUploader(env.web3StorageToken)
@@ -34,13 +34,16 @@ async function bootstrap() {
   const approvalQueue = new RunApprovalQueue(env.redisUrl);
   approvalQueue.startWorker(async (runId) => runApprovalWorker.process(runId));
 
-  const handleRunRequested = new HandleRunRequested(runRepository, thresholdService);
+  const secretSharingService = new ShamirSecretSharingService();
+  const prepareSecretShards = new PrepareSecretShards(runRepository, secretSharingService);
+
+  const handleRunRequested = new HandleRunRequested(runRepository);
   const runRequestSubscriber = new RunRequestSubscriber(publicClient, env.contractAddress, handleRunRequested);
   runRequestSubscriber.start();
 
   const submitShard = new SubmitShard(runRepository);
   const getRunStatus = new GetRunStatus(runRepository);
-  const runController = new RunController(submitShard, getRunStatus, approvalQueue);
+  const runController = new RunController(submitShard, getRunStatus, approvalQueue, prepareSecretShards);
 
   const httpServer = new HttpServer(runController, env.port);
   await httpServer.start();

@@ -2,7 +2,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { SubmitShard } from "../../../application/use-cases/submit-shard";
 import type { GetRunStatus } from "../../../application/use-cases/get-run-status";
 import type { RunApprovalQueue } from "../../../infrastructure/queue/run-approval-queue";
+import type { PrepareSecretShards } from "../../../application/use-cases/prepare-secret-shards";
 import { shardSubmissionSchema } from "../validators/shard-schema";
+import { prepareShardSchema, type PrepareShardRequest } from "../validators/prepare-shards-schema";
 
 interface ShardRequestBody {
   runId: string;
@@ -15,10 +17,51 @@ export class RunController {
   constructor(
     private readonly submitShard: SubmitShard,
     private readonly getRunStatus: GetRunStatus,
-    private readonly approvalQueue?: RunApprovalQueue
+    private readonly approvalQueue?: RunApprovalQueue,
+    private readonly prepareSecretShards?: PrepareSecretShards
   ) {}
 
   registerRoutes(server: FastifyInstance) {
+    server.post(
+      "/runs/:runId/prepare-shards",
+      async (
+        request: FastifyRequest<{ Params: { runId: string }; Body: PrepareShardRequest }>,
+        reply: FastifyReply
+      ) => {
+        if (!this.prepareSecretShards) {
+          return reply.status(501).send({ message: "Shard preparation is disabled" });
+        }
+
+        const parsed = prepareShardSchema.parse(request.body);
+
+        try {
+          const result = await this.prepareSecretShards.execute({
+            runId: request.params.runId,
+            secret: parsed.secret,
+            encoding: parsed.encoding,
+            totalShares: parsed.totalShares,
+            threshold: parsed.threshold,
+            defaultExpiresInSeconds: parsed.defaultExpiresInSeconds,
+            members: parsed.members.map((member) => ({
+              address: member.address as `0x${string}`,
+              expiresAt: member.expiresAt ? new Date(member.expiresAt) : undefined,
+              expiresInSeconds: member.expiresInSeconds,
+              note: member.note,
+            })),
+          });
+
+          return reply.send(result);
+        } catch (error) {
+          const message = (error as Error).message;
+          if (message.includes("not found")) {
+            return reply.status(404).send({ message });
+          }
+
+          return reply.status(400).send({ message });
+        }
+      }
+    );
+
     server.post(
       "/shards",
       async (
@@ -42,6 +85,8 @@ export class RunController {
           return reply.status(result.isDuplicate ? 200 : 201).send({
             runId: result.run.runId,
             codeId: result.run.codeId.toString(),
+            shardNonce: result.run.shardNonce.toString(),
+            requester: result.run.requester,
             isDuplicate: result.isDuplicate,
             pieceCount: result.pieceCount,
             threshold: result.run.threshold,
@@ -76,6 +121,8 @@ export class RunController {
         return reply.send({
           runId: status.run.runId,
           codeId: status.run.codeId.toString(),
+          shardNonce: status.run.shardNonce.toString(),
+          requester: status.run.requester,
           status: status.run.status,
           pieceCount: status.pieceCount,
           threshold: status.run.threshold,

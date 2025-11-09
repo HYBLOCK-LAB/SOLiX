@@ -31,17 +31,29 @@ export class RunRequestSubscriber {
 
           const runId = typeof args.runId === "string" ? args.runId : (args.runId as `0x${string}`);
           const codeId = typeof args.codeId === "bigint" ? args.codeId : BigInt(args.codeId as string);
+          const shardNonce =
+            typeof args.shardNonce === "bigint" ? args.shardNonce : BigInt(args.shardNonce as string);
+          const thresholdValue =
+            typeof args.threshold === "bigint"
+              ? Number(args.threshold)
+              : Number(args.threshold ?? 0);
+          if (!Number.isFinite(thresholdValue) || thresholdValue <= 0) {
+            logger.warn({ runId, threshold: args.threshold }, "Invalid threshold from event, skipping run");
+            continue;
+          }
+          const requester =
+            typeof args.requester === "string"
+              ? (args.requester as `0x${string}`)
+              : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
 
-          const timestamp =
-            typeof log.blockTimestamp === "bigint"
-              ? Number(log.blockTimestamp) * 1000
-              : log.blockTimestamp
-              ? Number(log.blockTimestamp)
-              : Date.now();
+          const timestamp = await this.resolveTimestamp(log);
 
           await this.handler.execute({
             runId,
             codeId,
+            shardNonce,
+            threshold: thresholdValue,
+            requester,
             requestedAt: new Date(timestamp),
           });
         }
@@ -56,6 +68,20 @@ export class RunRequestSubscriber {
       this.unwatch();
       this.unwatch = undefined;
       logger.info("RunRequested subscriber stopped");
+    }
+  }
+
+  private async resolveTimestamp(log: { blockNumber?: bigint }): Promise<number> {
+    if (!log.blockNumber) {
+      return Date.now();
+    }
+
+    try {
+      const block = await this.client.getBlock({ blockNumber: log.blockNumber });
+      return Number(block.timestamp) * 1000;
+    } catch (error) {
+      logger.warn({ err: error, blockNumber: log.blockNumber }, "Failed to fetch block timestamp");
+      return Date.now();
     }
   }
 }

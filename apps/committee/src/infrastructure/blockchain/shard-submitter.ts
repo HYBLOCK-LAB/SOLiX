@@ -15,7 +15,7 @@ export class BlockchainShardSubmitter implements ShardSubmitter {
       address: this.contractAddress,
       abi: committeeAbi,
       functionName: "submitShard",
-      args: [params.codeId, params.runNonce, params.shardCid],
+      args: [params.codeId, params.requester, params.shardCid],
       account: this.account,
       chain: undefined,
     });

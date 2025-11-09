@@ -17,8 +17,8 @@ export class RedisShardRepository implements ShardRepository {
     const pipeline = this.redis.pipeline();
     for (const shard of shards) {
       const record: StoredShard = {
-        runId: shard.payload.runId,
         codeId: shard.payload.codeId,
+        requester: shard.payload.requester,
         shardNonce: shard.payload.shardNonce,
         committee: shard.committee,
         shareIndex: shard.payload.shareIndex,
@@ -29,7 +29,7 @@ export class RedisShardRepository implements ShardRepository {
       };
 
       pipeline.set(
-        this.key(record.runId, record.codeId, record.committee),
+        this.key(record.codeId, record.requester, record.committee),
         JSON.stringify(record),
         "EX",
         this.ttlSeconds
@@ -38,12 +38,12 @@ export class RedisShardRepository implements ShardRepository {
     await pipeline.exec();
   }
 
-  async findByRun(
-    runId: string,
+  async findForCommittee(
     codeId: string,
+    requester: `0x${string}`,
     committee: `0x${string}`
   ): Promise<StoredShard | null> {
-    const payload = await this.redis.get(this.key(runId, codeId, committee));
+    const payload = await this.redis.get(this.key(codeId, requester, committee));
     if (!payload) {
       return null;
     }
@@ -52,7 +52,7 @@ export class RedisShardRepository implements ShardRepository {
 
   async saveRawShard(payload: StoredShard): Promise<void> {
     await this.redis.set(
-      this.key(payload.runId, payload.codeId, payload.committee),
+      this.key(payload.codeId, payload.requester, payload.committee),
       JSON.stringify(payload),
       "EX",
       this.ttlSeconds
@@ -61,13 +61,13 @@ export class RedisShardRepository implements ShardRepository {
 
   async savePlainShards(
     codeId: string,
-    wallet: `0x${string}`,
+    requester: `0x${string}`,
     shards: StoredShard[]
   ): Promise<void> {
     const pipeline = this.redis.pipeline();
     for (const shard of shards) {
       pipeline.set(
-        this.key(wallet, codeId, shard.committee),
+        this.key(codeId, requester, shard.committee),
         JSON.stringify(shard),
         "EX",
         this.ttlSeconds
@@ -77,13 +77,13 @@ export class RedisShardRepository implements ShardRepository {
   }
 
   async markSubmitted(
-    runId: string,
     codeId: string,
+    requester: `0x${string}`,
     committee: `0x${string}`,
     shardCid: string,
     submittedAt: Date
   ): Promise<void> {
-    const key = this.key(runId, codeId, committee);
+    const key = this.key(codeId, requester, committee);
     const payload = await this.redis.get(key);
     if (!payload) {
       return;
@@ -94,7 +94,7 @@ export class RedisShardRepository implements ShardRepository {
     await this.redis.set(key, JSON.stringify(parsed), "EX", this.ttlSeconds);
   }
 
-  private key(runId: string, codeId: string, committee: `0x${string}`) {
-    return `shard:${committee.toLowerCase()}:${codeId}:${runId}`;
+  private key(codeId: string, requester: `0x${string}`, committee: `0x${string}`) {
+    return `shard:${committee.toLowerCase()}:${codeId}:${requester.toLowerCase()}`;
   }
 }

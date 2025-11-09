@@ -1,6 +1,6 @@
 export interface StoredShard {
-  runId: string;
   codeId: string;
+  requester: `0x${string}`;
   shardNonce: string;
   committee: `0x${string}`;
   shareIndex: number;

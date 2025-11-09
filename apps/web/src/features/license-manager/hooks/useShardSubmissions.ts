@@ -6,7 +6,7 @@ import { COMMITTEE_MANAGER_ADDRESS } from "../constants";
 import { committeeManagerAbi } from "../committeeManagerAbi";
 
 const SHARD_SUBMITTED_EVENT = parseAbiItem(
-  "event ShardSubmitted(uint256 indexed codeId, bytes32 indexed runNonce, address indexed committee, string shardCid, uint256 approvals, uint256 threshold)"
+  "event ShardSubmitted(uint256 indexed codeId, address indexed requester, address indexed committee, string shardCid, uint256 approvals, uint256 threshold)"
 );
 
 export interface ShardSubmission {
@@ -14,12 +14,12 @@ export interface ShardSubmission {
   shardCid: string;
   approvals: number;
   threshold: number;
-  runNonce: `0x${string}`;
+  requester: `0x${string}`;
   blockNumber: bigint;
 }
 
 export interface ShardRun {
-  runNonce: `0x${string}`;
+  requester: `0x${string}`;
   threshold: number;
   shards: ShardSubmission[];
   lastUpdatedBlock: bigint;
@@ -50,18 +50,19 @@ export function useShardSubmissions(codeId?: number | null) {
 
       const groups = new Map<string, ShardRun>();
       for (const log of logs) {
-        const runNonce = (log.args.runNonce as `0x${string}`) ?? ("0x0" as `0x${string}`);
+        const requester = (log.args.requester as `0x${string}`) ?? ("0x0000000000000000000000000000000000000000" as `0x${string}`);
+        const groupKey = requester.toLowerCase();
         const shard: ShardSubmission = {
           committee: (log.args.committee as `0x${string}`) ?? ("0x0" as `0x${string}`),
           shardCid: typeof log.args.shardCid === "string" ? log.args.shardCid : "",
           approvals: Number(log.args.approvals ?? 0n),
           threshold: Number(log.args.threshold ?? 0n),
-          runNonce,
+          requester,
           blockNumber: log.blockNumber ?? 0n,
         };
 
-        const existing = groups.get(runNonce) ?? {
-          runNonce,
+        const existing = groups.get(groupKey) ?? {
+          requester,
           threshold: shard.threshold,
           shards: [],
           lastUpdatedBlock: 0n,
@@ -70,7 +71,7 @@ export function useShardSubmissions(codeId?: number | null) {
         existing.threshold = shard.threshold;
         existing.shards = [...existing.shards.filter((item) => item.committee !== shard.committee), shard];
         existing.lastUpdatedBlock = log.blockNumber ?? existing.lastUpdatedBlock;
-        groups.set(runNonce, existing);
+        groups.set(groupKey, existing);
       }
 
       return Array.from(groups.values()).sort((a, b) => Number(b.lastUpdatedBlock - a.lastUpdatedBlock));

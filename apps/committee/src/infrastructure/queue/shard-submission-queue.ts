@@ -3,10 +3,9 @@ import IORedis from "ioredis";
 import type { RedisOptions } from "ioredis";
 
 export interface ShardSubmissionJob {
-  runId: string;
   codeId: string;
-  runNonce: `0x${string}`;
   recipientPubKey: `0x${string}`;
+  requester: `0x${string}`;
 }
 
 export class ShardSubmissionQueue {
@@ -33,7 +32,7 @@ export class ShardSubmissionQueue {
     await this.queue.add("submit", job, {
       removeOnComplete: true,
       removeOnFail: 50,
-      jobId: `${job.runId}:${job.recipientPubKey}`,
+      jobId: `${job.codeId}:${job.requester}:${job.recipientPubKey}`,
       ...options,
     });
   }

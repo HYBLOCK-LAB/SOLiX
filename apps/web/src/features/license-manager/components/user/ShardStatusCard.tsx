@@ -34,7 +34,7 @@ export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardP
     setShares([]);
     setRecoveredSecret(null);
     setError(null);
-  }, [latestRun?.runNonce, recipientPublicKey]);
+  }, [latestRun?.requester, recipientPublicKey]);
 
   useEffect(() => {
     if (!latestRun || !recipientPublicKey || !keyRecord) {
@@ -125,7 +125,7 @@ export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardP
     <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm shadow-lg dark:border-primary-75 dark:bg-background-dark-75">
       <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">Shard 상태</h3>
       <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
-        Run {latestRun.runNonce} · 임계값 {latestRun.threshold}
+        요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold}
       </p>
 
       <ul className="mt-4 space-y-3 text-xs">
@@ -171,4 +171,9 @@ function renderShardState(state: ShardState["status"]): string {
     default:
       return "대기 중";
   }
+}
+
+function shortenAddress(value: `0x${string}` | null | undefined) {
+  if (!value) return "";
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }

@@ -18,8 +18,8 @@ export interface PrepareSecretShardsInput {
 export interface PreparedShard {
   committee: `0x${string}`;
   payload: {
-    runId: string;
     codeId: string;
+    requester: `0x${string}`;
     shardNonce: string;
     shareIndex: number;
     shareValue: `0x${string}`;
@@ -95,8 +95,8 @@ export class PrepareSecretShards {
       codeId,
       wallet,
       shards.map((shard) => ({
-        runId: wallet,
         codeId,
+        requester: wallet,
         shardNonce: shard.shardNonce,
         committee: shard.committee,
         shareIndex: shard.shareIndex,
@@ -115,8 +115,8 @@ export class PrepareSecretShards {
     return {
       committee: share.committee,
       payload: {
-        runId: run.runId,
         codeId: run.codeId.toString(),
+        requester: run.requester,
         shardNonce: run.shardNonce.toString(),
         shareIndex: share.shareIndex,
         shareValue: share.shareValue,

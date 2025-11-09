@@ -17,7 +17,7 @@ export const committeeAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "codeId", type: "uint256" },
-      { name: "runNonce", type: "bytes32" },
+      { name: "requester", type: "address" },
       { name: "shardCid", type: "string" },
     ],
     outputs: [],

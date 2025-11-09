@@ -16,7 +16,7 @@ export class PinataShardPublisher implements ShardPublisher {
       },
       body: JSON.stringify({
         pinataMetadata: {
-          name: `shard-${publication.runId}-${publication.shareIndex}`,
+          name: `shard-${publication.codeId}-${publication.requester}-${publication.shareIndex}`,
         },
         pinataContent: publication,
       }),

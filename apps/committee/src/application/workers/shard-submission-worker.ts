@@ -15,11 +15,16 @@ export class ShardSubmissionWorker {
   ) {}
 
   async process(job: ShardSubmissionJob) {
-    const shard = await this.shardRepository.findByRun(job.runId, job.codeId, this.committeeAddress);
+    const shard = await this.shardRepository.findForCommittee(
+      job.codeId,
+      job.requester,
+      this.committeeAddress
+    );
     if (!shard) {
       logger.warn(
         {
-          runId: job.runId,
+          codeId: job.codeId,
+          requester: job.requester,
           committee: this.committeeAddress,
         },
         "No shard prepared for this run"
@@ -29,7 +34,7 @@ export class ShardSubmissionWorker {
 
     if (shard.submittedAt) {
       logger.info(
-        { runId: job.runId, committee: this.committeeAddress },
+        { codeId: job.codeId, requester: job.requester, committee: this.committeeAddress },
         "Shard already submitted, skipping"
       );
       return;
@@ -39,7 +44,7 @@ export class ShardSubmissionWorker {
     const expiry = new Date(shard.expiresAt);
     if (expiry.getTime() <= now.getTime()) {
       logger.warn(
-        { runId: job.runId, committee: this.committeeAddress },
+        { codeId: job.codeId, requester: job.requester, committee: this.committeeAddress },
         "Shard expired before submission"
       );
       return;
@@ -51,8 +56,8 @@ export class ShardSubmissionWorker {
     });
 
     const cid = await this.publisher.publishShard({
-      runId: shard.runId,
       codeId: shard.codeId,
+      requester: shard.requester,
       shardNonce: shard.shardNonce,
       committee: this.committeeAddress,
       shareIndex: shard.shareIndex,
@@ -64,14 +69,21 @@ export class ShardSubmissionWorker {
 
     await this.submitter.submitShard({
       codeId: BigInt(shard.codeId),
-      runNonce: job.runNonce,
+      requester: job.requester,
       shardCid: cid,
     });
 
-    await this.shardRepository.markSubmitted(shard.runId, shard.codeId, this.committeeAddress, cid, now);
+    await this.shardRepository.markSubmitted(
+      shard.codeId,
+      shard.requester,
+      this.committeeAddress,
+      cid,
+      now
+    );
     logger.info(
       {
-        runId: shard.runId,
+        codeId: shard.codeId,
+        requester: shard.requester,
         committee: this.committeeAddress,
         cid,
       },

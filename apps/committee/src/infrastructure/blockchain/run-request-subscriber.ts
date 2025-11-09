@@ -36,8 +36,11 @@ export class RunRequestSubscriber {
           const args = log.args as Record<string, unknown>;
           if (!args) continue;
 
-          const runId = typeof args.runId === "string" ? (args.runId as `0x${string}`) : (args.runId as `0x${string}`);
           const codeId = typeof args.codeId === "bigint" ? args.codeId : BigInt(args.codeId as string);
+          const requester =
+            typeof args.requester === "string"
+              ? (args.requester as `0x${string}`)
+              : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
           const shardNonce =
             typeof args.shardNonce === "bigint" ? args.shardNonce : BigInt(args.shardNonce as string);
           const thresholdValue =
@@ -45,18 +48,17 @@ export class RunRequestSubscriber {
               ? Number(args.threshold)
               : Number(args.threshold ?? 0);
           if (!Number.isFinite(thresholdValue) || thresholdValue <= 0) {
-            logger.warn({ runId, threshold: args.threshold }, "Invalid threshold from event, skipping run");
+            logger.warn(
+              { codeId: codeId.toString(), requester, threshold: args.threshold },
+              "Invalid threshold from event, skipping run"
+            );
             continue;
           }
-          const requester =
-            typeof args.requester === "string"
-              ? (args.requester as `0x${string}`)
-              : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
 
           const timestamp = await this.resolveTimestamp(log);
 
           const run = await this.handler.execute({
-            runId,
+            runId: this.buildRunKey(codeId, requester),
             codeId,
             shardNonce,
             threshold: thresholdValue,
@@ -67,25 +69,23 @@ export class RunRequestSubscriber {
           const recipientPubKey = this.parseRecipientPubKey(args.recipientPubKey);
 
           if (!recipientPubKey) {
-            logger.warn({ runId }, "Missing recipientPubKey on RunRequested event");
+            logger.warn(
+              { codeId: run.codeId.toString(), requester: run.requester },
+              "Missing recipientPubKey on RunRequested event"
+            );
             continue;
           }
 
-          const shard = await this.shardRepository.findByRun(
-            run.runId,
-            run.codeId.toString(),
-            this.committeeAddress
-          );
+          const shard = await this.shardRepository.findForCommittee(run.codeId.toString(), run.requester, this.committeeAddress);
           if (!shard) {
-            logger.debug({ runId }, "No shard assigned to this committee for run");
+            logger.debug({ codeId: run.codeId.toString(), requester: run.requester }, "No shard assigned to this committee for run");
             continue;
           }
 
           await this.shardSubmissionQueue.enqueue({
-            runId: run.runId,
             codeId: shard.codeId,
-            runNonce: shard.shardNonce as `0x${string}`,
             recipientPubKey,
+            requester: run.requester,
           });
         }
       },
@@ -114,6 +114,10 @@ export class RunRequestSubscriber {
       logger.warn({ err: error, blockNumber: log.blockNumber }, "Failed to fetch block timestamp");
       return Date.now();
     }
+  }
+
+  private buildRunKey(codeId: bigint, requester: `0x${string}`): string {
+    return `${codeId.toString()}:${requester.toLowerCase()}`;
   }
 
   private parseRecipientPubKey(value: unknown): `0x${string}` | null {

@@ -9,7 +9,7 @@ export interface EncryptedShardPayload {
 export interface RemoteShardPublication {
   runId: string;
   codeId: string;
-  shardNonce: string;
+  runNonce: string;
   committee: `0x${string}`;
   shareIndex: number;
   byteLength: number;

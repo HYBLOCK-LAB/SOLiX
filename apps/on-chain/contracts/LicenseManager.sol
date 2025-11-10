@@ -238,6 +238,7 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // 실행 요청. 1회 소진 + 이벤트 발생
     function requestCodeExecution(
         uint256 codeId,
+        bytes32 runNonce,
         bytes calldata recipientPubKey
     ) external override {
         _requireCodeExists(codeId);
@@ -249,7 +250,13 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         // 1회 소진
         _burn(msg.sender, codeId, 1);
 
-        emit RunRequested(codeId, msg.sender, recipientPubKey, block.timestamp);
+        emit RunRequested(
+            codeId,
+            msg.sender,
+            runNonce,
+            recipientPubKey,
+            block.timestamp
+        );
     }
 
     // 소유자 혹은 사용자 대신 실행

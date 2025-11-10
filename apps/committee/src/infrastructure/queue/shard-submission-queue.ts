@@ -30,10 +30,11 @@ export class ShardSubmissionQueue {
   }
 
   async enqueue(job: ShardSubmissionJob, options?: JobsOptions) {
+    const normalizedNonce = job.runNonce.toLowerCase();
     await this.queue.add("submit", job, {
       removeOnComplete: true,
       removeOnFail: 50,
-      jobId: `${job.codeId}:${job.requester}:${job.runNonce}`,
+      jobId: `${job.codeId}:${job.requester}:${normalizedNonce}`,
       ...options,
     });
   }

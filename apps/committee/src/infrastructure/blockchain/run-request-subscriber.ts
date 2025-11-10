@@ -41,9 +41,9 @@ export class RunRequestSubscriber {
             typeof args.requester === "string"
               ? (args.requester as `0x${string}`)
               : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
-          const shardNonce =
-            typeof args.shardNonce === "bigint" ? args.shardNonce : BigInt(args.shardNonce as string);
-          const runNonceHex = this.formatBytes32(shardNonce);
+          const runNonceValue =
+            typeof args.runNonce === "bigint" ? args.runNonce : BigInt(args.runNonce as string);
+          const runNonceHex = this.formatBytes32(runNonceValue);
           const thresholdValue =
             typeof args.threshold === "bigint"
               ? Number(args.threshold)
@@ -61,7 +61,7 @@ export class RunRequestSubscriber {
           const run = await this.handler.execute({
             runId: this.buildRunKey(codeId, requester, runNonceHex),
             codeId,
-            shardNonce,
+            runNonce: runNonceValue,
             threshold: thresholdValue,
             requester,
             requestedAt: new Date(timestamp),
@@ -77,7 +77,12 @@ export class RunRequestSubscriber {
             continue;
           }
 
-          const shard = await this.shardRepository.findForCommittee(run.codeId.toString(), run.requester, this.committeeAddress);
+          const shard = await this.shardRepository.findForCommittee(
+            run.codeId.toString(),
+            run.requester,
+            runNonceHex,
+            this.committeeAddress
+          );
           if (!shard) {
             logger.debug({ codeId: run.codeId.toString(), requester: run.requester }, "No shard assigned to this committee for run");
             continue;

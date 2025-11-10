@@ -3,7 +3,7 @@ export interface RegisterShardsParams {
   wallet: `0x${string}`;
   shards: Array<{
     committee: `0x${string}`;
-    shardNonce: string;
+    runNonce: string;
     shareIndex: number;
     shareValue: `0x${string}`;
     byteLength: number;

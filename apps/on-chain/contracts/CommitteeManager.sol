@@ -5,6 +5,10 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
 
 contract CommitteeManager is AccessControl {
+    /* ========= Errors ========= */
+
+    error DuplicateShard(uint256 codeId, address requester, address committee);
+
     /* ========= 전역 변수 ========= */
 
     bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
@@ -20,6 +24,7 @@ contract CommitteeManager is AccessControl {
     /* ========= 상태 ========= */
 
     mapping(bytes32 => uint256) public shardCountForRun;
+    mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
     uint256 public committeeThreshold = 3;
 
     /* ========= 이벤트 ========= */
@@ -31,7 +36,8 @@ contract CommitteeManager is AccessControl {
         bytes32 indexed runNonce,
         address committee,
         string shardCid,
-        uint256 countAfter
+        uint256 countAfter,
+        uint256 threshold
     );
 
     // 모든 위원회의 승인이 완료되었음을 알리는 이벤트
@@ -78,7 +84,13 @@ contract CommitteeManager is AccessControl {
         require(licenseManager.checkCodeExists(codeId), "code is not exist");
         require(licenseManager.checkCodeActive(codeId), "code is not active");
 
-        bytes32 runKey = keccak256(abi.encodePacked(codeId, requester, runNonce));
+        bytes32 runKey = keccak256(
+            abi.encodePacked(codeId, requester, runNonce)
+        );
+        if (hasSubmitted[runKey][msg.sender]) {
+            revert DuplicateShard(codeId, requester, msg.sender);
+        }
+        hasSubmitted[runKey][msg.sender] = true;
         uint256 newCount = ++shardCountForRun[runKey];
 
         emit ShardSubmitted(
@@ -87,7 +99,8 @@ contract CommitteeManager is AccessControl {
             runNonce,
             msg.sender,
             shardCid,
-            newCount
+            newCount,
+            committeeThreshold
         );
 
         if (newCount >= committeeThreshold) {

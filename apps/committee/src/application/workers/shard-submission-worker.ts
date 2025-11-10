@@ -18,6 +18,7 @@ export class ShardSubmissionWorker {
     const shard = await this.shardRepository.findForCommittee(
       job.codeId,
       job.requester,
+      job.runNonce,
       this.committeeAddress
     );
     if (!shard) {
@@ -25,6 +26,7 @@ export class ShardSubmissionWorker {
         {
           codeId: job.codeId,
           requester: job.requester,
+          runNonce: job.runNonce,
           committee: this.committeeAddress,
         },
         "No shard prepared for this run"
@@ -32,9 +34,23 @@ export class ShardSubmissionWorker {
       return;
     }
 
+    if (shard.runNonce.toLowerCase() !== job.runNonce.toLowerCase()) {
+      logger.warn(
+        {
+          codeId: job.codeId,
+          requester: job.requester,
+          expected: job.runNonce,
+          actual: shard.runNonce,
+          committee: this.committeeAddress,
+        },
+        "Stored shard nonce mismatch, skipping submission"
+      );
+      return;
+    }
+
     if (shard.submittedAt) {
       logger.info(
-        { codeId: job.codeId, requester: job.requester, committee: this.committeeAddress },
+        { codeId: job.codeId, requester: job.requester, runNonce: job.runNonce, committee: this.committeeAddress },
         "Shard already submitted, skipping"
       );
       return;
@@ -44,7 +60,7 @@ export class ShardSubmissionWorker {
     const expiry = new Date(shard.expiresAt);
     if (expiry.getTime() <= now.getTime()) {
       logger.warn(
-        { codeId: job.codeId, requester: job.requester, committee: this.committeeAddress },
+        { codeId: job.codeId, requester: job.requester, runNonce: job.runNonce, committee: this.committeeAddress },
         "Shard expired before submission"
       );
       return;
@@ -58,7 +74,7 @@ export class ShardSubmissionWorker {
     const cid = await this.publisher.publishShard({
       codeId: shard.codeId,
       requester: shard.requester,
-      shardNonce: shard.shardNonce,
+      runNonce: shard.runNonce,
       committee: this.committeeAddress,
       shareIndex: shard.shareIndex,
       byteLength: shard.byteLength,
@@ -77,6 +93,7 @@ export class ShardSubmissionWorker {
     await this.shardRepository.markSubmitted(
       shard.codeId,
       shard.requester,
+      job.runNonce,
       this.committeeAddress,
       cid,
       now
@@ -85,6 +102,7 @@ export class ShardSubmissionWorker {
       {
         codeId: shard.codeId,
         requester: shard.requester,
+        runNonce: job.runNonce,
         committee: this.committeeAddress,
         cid,
       },

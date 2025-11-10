@@ -86,6 +86,7 @@ interface ILicenseManager is IERC165 {
     event RunRequested(
         uint256 indexed codeId,
         address indexed user,
+        bytes32 indexed runNonce,
         bytes recipientPubKey,
         uint256 blockTimestamp
     );
@@ -134,6 +135,7 @@ interface ILicenseManager is IERC165 {
     // 코드 실행 요청
     function requestCodeExecution(
         uint256 codeId,
+        bytes32 runNonce,
         bytes calldata recipientPubKey
     ) external;
 

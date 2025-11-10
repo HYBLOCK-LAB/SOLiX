@@ -7,7 +7,7 @@ export const plainShardSchema = z.object({
     .array(
       z.object({
         committee: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-        shardNonce: z.string().min(1),
+        runNonce: z.string().min(1),
         shareIndex: z.number().int().min(1),
         shareValue: z.string().regex(/^0x[a-fA-F0-9]+$/),
         byteLength: z.number().int().positive(),

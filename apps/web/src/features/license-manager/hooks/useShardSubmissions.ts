@@ -6,7 +6,7 @@ import { COMMITTEE_MANAGER_ADDRESS } from "../constants";
 import { committeeManagerAbi } from "../committeeManagerAbi";
 
 const SHARD_SUBMITTED_EVENT = parseAbiItem(
-  "event ShardSubmitted(uint256 indexed codeId, address indexed requester, address indexed committee, string shardCid, uint256 approvals, uint256 threshold)"
+  "event ShardSubmitted(uint256 indexed codeId, address indexed requester, bytes32 indexed runNonce, address committee, string shardCid, uint256 countAfter, uint256 threshold)"
 );
 
 export interface ShardSubmission {
@@ -15,23 +15,25 @@ export interface ShardSubmission {
   approvals: number;
   threshold: number;
   requester: `0x${string}`;
+  runNonce: `0x${string}`;
   blockNumber: bigint;
 }
 
 export interface ShardRun {
   requester: `0x${string}`;
+  runNonce: `0x${string}`;
   threshold: number;
   shards: ShardSubmission[];
   lastUpdatedBlock: bigint;
 }
 
-export function useShardSubmissions(codeId?: number | null) {
+export function useShardSubmissions(codeId?: number | null, runNonce?: `0x${string}` | null) {
   const publicClient = usePublicClient();
   const queryClient = useQueryClient();
 
   const queryKey = useMemo(
-    () => ["committee-manager", "shards", publicClient?.chain?.id, codeId ?? "none"],
-    [publicClient?.chain?.id, codeId]
+    () => ["committee-manager", "shards", publicClient?.chain?.id, codeId ?? "none", runNonce ?? "all"],
+    [publicClient?.chain?.id, codeId, runNonce]
   );
 
   const query = useQuery({
@@ -51,18 +53,24 @@ export function useShardSubmissions(codeId?: number | null) {
       const groups = new Map<string, ShardRun>();
       for (const log of logs) {
         const requester = (log.args.requester as `0x${string}`) ?? ("0x0000000000000000000000000000000000000000" as `0x${string}`);
-        const groupKey = requester.toLowerCase();
+        const runNonceValue = (log.args.runNonce as `0x${string}`) ?? ("0x0" as `0x${string}`);
+        if (runNonce && runNonce.toLowerCase() !== runNonceValue.toLowerCase()) {
+          continue;
+        }
+        const groupKey = `${requester.toLowerCase()}:${runNonceValue.toLowerCase()}`;
         const shard: ShardSubmission = {
           committee: (log.args.committee as `0x${string}`) ?? ("0x0" as `0x${string}`),
           shardCid: typeof log.args.shardCid === "string" ? log.args.shardCid : "",
-          approvals: Number(log.args.approvals ?? 0n),
+          approvals: Number(log.args.countAfter ?? 0n),
           threshold: Number(log.args.threshold ?? 0n),
           requester,
+          runNonce: runNonceValue,
           blockNumber: log.blockNumber ?? 0n,
         };
 
         const existing = groups.get(groupKey) ?? {
           requester,
+          runNonce: runNonceValue,
           threshold: shard.threshold,
           shards: [],
           lastUpdatedBlock: 0n,
@@ -82,7 +90,13 @@ export function useShardSubmissions(codeId?: number | null) {
     address: COMMITTEE_MANAGER_ADDRESS,
     abi: committeeManagerAbi,
     eventName: "ShardSubmitted",
-    args: codeId != null ? { codeId: BigInt(codeId) } : undefined,
+    args:
+      codeId != null
+        ? {
+            codeId: BigInt(codeId),
+            ...(runNonce ? { runNonce } : {}),
+          }
+        : undefined,
     onLogs: () => queryClient.invalidateQueries({ queryKey }),
   });
 

@@ -52,7 +52,7 @@ export class RunController {
             parsed.wallet as `0x${string}`,
             parsed.shards.map((shard) => ({
               committee: shard.committee as `0x${string}`,
-              shardNonce: shard.shardNonce,
+              runNonce: shard.runNonce,
               shareIndex: shard.shareIndex,
               shareValue: shard.shareValue as `0x${string}`,
               byteLength: shard.byteLength,
@@ -90,7 +90,7 @@ export class RunController {
           return reply.status(result.isDuplicate ? 200 : 201).send({
             runId: result.run.runId,
             codeId: result.run.codeId.toString(),
-            shardNonce: result.run.shardNonce.toString(),
+            runNonce: result.run.runNonce.toString(),
             requester: result.run.requester,
             isDuplicate: result.isDuplicate,
             pieceCount: result.pieceCount,

@@ -9,6 +9,7 @@ import { findExecutionKey } from "../../services/executionKeyService";
 interface ShardStatusCardProps {
   codeId: number;
   recipientPublicKey: `0x${string}` | null;
+  runNonce: `0x${string}` | null;
 }
 
 interface ShardState {
@@ -17,8 +18,8 @@ interface ShardState {
   message?: string;
 }
 
-export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardProps) {
-  const { latestRun, isLoading } = useShardSubmissions(codeId);
+export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardStatusCardProps) {
+  const { latestRun, isLoading } = useShardSubmissions(codeId, runNonce);
   const [shardStates, setShardStates] = useState<Record<string, ShardState>>({});
   const [shares, setShares] = useState<SecretSharePayload[]>([]);
   const [recoveredSecret, setRecoveredSecret] = useState<`0x${string}` | null>(null);
@@ -26,18 +27,26 @@ export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardP
 
   const keyRecord = useMemo(() => {
     if (!recipientPublicKey) return null;
-    return findExecutionKey(recipientPublicKey);
-  }, [recipientPublicKey]);
+    const record = findExecutionKey(recipientPublicKey);
+    if (!record) return null;
+    if (runNonce && record.runNonce && record.runNonce.toLowerCase() !== runNonce.toLowerCase()) {
+      return null;
+    }
+    return record;
+  }, [recipientPublicKey, runNonce]);
 
   useEffect(() => {
     setShardStates({});
     setShares([]);
     setRecoveredSecret(null);
     setError(null);
-  }, [latestRun?.requester, recipientPublicKey]);
+  }, [latestRun?.requester, latestRun?.runNonce, recipientPublicKey, runNonce]);
 
   useEffect(() => {
     if (!latestRun || !recipientPublicKey || !keyRecord) {
+      return;
+    }
+    if (runNonce && latestRun.runNonce.toLowerCase() !== runNonce.toLowerCase()) {
       return;
     }
 
@@ -98,7 +107,7 @@ export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardP
     };
   }, [latestRun, recipientPublicKey, keyRecord]);
 
-  if (!recipientPublicKey) {
+  if (!recipientPublicKey || !runNonce) {
     return (
       <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm dark:border-primary-75 dark:bg-background-dark-75">
         <p className="text-text-light-50 dark:text-text-dark-50">실행 요청을 먼저 보내 임시 공개키를 생성하세요.</p>
@@ -125,7 +134,7 @@ export function ShardStatusCard({ codeId, recipientPublicKey }: ShardStatusCardP
     <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm shadow-lg dark:border-primary-75 dark:bg-background-dark-75">
       <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">Shard 상태</h3>
       <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
-        요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold}
+        요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold} · RunNonce {shortenAddress(latestRun.runNonce)}
       </p>
 
       <ul className="mt-4 space-y-3 text-xs">

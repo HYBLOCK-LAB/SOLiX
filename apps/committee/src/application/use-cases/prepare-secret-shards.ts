@@ -20,7 +20,7 @@ export interface PreparedShard {
   payload: {
     codeId: string;
     requester: `0x${string}`;
-    shardNonce: string;
+    runNonce: string;
     shareIndex: number;
     shareValue: `0x${string}`;
     byteLength: number;
@@ -32,7 +32,7 @@ export interface PreparedShard {
 export interface PrepareSecretShardsResult {
   runId: string;
   codeId: string;
-  shardNonce: string;
+  runNonce: string;
   totalShares: number;
   threshold: number;
   shards: PreparedShard[];
@@ -64,11 +64,11 @@ export class PrepareSecretShards {
       this.buildShardPayload(share, run)
     );
 
-    const shardNonceHex = `0x${run.shardNonce.toString(16)}` as `0x${string}`;
+    const runNonceHex = `0x${run.runNonce.toString(16)}` as `0x${string}`;
     const result = {
       runId: run.runId,
       codeId: run.codeId.toString(),
-      shardNonce: shardNonceHex,
+      runNonce: runNonceHex,
       totalShares: shards.length,
       threshold: run.threshold,
       shards,
@@ -83,7 +83,7 @@ export class PrepareSecretShards {
     wallet: `0x${string}`,
     shards: Array<{
       committee: `0x${string}`;
-      shardNonce: string;
+      runNonce: string;
       shareIndex: number;
       shareValue: `0x${string}`;
       byteLength: number;
@@ -97,7 +97,7 @@ export class PrepareSecretShards {
       shards.map((shard) => ({
         codeId,
         requester: wallet,
-        shardNonce: shard.shardNonce,
+        runNonce: shard.runNonce,
         committee: shard.committee,
         shareIndex: shard.shareIndex,
         shareValue: shard.shareValue,
@@ -117,7 +117,7 @@ export class PrepareSecretShards {
       payload: {
         codeId: run.codeId.toString(),
         requester: run.requester,
-        shardNonce: run.shardNonce.toString(),
+        runNonce: run.runNonce.toString(),
         shareIndex: share.shareIndex,
         shareValue: share.shareValue,
         byteLength: share.byteLength,

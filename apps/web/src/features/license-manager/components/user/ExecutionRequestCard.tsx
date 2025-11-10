@@ -15,10 +15,24 @@ function truncateKey(value: `0x${string}`): string {
   return `${value.slice(0, 10)}…${value.slice(-6)}`;
 }
 
+function generateRunNonce(): `0x${string}` {
+  if (typeof crypto === "undefined" || !crypto.getRandomValues) {
+    const fallback = Array.from({ length: 32 }, (_, index) =>
+      ((Date.now() + index) % 256).toString(16).padStart(2, "0")
+    ).join("");
+    return `0x${fallback}` as `0x${string}`;
+  }
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `0x${hex}` as `0x${string}`;
+}
+
 export function ExecutionRequestCard() {
   const [codeId, setCodeId] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
   const [latestPublicKey, setLatestPublicKey] = useState<`0x${string}` | null>(null);
+  const [latestRunNonce, setLatestRunNonce] = useState<`0x${string}` | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
 
   const { execute, isPending, isSuccess, transactionHash, error } =
@@ -45,12 +59,15 @@ export function ExecutionRequestCard() {
     setIsPreparing(true);
     setStatus("임시 공개키를 생성하고 있습니다…");
     setLatestPublicKey(null);
+    setLatestRunNonce(null);
 
     try {
       keyPair = await createExecutionKeyPair();
-      storeExecutionKeyPair(keyPair);
-      await execute([BigInt(codeId), keyPair.publicKey]);
+      const runNonce = generateRunNonce();
+      storeExecutionKeyPair(keyPair, { runNonce, codeId });
+      await execute([BigInt(codeId), runNonce, keyPair.publicKey]);
       setLatestPublicKey(keyPair.publicKey);
+      setLatestRunNonce(runNonce);
       setStatus("임시 키 쌍이 생성되어 로컬에 저장되었습니다.");
     } catch (err) {
       if (keyPair) {
@@ -118,6 +135,11 @@ export function ExecutionRequestCard() {
             공개키: {truncateKey(latestPublicKey)} (로컬 저장됨)
           </p>
         )}
+        {latestRunNonce && (
+          <p className="font-mono text-xs text-secondary-100">
+            Run Nonce: {truncateKey(latestRunNonce)}
+          </p>
+        )}
         {isSuccess && transactionHash && (
           <p className="text-secondary-100">요청 완료! Tx: {transactionHash.slice(0, 8)}...</p>
         )}
@@ -129,7 +151,7 @@ export function ExecutionRequestCard() {
       </footer>
 
       {codeId > 0 && (
-        <ShardStatusCard codeId={codeId} recipientPublicKey={latestPublicKey} />
+        <ShardStatusCard codeId={codeId} recipientPublicKey={latestPublicKey} runNonce={latestRunNonce} />
       )}
     </section>
   );

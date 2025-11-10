@@ -73,6 +73,7 @@ export const licenseManagerAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "codeId", type: "uint256" },
+      { name: "runNonce", type: "bytes32" },
       { name: "recipientPubKey", type: "bytes" },
     ],
     outputs: [],

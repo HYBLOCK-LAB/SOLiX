@@ -6,6 +6,7 @@ export interface ShardRepository {
   findForCommittee(
     codeId: string,
     requester: `0x${string}`,
+    runNonce: `0x${string}`,
     committee: `0x${string}`
   ): Promise<StoredShard | null>;
   savePlainShards(
@@ -17,6 +18,7 @@ export interface ShardRepository {
   markSubmitted(
     codeId: string,
     requester: `0x${string}`,
+    runNonce: `0x${string}`,
     committee: `0x${string}`,
     shardCid: string,
     submittedAt: Date

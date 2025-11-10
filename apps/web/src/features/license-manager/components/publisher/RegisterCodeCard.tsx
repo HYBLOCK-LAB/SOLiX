@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
+import { keccak256, stringToBytes } from "viem";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { createEncryptedArtifact, uploadEncryptedArtifact } from "../../services/artifact";
 import { storageMode } from "../../../../lib/storageConfig";
@@ -91,7 +92,7 @@ export function RegisterCodeCard() {
       const expiresAt = new Date(Date.now() + DEFAULT_SHARD_EXPIRY_SECONDS * 1000).toISOString();
 
       setShardStatus({ state: "pending", message: "위원회 shard 등록 중..." });
-      const shardNonce = `code-${nextCodeId.toString()}`;
+      const runNonce = keccak256(stringToBytes(`code-${nextCodeId.toString()}`));
       const shardPayloads = committeeMembers.map((committee, index) => {
         const share = shares[index];
         if (!share) {
@@ -99,7 +100,7 @@ export function RegisterCodeCard() {
         }
         return {
           committee,
-          shardNonce,
+          runNonce,
           shareIndex: share.index,
           shareValue: share.value,
           byteLength: share.byteLength,

@@ -5,7 +5,7 @@ import type { RunRepository } from "../../domain/repositories/run-repository";
 interface PersistedRun {
   runId: string;
   codeId: string;
-  shardNonce: string;
+  runNonce: string;
   threshold: number;
   requester: `0x${string}`;
   status: Run["status"];
@@ -34,7 +34,7 @@ export class RedisRunRepository implements RunRepository {
     const payload: PersistedRun = {
       runId: run.runId,
       codeId: run.codeId.toString(),
-      shardNonce: run.shardNonce.toString(),
+      runNonce: run.runNonce.toString(),
       threshold: run.threshold,
       requester: run.requester,
       status: run.status,
@@ -69,7 +69,7 @@ export class RedisRunRepository implements RunRepository {
     const run = new Run(
       parsed.runId,
       BigInt(parsed.codeId),
-      BigInt(parsed.shardNonce),
+      BigInt(parsed.runNonce),
       parsed.threshold,
       parsed.requester,
       new Date(parsed.createdAt),

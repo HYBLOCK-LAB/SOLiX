@@ -6,7 +6,7 @@ export const committeeAbi = [
       { name: "codeId", type: "uint256", indexed: true },
       { name: "runId", type: "bytes32", indexed: true },
       { name: "requester", type: "address", indexed: true },
-      { name: "shardNonce", type: "bytes32", indexed: false },
+      { name: "runNonce", type: "bytes32", indexed: false },
       { name: "threshold", type: "uint256", indexed: false },
       { name: "recipientPubKey", type: "bytes", indexed: false },
     ],

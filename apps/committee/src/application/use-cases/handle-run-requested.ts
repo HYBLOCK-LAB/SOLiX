@@ -4,7 +4,7 @@ import type { RunRepository } from "../../domain/repositories/run-repository";
 export interface RunRequestedPayload {
   runId: string;
   codeId: bigint;
-  shardNonce: bigint;
+  runNonce: bigint;
   threshold: number;
   requester: `0x${string}`;
   requestedAt: Date;
@@ -17,7 +17,7 @@ export class HandleRunRequested {
     const run = new Run(
       payload.runId,
       payload.codeId,
-      payload.shardNonce,
+      payload.runNonce,
       payload.threshold,
       payload.requester,
       payload.requestedAt

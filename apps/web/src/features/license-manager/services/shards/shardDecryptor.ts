@@ -15,10 +15,15 @@ export async function fetchShardPublication(shardCid: string): Promise<RemoteSha
 
 export async function decryptShardPublication(
   publication: RemoteShardPublication,
-  recipientPrivateKey: `0x${string}`
+  recipientPrivateKey: `0x${string}`,
 ): Promise<SecretSharePayload> {
   const aesKey = deriveAesKey(recipientPrivateKey, publication.payload.ephemeralPublicKey);
-  const plaintext = await decryptAesGcm(publication.payload.ciphertext, publication.payload.authTag, publication.payload.iv, aesKey);
+  const plaintext = await decryptAesGcm(
+    publication.payload.ciphertext,
+    publication.payload.authTag,
+    publication.payload.iv,
+    aesKey,
+  );
   return {
     index: publication.shareIndex,
     value: bytesToHex(new Uint8Array(plaintext)),
@@ -26,7 +31,10 @@ export async function decryptShardPublication(
   };
 }
 
-function deriveAesKey(privateKeyHex: `0x${string}` | string, peerPublicKey: `0x${string}` | string): Uint8Array {
+function deriveAesKey(
+  privateKeyHex: `0x${string}` | string,
+  peerPublicKey: `0x${string}` | string,
+): Uint8Array {
   const privBytes = hexToBytes(privateKeyHex);
   const pubBytes = hexToBytes(peerPublicKey);
   const shared = secp256k1.getSharedSecret(privBytes, pubBytes, true);
@@ -38,7 +46,7 @@ async function decryptAesGcm(
   ciphertextHex: `0x${string}`,
   authTagHex: `0x${string}`,
   ivHex: `0x${string}`,
-  keyBytes: Uint8Array
+  keyBytes: Uint8Array,
 ): Promise<ArrayBuffer> {
   const ciphertext = hexToBytes(ciphertextHex);
   const authTag = hexToBytes(authTagHex);
@@ -46,14 +54,17 @@ async function decryptAesGcm(
   combined.set(ciphertext);
   combined.set(authTag, ciphertext.length);
 
-  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]);
+  const keyBuffer = Uint8Array.from(keyBytes).buffer;
+  const key = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, [
+    "decrypt",
+  ]);
   return crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: hexToBytes(ivHex),
+      iv: Uint8Array.from(hexToBytes(ivHex)),
     },
     key,
-    combined
+    combined,
   );
 }
 

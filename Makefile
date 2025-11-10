@@ -61,9 +61,7 @@ committee-build: ## Build committee app
 	@docker compose build committee
 
 committee-dev: ## Start committee dev server
-	@docker compose up committee
-
-
+	@docker compose up committee-1 committee-2 committee-3 committee-4 committee-5
 
 committee-start: ## Start committee app (production)
 	@docker compose up -d committee

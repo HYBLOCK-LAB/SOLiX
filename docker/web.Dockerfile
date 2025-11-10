@@ -1,4 +1,4 @@
-FROM node:20-bullseye-slim AS deps
+FROM node:22-bullseye-slim AS deps
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY apps/web/package-lock.json ./
 
 RUN npm install
 
-FROM node:20-bullseye-slim AS builder
+FROM node:22-bullseye-slim AS builder
 
 WORKDIR /app
 
@@ -22,8 +22,9 @@ COPY apps/web/.env ./.env.build
 RUN if [ -f ./.env.build ]; then cp ./.env.build ./.env; fi
 
 RUN npm run build
+RUN npm prune --omit=dev
 
-FROM node:20-bullseye-slim AS runner
+FROM node:22-bullseye-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -35,8 +36,7 @@ RUN apt-get update && \
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY apps/web/package.json ./package.json
-
-RUN npm install --omit=dev
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 

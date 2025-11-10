@@ -13,7 +13,6 @@ export class PinataShardPublisher implements ShardPublisher {
       {
         codeId: publication.codeId,
         requester: publication.requester,
-        runNonce: publication.runNonce,
         committee: publication.committee,
       },
       '[IPFS] Upload started'
@@ -38,11 +37,10 @@ export class PinataShardPublisher implements ShardPublisher {
       logger.error(
         {
           status: response.status,
-          message,
-          codeId: publication.codeId,
-          requester: publication.requester,
-          runNonce: publication.runNonce,
-          committee: publication.committee,
+        message,
+        codeId: publication.codeId,
+        requester: publication.requester,
+        committee: publication.committee,
         },
         "[IPFS] Upload failed"
       );
@@ -55,7 +53,6 @@ export class PinataShardPublisher implements ShardPublisher {
       {
         codeId: publication.codeId,
         requester: publication.requester,
-        runNonce: publication.runNonce,
         committee: publication.committee,
         cid,
       },

@@ -138,6 +138,7 @@ export class RunController {
             return reply.status(result.queued ? 201 : 202).send({
               queued: result.queued,
               runId: result.queued ? result.run?.runId : undefined,
+              reason: result.queued ? undefined : result.reason,
             });
           } catch (error) {
             return reply

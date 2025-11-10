@@ -64,11 +64,10 @@ export class PrepareSecretShards {
       this.buildShardPayload(share, run)
     );
 
-    const runNonceHex = `0x${run.runNonce.toString(16)}` as `0x${string}`;
     const result = {
       runId: run.runId,
       codeId: run.codeId.toString(),
-      runNonce: runNonceHex,
+      runNonce: run.runNonce.toString(),
       totalShares: shards.length,
       threshold: run.threshold,
       shards,
@@ -83,7 +82,6 @@ export class PrepareSecretShards {
     wallet: `0x${string}`,
     shards: Array<{
       committee: `0x${string}`;
-      runNonce: string;
       shareIndex: number;
       shareValue: `0x${string}`;
       byteLength: number;
@@ -93,11 +91,9 @@ export class PrepareSecretShards {
   ): Promise<void> {
     await this.shardRepository.savePlainShards(
       codeId,
-      wallet,
       shards.map((shard) => ({
         codeId,
         requester: wallet,
-        runNonce: shard.runNonce,
         committee: shard.committee,
         shareIndex: shard.shareIndex,
         shareValue: shard.shareValue,

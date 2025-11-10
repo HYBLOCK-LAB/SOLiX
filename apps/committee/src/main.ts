@@ -33,6 +33,16 @@ async function bootstrap() {
   const { publicClient, walletClient, account } = createViemClients(env);
   const committeeId = env.committeeId;
 
+  const committeeAddressOverrides: Record<string, `0x${string}`> = {
+    "committee-1": "0x1111111111111111111111111111111111111111",
+    "committee-2": "0x2222222222222222222222222222222222222222",
+    "committee-3": "0x3333333333333333333333333333333333333333",
+    "committee-4": "0x4444444444444444444444444444444444444444",
+    "committee-5": "0x5555555555555555555555555555555555555555",
+  };
+  const committeeAddress =
+    committeeAddressOverrides[committeeId] ?? account.address;
+
   const shardEncryptor = new EcdhShardEncryptor();
   const shardPublisher = new PinataShardPublisher(env.pinataJwt);
   const shardSubmitter = new BlockchainShardSubmitter(
@@ -52,7 +62,7 @@ async function bootstrap() {
     shardEncryptor,
     shardPublisher,
     shardSubmitter,
-    account.address
+    committeeAddress
   );
   shardSubmissionQueue.startWorker(async (job) => shardWorker.process(job));
 
@@ -70,7 +80,7 @@ async function bootstrap() {
     handleRunRequested,
     shardRepository,
     shardSubmissionQueue,
-    account.address,
+    committeeAddress,
     thresholdProvider
   );
   const runRequestSubscriber = new RunRequestSubscriber(

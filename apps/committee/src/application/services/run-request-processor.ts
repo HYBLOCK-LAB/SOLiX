@@ -1,4 +1,5 @@
 import type { HandleRunRequested } from "../use-cases/handle-run-requested";
+import type { Run } from "../../domain/entities/run";
 import type { ShardRepository } from "../../domain/repositories/shard-repository";
 import type { ShardSubmissionQueue } from "../../infrastructure/queue/shard-submission-queue";
 import { logger } from "../../shared/logger";
@@ -12,6 +13,12 @@ export interface RunRequestPayload {
   requestedAt: Date;
 }
 
+export interface RunRequestResult {
+  queued: boolean;
+  run?: Run;
+  reason?: string;
+}
+
 export class RunRequestProcessor {
   constructor(
     private readonly handler: HandleRunRequested,
@@ -21,7 +28,7 @@ export class RunRequestProcessor {
     private readonly thresholdProvider: CommitteeThresholdProvider
   ) {}
 
-  async process(payload: RunRequestPayload) {
+  async process(payload: RunRequestPayload): Promise<RunRequestResult> {
     const threshold = await this.thresholdProvider.getThreshold();
     const run = await this.handler.execute({
       runId: this.buildRunKey(
@@ -38,8 +45,6 @@ export class RunRequestProcessor {
 
     const shard = await this.shardRepository.findForCommittee(
       run.codeId.toString(),
-      run.requester,
-      payload.runNonce,
       this.committeeAddress
     );
 

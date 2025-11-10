@@ -86,12 +86,19 @@ export function ExecutionRequestCard() {
 
   const dispatchToCommittee = async () => {
     if (!codeId || !address || !latestRunNonce || !latestPublicKey) {
-      setDispatchStatus("실행 요청이 완료된 후에 사용할 수 있습니다.");
+      setDispatchStatus("실행 요청이 완료된 뒤에 다시 시도해주세요.");
       return;
     }
     setIsDispatching(true);
     setDispatchStatus("위원회로 요청을 전달하고 있습니다...");
     try {
+      type CommitteeDispatchResponse = {
+        success?: boolean;
+        queuedCount?: number;
+        totalCommittees?: number;
+        responses?: Array<{ url: string; queued: boolean; reason?: string }>;
+        errors?: string[];
+      };
       const response = await fetch("/api/committee/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,11 +109,24 @@ export function ExecutionRequestCard() {
           recipientPubKey: latestPublicKey,
         }),
       });
-      const body = (await response.json().catch(() => ({}))) as { errors?: string[] };
+      const body = (await response.json().catch(() => ({}))) as CommitteeDispatchResponse;
       if (!response.ok) {
         throw new Error(body?.errors?.[0] ?? "위원회 요청에 실패했습니다.");
       }
-      setDispatchStatus("위원회 큐에 정상적으로 전달되었습니다.");
+      const totalCommittees = body.totalCommittees ?? body.responses?.length ?? 0;
+      const queuedCount =
+        body.queuedCount ?? body.responses?.filter((result) => result.queued).length ?? 0;
+      const baseMessage =
+        typeof totalCommittees === "number"
+          ? `위원회 ${queuedCount ?? 0}/${totalCommittees} 노드에 전달되었습니다.`
+          : "위원회 응답을 수신했습니다.";
+      const failedReasons =
+        body.responses
+          ?.filter((result) => !result.queued && result.reason)
+          .map((result) => `${new URL(result.url).host}: ${result.reason}`)
+          .filter(Boolean) ?? [];
+      const errorMessage = body.errors?.[0] ?? failedReasons[0];
+      setDispatchStatus(errorMessage ? `${baseMessage} (${errorMessage})` : baseMessage);
     } catch (err) {
       setDispatchStatus((err as Error).message);
     } finally {

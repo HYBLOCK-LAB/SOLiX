@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   const urls = buildCommitteeUrls("/runs/manual");
 
-  const results: Array<{ url: string; queued: boolean }> = [];
+  const results: Array<{ url: string; queued: boolean; reason?: string }> = [];
   const errors: string[] = [];
 
   for (const url of urls) {
@@ -39,17 +39,21 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const body = (await response.json()) as { queued: boolean };
-      results.push({ url, queued: Boolean(body?.queued) });
+      const body = (await response.json()) as { queued?: boolean; reason?: string };
+      results.push({ url, queued: Boolean(body?.queued), reason: body?.reason });
     } catch (error) {
       errors.push(`Committee ${url} request failed: ${(error as Error).message}`);
     }
   }
 
+  const totalCommittees = urls.length;
+  const queuedCount = results.filter((result) => result.queued).length;
   const status = errors.length === urls.length ? 502 : errors.length > 0 ? 207 : 201;
   return NextResponse.json(
     {
       success: errors.length === 0,
+      totalCommittees,
+      queuedCount,
       responses: results,
       errors,
     },

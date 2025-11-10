@@ -5,20 +5,12 @@ export interface ShardRepository {
   saveMany(shards: PreparedShard[]): Promise<void>;
   findForCommittee(
     codeId: string,
-    requester: `0x${string}`,
-    runNonce: `0x${string}`,
     committee: `0x${string}`
   ): Promise<StoredShard | null>;
-  savePlainShards(
-    codeId: string,
-    requester: `0x${string}`,
-    shards: StoredShard[]
-  ): Promise<void>;
+  savePlainShards(codeId: string, shards: StoredShard[]): Promise<void>;
   saveRawShard(payload: StoredShard): Promise<void>;
   markSubmitted(
     codeId: string,
-    requester: `0x${string}`,
-    runNonce: `0x${string}`,
     committee: `0x${string}`,
     shardCid: string,
     submittedAt: Date

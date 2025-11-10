@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useShardSubmissions } from "../../hooks/useShardSubmissions";
-import { fetchShardPublication, decryptShardPublication, combineDecryptedShares } from "../../services/shards/shardDecryptor";
+import {
+  fetchShardPublication,
+  decryptShardPublication,
+  combineDecryptedShares,
+} from "../../services/shards/shardDecryptor";
 import type { SecretSharePayload } from "../../services/shards/types";
 import { findExecutionKey } from "../../services/executionKeyService";
 
@@ -49,11 +53,12 @@ export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardS
     if (runNonce && latestRun.runNonce.toLowerCase() !== runNonce.toLowerCase()) {
       return;
     }
+    const currentRun = latestRun;
 
     let cancelled = false;
 
     async function processShards() {
-      for (const shard of latestRun.shards) {
+      for (const shard of currentRun.shards) {
         if (cancelled) break;
         const key = shard.committee.toLowerCase();
         setShardStates((prev) => {
@@ -69,13 +74,13 @@ export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardS
 
         try {
           const publication = await fetchShardPublication(shard.shardCid);
-          const decrypted = await decryptShardPublication(publication, keyRecord.privateKey);
+          const decrypted = await decryptShardPublication(publication, keyRecord!.privateKey);
           if (cancelled) return;
           setShares((prev) => {
             const next = [...prev.filter((item) => item.index !== decrypted.index), decrypted];
-            if (next.length >= latestRun.threshold) {
+            if (next.length >= currentRun.threshold) {
               try {
-                const secret = combineDecryptedShares(next.slice(0, latestRun.threshold));
+                const secret = combineDecryptedShares(next.slice(0, currentRun.threshold));
                 setRecoveredSecret((existing) => existing ?? secret);
               } catch (combineError) {
                 setError((combineError as Error).message);
@@ -105,12 +110,14 @@ export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardS
     return () => {
       cancelled = true;
     };
-  }, [latestRun, recipientPublicKey, keyRecord]);
+  }, [latestRun, recipientPublicKey, keyRecord, runNonce]);
 
   if (!recipientPublicKey || !runNonce) {
     return (
       <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm dark:border-primary-75 dark:bg-background-dark-75">
-        <p className="text-text-light-50 dark:text-text-dark-50">실행 요청을 먼저 보내 임시 공개키를 생성하세요.</p>
+        <p className="text-text-light-50 dark:text-text-dark-50">
+          실행 요청을 먼저 보내 임시 공개키를 생성하세요.
+        </p>
       </section>
     );
   }
@@ -132,22 +139,30 @@ export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardS
 
   return (
     <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm shadow-lg dark:border-primary-75 dark:bg-background-dark-75">
-      <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">Shard 상태</h3>
+      <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">
+        Shard 상태
+      </h3>
       <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
-        요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold} · RunNonce {shortenAddress(latestRun.runNonce)}
+        요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold} · RunNonce{" "}
+        {shortenAddress(latestRun.runNonce)}
       </p>
 
-      <ul className="mt-4 space-y-3 text-xs">
+      <div className="mt-4 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
         {decryptingStates.map((entry) => (
-          <li key={entry.committee} className="rounded border border-primary-25 p-3 dark:border-primary-75">
-            <p className="font-mono text-text-light-75 dark:text-text-dark-75">{entry.committee}</p>
-            <p className="mt-1 text-text-light-50 dark:text-text-dark-50">상태: {renderShardState(entry.status)}</p>
-            {entry.message && (
-              <p className="text-rose-500">{entry.message}</p>
-            )}
-          </li>
+          <div
+            key={entry.committee}
+            className="rounded border border-primary-25 p-3 shadow-sm dark:border-primary-75"
+          >
+            <p className="break-all font-mono text-text-light-75 dark:text-text-dark-75">
+              {entry.committee}
+            </p>
+            <p className="mt-1 text-text-light-50 dark:text-text-dark-50">
+              상태: {renderShardState(entry.status)}
+            </p>
+            {entry.message && <p className="mt-1 text-rose-500">{entry.message}</p>}
+          </div>
         ))}
-      </ul>
+      </div>
 
       <p className="mt-3 text-xs text-text-light-50 dark:text-text-dark-50">
         복호화된 조각: {shares.length} / {latestRun.threshold}
@@ -160,11 +175,13 @@ export function ShardStatusCard({ codeId, recipientPublicKey, runNonce }: ShardS
         </div>
       )}
 
-      {error && (
-        <p className="mt-2 text-xs text-rose-500">복원 중 오류: {error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-rose-500">복원 중 오류: {error}</p>}
 
-      {isLoading && <p className="mt-2 text-xs text-text-light-50 dark:text-text-dark-50">이벤트 동기화 중...</p>}
+      {isLoading && (
+        <p className="mt-2 text-xs text-text-light-50 dark:text-text-dark-50">
+          이벤트 동기화 중...
+        </p>
+      )}
     </section>
   );
 }

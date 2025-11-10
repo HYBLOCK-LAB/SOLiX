@@ -291,16 +291,26 @@ export function RegisterCodeCard() {
         <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
           총 {committeeMembers.length}명의 위원에게 키 조각을 전달하며, 임계값은 {threshold}입니다.
         </p>
-        <ul className="mt-3 space-y-1 text-xs text-text-light-75 dark:text-text-dark-75">
-          {committeeMembers.map((member) => (
-            <li key={member} className="font-mono">
-              {member}
-            </li>
+        <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-light-75 dark:text-text-dark-75 sm:grid-cols-2">
+          {committeeMembers.map((member, index) => (
+            <div key={member} className="rounded border border-primary-25 p-2 dark:border-primary-75">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] uppercase text-text-light-50 dark:text-text-dark-50">
+                    위원 #{index + 1}
+                  </p>
+                  <p className="break-all font-mono">{member}</p>
+                </div>
+                <div className="text-right text-[11px]">
+                  <p className="text-text-light-50 dark:text-text-dark-50">상태</p>
+                  <p className="text-text-light-100 dark:text-text-dark-100">
+                    {renderShardStatus(shardStatus)}
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
-        </ul>
-        <p className="mt-3 text-xs text-text-light-100 dark:text-text-dark-75">
-          상태: {renderShardStatus(shardStatus)}
-        </p>
+        </div>
       </section>
     </section>
   );

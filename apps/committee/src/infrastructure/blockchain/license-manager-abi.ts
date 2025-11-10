@@ -4,11 +4,10 @@ export const licenseManagerAbi = [
     name: "RunRequested",
     inputs: [
       { name: "codeId", type: "uint256", indexed: true },
-      { name: "runId", type: "bytes32", indexed: true },
-      { name: "requester", type: "address", indexed: true },
-      { name: "runNonce", type: "bytes32", indexed: false },
-      { name: "threshold", type: "uint256", indexed: false },
+      { name: "user", type: "address", indexed: true },
+      { name: "runNonce", type: "bytes32", indexed: true },
       { name: "recipientPubKey", type: "bytes", indexed: false },
+      { name: "blockTimestamp", type: "uint256", indexed: false },
     ],
   },
 ] as const;

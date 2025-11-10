@@ -1,5 +1,6 @@
 import { bytesToHex, type PublicClient } from "viem";
 import { licenseManagerAbi } from "./license-manager-abi";
+import { committeeAbi } from "./committee-abi";
 import type { HandleRunRequested } from "../../application/use-cases/handle-run-requested";
 import type { ShardRepository } from "../../domain/repositories/shard-repository";
 import type { ShardSubmissionQueue } from "../queue/shard-submission-queue";
@@ -11,12 +12,14 @@ export class RunRequestSubscriber {
   constructor(
     private readonly client: PublicClient,
     private readonly licenseContractAddress: `0x${string}`,
+    private readonly committeeContractAddress: `0x${string}`,
     private readonly handler: HandleRunRequested,
     private readonly pollingIntervalMs: number,
     private readonly shardRepository: ShardRepository,
     private readonly shardSubmissionQueue: ShardSubmissionQueue,
     private readonly committeeAddress: `0x${string}`
   ) {}
+  private cachedThreshold?: number;
 
   start() {
     if (this.unwatch) {
@@ -38,23 +41,20 @@ export class RunRequestSubscriber {
 
           const codeId = typeof args.codeId === "bigint" ? args.codeId : BigInt(args.codeId as string);
           const requester =
-            typeof args.requester === "string"
-              ? (args.requester as `0x${string}`)
-              : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
-          const runNonceValue =
-            typeof args.runNonce === "bigint" ? args.runNonce : BigInt(args.runNonce as string);
-          const runNonceHex = this.formatBytes32(runNonceValue);
-          const thresholdValue =
-            typeof args.threshold === "bigint"
-              ? Number(args.threshold)
-              : Number(args.threshold ?? 0);
-          if (!Number.isFinite(thresholdValue) || thresholdValue <= 0) {
+            typeof args.user === "string"
+              ? (args.user as `0x${string}`)
+              : ((args.user?.toString?.() ?? "0x0") as `0x${string}`);
+          if (!args.runNonce) {
             logger.warn(
-              { codeId: codeId.toString(), requester, threshold: args.threshold },
-              "Invalid threshold from event, skipping run"
+              { codeId: codeId.toString(), requester },
+              "Missing runNonce on RunRequested event"
             );
             continue;
           }
+          const runNonceValue =
+            typeof args.runNonce === "bigint" ? args.runNonce : BigInt(args.runNonce as string);
+          const runNonceHex = this.formatBytes32(runNonceValue);
+          const thresholdValue = await this.resolveThreshold();
 
           const timestamp = await this.resolveTimestamp(log);
 
@@ -149,5 +149,33 @@ export class RunRequestSubscriber {
   private formatBytes32(value: bigint): `0x${string}` {
     const hex = value.toString(16).padStart(64, "0");
     return `0x${hex}` as `0x${string}`;
+  }
+
+  private async resolveThreshold(): Promise<number> {
+    if (this.cachedThreshold && this.cachedThreshold > 0) {
+      return this.cachedThreshold;
+    }
+    try {
+      const threshold = await this.client.readContract({
+        address: this.committeeContractAddress,
+        abi: committeeAbi,
+        functionName: "committeeThreshold",
+      });
+      const value = Number(threshold);
+      if (Number.isFinite(value) && value > 0) {
+        this.cachedThreshold = value;
+        return value;
+      }
+    } catch (error) {
+      logger.error({ err: error }, "Failed to fetch committee threshold");
+    }
+    if (!this.cachedThreshold || this.cachedThreshold <= 0) {
+      this.cachedThreshold = 1;
+      logger.warn(
+        { fallback: this.cachedThreshold },
+        "Falling back to default committee threshold"
+      );
+    }
+    return this.cachedThreshold;
   }
 }

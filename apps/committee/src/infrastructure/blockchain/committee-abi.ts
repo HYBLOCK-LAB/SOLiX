@@ -23,6 +23,13 @@ export const committeeAbi = [
     ],
     outputs: [],
   },
+  {
+    type: "function",
+    name: "committeeThreshold",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 export type CommitteeAbi = typeof committeeAbi;

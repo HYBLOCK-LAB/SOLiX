@@ -1,9 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAbiItem } from "viem";
-import { usePublicClient, useWatchContractEvent } from "wagmi";
+import { usePublicClient } from "wagmi";
 import { LICENSE_MANAGER_ADDRESS } from "../constants";
-import { licenseManagerAbi } from "../abi";
 
 const CODE_REGISTERED_EVENT = parseAbiItem(
   "event CodeRegistered(uint256 indexed codeId, bytes32 codeHash, string cipherCid, string name, string version, address indexed publisher)",
@@ -30,7 +29,9 @@ export function useRegisteredCodes() {
   const query = useQuery({
     queryKey,
     enabled: Boolean(publicClient),
-    staleTime: 30_000,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
     queryFn: async (): Promise<RegisteredCode[]> => {
       if (!publicClient) return [];
 
@@ -60,15 +61,10 @@ export function useRegisteredCodes() {
     },
   });
 
-  useWatchContractEvent({
-    address: LICENSE_MANAGER_ADDRESS,
-    abi: licenseManagerAbi,
-    eventName: "CodeRegistered",
-    enabled: Boolean(publicClient),
-    onLogs() {
-      queryClient.invalidateQueries({ queryKey });
-    },
-  });
+  useEffect(() => {
+    if (!publicClient) return;
+    queryClient.invalidateQueries({ queryKey }).catch(() => undefined);
+  }, [publicClient, queryClient, queryKey]);
 
   return {
     codes: query.data ?? [],

@@ -57,6 +57,7 @@ async function bootstrap() {
   const runRequestSubscriber = new RunRequestSubscriber(
     publicClient,
     env.licenseManagerAddress,
+    env.committeeManagerAddress,
     handleRunRequested,
     env.eventPollIntervalMs,
     shardRepository,

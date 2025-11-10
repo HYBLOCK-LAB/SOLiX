@@ -65,6 +65,7 @@ export function ExecutionRequestCard() {
       keyPair = await createExecutionKeyPair();
       const runNonce = generateRunNonce();
       storeExecutionKeyPair(keyPair, { runNonce, codeId });
+      setStatus("임시 키가 준비되었습니다. 트랜잭션을 전송합니다…");
       await execute([BigInt(codeId), runNonce, keyPair.publicKey]);
       setLatestPublicKey(keyPair.publicKey);
       setLatestRunNonce(runNonce);
@@ -124,7 +125,11 @@ export function ExecutionRequestCard() {
           className="rounded-lg bg-accent-100 px-4 py-[10px] text-sm font-bold uppercase tracking-wide text-text-dark-100 hover:bg-accent-75 disabled:bg-accent-25 disabled:text-text-dark-50"
           disabled={isPending || isPreparing}
         >
-          {isPending || isPreparing ? "요청 전송 중..." : "실행 요청"}
+          {isPreparing
+            ? "잠시만 기다려주세요..."
+            : isPending
+            ? "트랜잭션 전송 중..."
+            : "실행 요청"}
         </button>
       </form>
 

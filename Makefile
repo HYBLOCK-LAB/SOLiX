@@ -58,7 +58,7 @@ web-lint: ## Lint web project
 # Committee
 #
 committee-build: ## Build committee app
-	@docker compose build committee
+	@docker compose build committee-1 committee-2 committee-3 committee-4 committee-5
 
 committee-dev: ## Start committee dev server
 	@docker compose up committee-1 committee-2 committee-3 committee-4 committee-5

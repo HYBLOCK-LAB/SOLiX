@@ -29,9 +29,13 @@ IPFS의 핵심 컴포넌트를 살펴보고 파일 추가, 조회 등의 동작 
 
 Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다.
 
+#### 5. 테스트
+
+수정한 내용을 바탕으로 테스트를 진행합니다.
+
 #### 4. 취약점 탐색 및 수정
 
-기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 찾아 수정합니다.
+취약점을 공부할 수 있는 ethernaut에 대해 알아봅시다. 기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 검토해봅시다.
 
 ## IPFS 구조 및 동작 원리
 
@@ -255,88 +259,258 @@ console.assert(dek.equals(recovered));
 
 Duration: 30
 
-Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다.
-
-### 컨트랙트 구조 살펴보기
-
-`CommitteeManager`는 `AccessControl`을 상속해 역할 기반 권한 관리를 사용합니다. 핵심 상태는 다음과 같습니다.
+Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다. 프로젝트의 `apps/on-chain/contracts/CommitteeManager.sol`을 확인해주세요.
 
 ```solidity
-bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
-ILicenseManager public immutable licenseManager;
-mapping(bytes32 => uint256) public shardCountForRun;
-uint256 public committeeThreshold = 2;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
+
+contract CommitteeManager is AccessControl {
+
+}
 ```
 
-- `licenseManager`는 `LicenseManager`에 대한 읽기 전용 포인터로, 코드 존재 여부와 일시정지 상태를 검증합니다.
-- `shardCountForRun`은 `(codeId, runNonce)` 쌍을 해시한 키 별로 제출된 shard 개수를 카운트합니다.
-- `committeeThreshold`는 실행 승인을 위해 필요한 최소 위원 수입니다. 기본값은 2이며 관리자만 변경할 수 있습니다.
+### 컨트랙트 뼈대 작성하기
 
-### 접근 제어와 초기화
+`CommitteeManager.sol`는 위원회가 Shard를 제출하고 위원회 임계치 설정, 위원회 멤버 추가/삭제 등의 기능이 필요합니다. 또한, 이를 위해 역할 기반으로 권한을 관리합니다. 아래와 같이 Contract을 작성해주세요.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
+
+contract CommitteeManager is AccessControl {
+
+    /* ========= 전역 변수 ========= */
+    bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
+
+    // TODO Implement status
+
+    constructor(address licenseManager_) {
+        // TODO Implement constructor
+    }
+
+
+
+    /* ========= 이벤트 ========= */
+
+    // 위원회 멤버가 shard CID(IPFS)를 제출했음을 알리는 이벤트
+    event ShardSubmitted(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        address committee,
+        string shardCid,
+        uint256 countAfter,
+        uint256 threshold
+    );
+
+    // 모든 위원회의 승인이 완료되었음을 알리는 이벤트
+    event ExecutionApproved(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        uint256 threshold,
+        uint256 count
+    );
+
+    /* ========= 관리자 기능 ========= */
+
+    // 위원회 임계치 설정. 관리자만 가능
+    function setCommitteeThreshold(
+        uint256 newThreshold
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // TODO Implement committee threshold setter
+    }
+
+    // 위원회 멤버 추가. 관리자만 가능
+    function addCommittee(
+        address newCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // TODO Implement committee adder
+    }
+
+    // 위원회 멤버 제거. 관리자만 가능
+    function removeCommittee(
+        address removalCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // TODO Implement committee remover
+    }
+
+    // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
+    function submitShard(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce,
+        string calldata shardCid
+    ) external onlyRole(COMMITTEE_ROLE) {
+        // TODO Implement Shard Submission Logic
+    }
+}
+
+```
+
+#### 역할 기반 관리
+
+`CommitteeManager`는 `AccessControl`을 상속해 역할 기반 권한 관리를 사용합니다. `COMMITTEE_ROLE`이라는 역할을 추가해 위원회 여부를 확인할 수 있도록 합니다.
+
+#### 사용자 정의 오류(Error)
+
+[Solidity 0.8.4 이후에 추가된 기능](https://www.soliditylang.org/blog/2021/04/21/custom-errors/)으로, require, revert 구문과 함께 가스 효율적으로 오류를 발생시키는 방법입니다. error는 이름과 파라미터를 명시해서 더 구조적으로 에러를 처리합니다. 이번 세션에서는 `DuplicateShard`라는 에러를 정의해서 중복된 Shard를 제출하는 것을 방지하는데 사용합니다.
+
+#### 이벤트
+
+`ShardSubmitted`와 `ExecutionApproved`를 지원합니다. `ShardSubmitted`는 각 위원회가 Shard를 제출했을 때 발생하는 이벤트로 요청자가 오프체인에서 Shard제출 여부를 확인하기 위해 사용됩니다. `ExecutionApproved`는 모든 위원회에서 Shard를 제출했을 때 발생합니다. Shard는 `codeId`, `requester`로 구별됩니다. `runNonce`은 중복 실행 방지 및 상관관계 추적을 위한 용도입니다.
+
+### 상태 및 생성자
+
+상태 관련 변수와 생성자를 구현해봅시다.
+
+#### 상태
+
+필요한 상태는 다음과 같습니다.
+
+```solidity
+/* ========= 상태 ========= */
+
+mapping(bytes32 => uint256) public shardCountForRun;
+mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
+uint256 public committeeThreshold = 3;
+
+//  라이선스 컨트랙트 읽기용
+ILicenseManager public immutable licenseManager;
+```
+
+- `shardCountForRun`은 `(codeId, requester, runNonce)` 조합을 해시한 키 별로 제출된 shard 개수를 카운트합니다.
+- `hasSubmitted`는 동일 위원이 중복 shard를 제출하지 않도록 추적합니다.
+- `committeeThreshold`는 실행 승인을 위해 필요한 최소 위원 수입니다. 이번 세션에서는 5개의 위원회 중 3개의 위원회가 승인하면 복원할 수 있도록 구성하기 위해, 기본값은 3으로 설정했으며 관리자만 변경할 수 있습니다.
+- `licenseManager`는 `LicenseManager`에 대한 읽기 전용 포인터로, 코드 존재 여부와 일시정지 상태를 검증합니다.
+
+#### 생성자
+
+```solidity
+constructor(address licenseManager_) {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    licenseManager = ILicenseManager(licenseManager_);
+}
+```
 
 생성자에서 `DEFAULT_ADMIN_ROLE`을 배포자에게 부여하고, 외부에서 전달 받은 `licenseManager` 주소를 immutable 변수에 저장합니다. 관리자 권한은 다음과 같은 기능에 적용됩니다.
 
 - `setCommitteeThreshold`: 위원회 합의 임계값을 업데이트합니다. 0은 허용하지 않습니다.
 - `addCommittee` / `removeCommittee`: 특정 주소에 `COMMITTEE_ROLE`을 부여하거나 회수합니다.
 
-운영팀은 최초 배포 후 다음 순서를 따라야 합니다.
+운영환경에서 최초 배포 후 다음 순서를 따라야 합니다.
 
 1. `LicenseManager` 주소를 인자로 넘겨 `CommitteeManager`를 배포합니다.
 2. `DEFAULT_ADMIN_ROLE` 보유자가 멤버 주소를 등록합니다.
 3. 필요 시 `setCommitteeThreshold`를 호출해 요구 합의 인원 수를 설정합니다.
 
-### Shard 제출 흐름
+### 위원회 관리 함수
 
-핵심 로직은 `submitShard` 함수입니다.
+#### setCommitteeThreshold
 
 ```solidity
+// 위원회 임계치 설정. 관리자만 가능
+function setCommitteeThreshold(
+    uint256 newThreshold
+) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    require(newThreshold > 0, "threshold must be more then 0");
+    require(newThreshold <= type(uint32).max, "threshold too large");
+    committeeThreshold = newThreshold;
+}
+```
+
+새로 설정할 임계치가 부절절한 값인지 확인하고 적절하다고 판단되면 설정합니다.
+
+#### addCommittee
+
+```solidity
+// 위원회 멤버 추가. 관리자만 가능
+function addCommittee(
+    address newCommittee
+) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _grantRole(COMMITTEE_ROLE, newCommittee);
+}
+```
+
+위원회 멤버에 추가하기 위해서 `COMMITTEE_ROLE`을 부여합니다. 요청한 사용자가 관리자인지 확인 후 부여합니다.
+
+#### removeCommittee
+
+```solidity
+// 위원회 멤버 제거. 관리자만 가능
+function removeCommittee(
+    address removalCommittee
+) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _revokeRole(COMMITTEE_ROLE, removalCommittee);
+}
+```
+
+위원회 멤버를 제거하기 위해서 `COMMITTEE_ROLE`을 제거합니다. 요청한 사용자가 관리자인지 확인 후 부여합니다. 제거하려는 대상이 role이 부여되어 있는지 확인하는 로직은 `_revokeRole`내부에 구현되어 있습니다.
+
+### Shard 제출 흐름
+
+`submitShard`를 구현합니다. 아래와 같이 작성해주세요.
+
+```solidity
+// 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
 function submitShard(
     uint256 codeId,
+    address requester,
     bytes32 runNonce,
     string calldata shardCid
 ) external onlyRole(COMMITTEE_ROLE) {
-    require(licenseManager.checkCodeExists(codeId), "code !exist");
-    require(licenseManager.checkCodeActive(codeId), "code paused");
+    require(licenseManager.checkCodeExists(codeId), "code is not exist");
+    require(licenseManager.checkCodeActive(codeId), "code is not active");
 
-    bytes32 runKey = keccak256(abi.encodePacked(codeId, runNonce));
+    bytes32 runKey = keccak256(
+        abi.encodePacked(codeId, requester, runNonce)
+    );
+    if (hasSubmitted[runKey][msg.sender]) {
+        revert DuplicateShard(codeId, requester, msg.sender);
+    }
+    hasSubmitted[runKey][msg.sender] = true;
     uint256 newCount = ++shardCountForRun[runKey];
 
-    emit ShardSubmitted(codeId, runNonce, msg.sender, shardCid, newCount);
+    emit ShardSubmitted(
+        codeId,
+        requester,
+        runNonce,
+        msg.sender,
+        shardCid,
+        newCount,
+        committeeThreshold
+    );
 
     if (newCount >= committeeThreshold) {
-        emit ExecutionApproved(codeId, runNonce, committeeThreshold, newCount);
+        emit ExecutionApproved(
+            codeId,
+            requester,
+            runNonce,
+            committeeThreshold,
+            newCount
+        );
     }
 }
 ```
 
 1. `COMMITTEE_ROLE`을 가진 계정만 호출이 가능합니다.
 2. `LicenseManager`에 위임해 코드 존재 여부와 정지 상태를 검증합니다.
-3. `(codeId, runNonce)` 조합을 해시해 카운터 키를 만들고 제출 횟수를 1 증가시킵니다.
-4. `ShardSubmitted` 이벤트에는 shard를 저장한 IPFS CID와 현재 카운트가 기록됩니다.
-5. 카운트가 `committeeThreshold` 이상이 되면 `ExecutionApproved` 이벤트로 승인 상태를 알립니다.
+3. `(codeId, requester, runNonce)` 조합을 해시해 `runkey`를 만들고 제출 횟수를 1 증가시킵니다.
+4. `hasSubmitted`를 먼저 확인해 위원이 동일 실행에 두 번 이상 제출하지 못하도록 합니다.
+5. `ShardSubmitted` 이벤트에는 committee 주소, shard CID, 현재 카운트, 임계치가 함께 기록됩니다.
+6. 카운트가 `committeeThreshold` 이상이 되면 `ExecutionApproved` 이벤트로 승인 상태를 알립니다.
 
-### 오프체인 연동
-
-- `ShardSubmitted` 이벤트를 인덱싱하면 특정 실행 요청(runNonce)에 대해 누가 몇 번째로 shard를 업로드했는지 추적할 수 있습니다.
-- `ExecutionApproved` 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.
-- 중복 제출 방지를 위해 Off-chain 레이어에서 `(committee, runNonce)` 중복 여부를 체크합니다.
-
-### 하드햇 환경에서 검증하기
-
-1. `apps/on-chain` 디렉터리에서 종속성을 설치합니다.
-   ```bash
-   npm install
-   ```
-2. Committee와 LicenseManager를 배포해 상호 의존성을 설정한 뒤 아래 테스트 스켈레톤을 참고해 시나리오를 작성합니다.
-   ```bash
-   npx hardhat test test/CommitteeManager.test.ts
-   ```
-3. 테스트 시나리오 예시
-   - 관리자만이 임계치와 위원회 구성을 변경할 수 있는지 확인
-   - `licenseManager.pauseCodeExecution` 이후 shard 제출이 거부되는지 확인
-   - 동일 runNonce에 대해 threshold 이상 shard가 모였을 때 `ExecutionApproved` 이벤트가 발생하는지 확인
-
-이 과정을 통해 스마트 컨트랙트가 설계 의도대로 동작하는지 조기에 검증할 수 있습니다.
+<aside class="positive"><p><strong>오프체인 연동</strong></p>
+<p><code>ShardSubmitted</code> 이벤트를 인덱싱하면 특정 실행 요청(runNonce)에 대해 누가 몇 번째로 shard를 업로드했는지 추적할 수 있습니다.</p>
+<p><code>ExecutionApproved</code> 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.</p>
+<p>중복 제출 방지를 위해 Off-chain 레이어에서 <code>(committee, runNonce)</code> 중복 여부를 체크합니다.</p></aside>
 
 ## 취약점 탐색 및 수정
 
@@ -390,6 +564,28 @@ Duration: 49
 1. 중복 제출 방지 로직과 임계치 변경 이벤트를 구현하고 단위 테스트를 작성합니다.
 2. `LicenseManager`에 만료 시간 검증 로직을 추가하고, 만료된 라이선스로 `requestCodeExecution`이 호출될 때 revert되는지 테스트합니다.
 3. Hardhat Network에서 위 시나리오를 모두 검증한 뒤, Sepolia에 배포하고 이벤트 로그를 확인해 봅니다.
+
+## 테스트
+
+#### 1. `apps/on-chain` 디렉터리에서 종속성을 설치합니다.
+
+```bash
+npm install
+```
+
+2. Committee와 LicenseManager를 배포해 상호 의존성을 설정한 뒤 아래 테스트 스켈레톤을 참고해 시나리오를 작성합니다.
+
+```bash
+npx hardhat test test/CommitteeManager.test.ts
+```
+
+3. 테스트 시나리오 예시
+
+- 관리자만이 임계치와 위원회 구성을 변경할 수 있는지 확인
+- `licenseManager.pauseCodeExecution` 이후 shard 제출이 거부되는지 확인
+- 동일 runNonce에 대해 threshold 이상 shard가 모였을 때 `ExecutionApproved` 이벤트가 발생하는지 확인
+
+이 과정을 통해 스마트 컨트랙트가 설계 의도대로 동작하는지 조기에 검증할 수 있습니다.
 
 ## 축하합니다
 

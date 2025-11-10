@@ -10,8 +10,13 @@ contract CommitteeManager is AccessControl {
     error DuplicateShard(uint256 codeId, address requester, address committee);
 
     /* ========= 전역 변수 ========= */
-
     bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
+
+    /* ========= 상태 ========= */
+
+    mapping(bytes32 => uint256) public shardCountForRun;
+    mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
+    uint256 public committeeThreshold = 3;
 
     //  라이선스 컨트랙트 읽기용
     ILicenseManager public immutable licenseManager;
@@ -20,12 +25,6 @@ contract CommitteeManager is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         licenseManager = ILicenseManager(licenseManager_);
     }
-
-    /* ========= 상태 ========= */
-
-    mapping(bytes32 => uint256) public shardCountForRun;
-    mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
-    uint256 public committeeThreshold = 3;
 
     /* ========= 이벤트 ========= */
 

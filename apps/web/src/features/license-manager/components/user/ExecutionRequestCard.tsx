@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useAccount } from "wagmi";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { useRegisteredCodes } from "../../hooks/useRegisteredCodes";
 import {
@@ -18,7 +19,7 @@ function truncateKey(value: `0x${string}`): string {
 function generateRunNonce(): `0x${string}` {
   if (typeof crypto === "undefined" || !crypto.getRandomValues) {
     const fallback = Array.from({ length: 32 }, (_, index) =>
-      ((Date.now() + index) % 256).toString(16).padStart(2, "0")
+      ((Date.now() + index) % 256).toString(16).padStart(2, "0"),
     ).join("");
     return `0x${fallback}` as `0x${string}`;
   }
@@ -34,10 +35,13 @@ export function ExecutionRequestCard() {
   const [latestPublicKey, setLatestPublicKey] = useState<`0x${string}` | null>(null);
   const [latestRunNonce, setLatestRunNonce] = useState<`0x${string}` | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
 
   const { execute, isPending, isSuccess, transactionHash, error } =
     useLicenseManagerWrite("requestCodeExecution");
   const { codes: registeredCodes, isLoading: isCodesLoading } = useRegisteredCodes();
+  const { address } = useAccount();
 
   const hasRegisteredCodes = registeredCodes.length > 0;
   const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
@@ -77,6 +81,36 @@ export function ExecutionRequestCard() {
       setStatus((err as Error).message);
     } finally {
       setIsPreparing(false);
+    }
+  };
+
+  const dispatchToCommittee = async () => {
+    if (!codeId || !address || !latestRunNonce || !latestPublicKey) {
+      setDispatchStatus("실행 요청이 완료된 후에 사용할 수 있습니다.");
+      return;
+    }
+    setIsDispatching(true);
+    setDispatchStatus("위원회로 요청을 전달하고 있습니다...");
+    try {
+      const response = await fetch("/api/committee/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codeId,
+          requester: address,
+          runNonce: latestRunNonce,
+          recipientPubKey: latestPublicKey,
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { errors?: string[] };
+      if (!response.ok) {
+        throw new Error(body?.errors?.[0] ?? "위원회 요청에 실패했습니다.");
+      }
+      setDispatchStatus("위원회 큐에 정상적으로 전달되었습니다.");
+    } catch (err) {
+      setDispatchStatus((err as Error).message);
+    } finally {
+      setIsDispatching(false);
     }
   };
 
@@ -125,11 +159,15 @@ export function ExecutionRequestCard() {
           className="rounded-lg bg-accent-100 px-4 py-[10px] text-sm font-bold uppercase tracking-wide text-text-dark-100 hover:bg-accent-75 disabled:bg-accent-25 disabled:text-text-dark-50"
           disabled={isPending || isPreparing}
         >
-          {isPreparing
-            ? "잠시만 기다려주세요..."
-            : isPending
-            ? "트랜잭션 전송 중..."
-            : "실행 요청"}
+          {isPreparing ? "잠시만 기다려주세요..." : isPending ? "트랜잭션 전송 중..." : "실행 요청"}
+        </button>
+        <button
+          type="button"
+          className="rounded-lg border border-secondary-50 px-4 py-[10px] text-sm font-semibold text-secondary-100 transition hover:bg-secondary-10 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={!isSuccess || !latestRunNonce || !latestPublicKey || isDispatching}
+          onClick={dispatchToCommittee}
+        >
+          {isDispatching ? "위원회로 전달 중..." : "위원회에 실행 정보 전달"}
         </button>
       </form>
 
@@ -153,10 +191,17 @@ export function ExecutionRequestCard() {
             오류: {error.message}
           </p>
         )}
+        {dispatchStatus && (
+          <p className="text-xs text-text-light-50 dark:text-text-dark-50">{dispatchStatus}</p>
+        )}
       </footer>
 
       {codeId > 0 && (
-        <ShardStatusCard codeId={codeId} recipientPublicKey={latestPublicKey} runNonce={latestRunNonce} />
+        <ShardStatusCard
+          codeId={codeId}
+          recipientPublicKey={latestPublicKey}
+          runNonce={latestRunNonce}
+        />
       )}
     </section>
   );

@@ -12,6 +12,11 @@ import {
   plainShardSchema,
   type PlainShardRequest,
 } from "../validators/plain-shards-schema";
+import {
+  manualRunSchema,
+  type ManualRunRequest,
+} from "../validators/run-request-schema";
+import type { RunRequestProcessor } from "../../../application/services/run-request-processor";
 
 interface ShardRequestBody {
   runId: string;
@@ -25,7 +30,8 @@ export class RunController {
     private readonly submitShard: SubmitShard,
     private readonly getRunStatus: GetRunStatus,
     private readonly approvalQueue?: RunApprovalQueue,
-    private readonly prepareSecretShards?: PrepareSecretShards
+    private readonly prepareSecretShards?: PrepareSecretShards,
+    private readonly runRequestProcessor?: RunRequestProcessor
   ) {}
 
   registerRoutes(server: FastifyInstance) {
@@ -109,6 +115,38 @@ export class RunController {
         }
       }
     );
+
+    if (this.runRequestProcessor) {
+      server.post(
+        "/runs/manual",
+        async (
+          request: FastifyRequest<{ Body: ManualRunRequest }>,
+          reply: FastifyReply
+        ) => {
+          const parsed = manualRunSchema.parse(request.body);
+          try {
+            const result = await this.runRequestProcessor!.process({
+              codeId: BigInt(parsed.codeId),
+              requester: parsed.requester as `0x${string}`,
+              runNonce: parsed.runNonce as `0x${string}`,
+              recipientPubKey: parsed.recipientPubKey as `0x${string}`,
+              requestedAt: parsed.requestedAt
+                ? new Date(parsed.requestedAt)
+                : new Date(),
+            });
+
+            return reply.status(result.queued ? 201 : 202).send({
+              queued: result.queued,
+              runId: result.queued ? result.run?.runId : undefined,
+            });
+          } catch (error) {
+            return reply
+              .status(400)
+              .send({ message: (error as Error).message });
+          }
+        }
+      );
+    }
 
     server.get("/health", async () => ({ status: "ok" }));
   }

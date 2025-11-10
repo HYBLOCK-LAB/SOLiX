@@ -16,6 +16,8 @@ import { PinataShardPublisher } from "./infrastructure/storage/pinata-shard-publ
 import { BlockchainShardSubmitter } from "./infrastructure/blockchain/shard-submitter";
 import { ShardSubmissionQueue } from "./infrastructure/queue/shard-submission-queue";
 import { ShardSubmissionWorker } from "./application/workers/shard-submission-worker";
+import { CommitteeThresholdProvider } from "./application/services/committee-threshold-provider";
+import { RunRequestProcessor } from "./application/services/run-request-processor";
 
 async function bootstrap() {
   logger.info("Bootstrapping committee backend");
@@ -41,7 +43,10 @@ async function bootstrap() {
   );
   const normalizedQueueSuffix = committeeId.replace(/[^a-zA-Z0-9_-]/g, "-");
   const shardQueueName = `shard_submission_${normalizedQueueSuffix}`;
-  const shardSubmissionQueue = new ShardSubmissionQueue(env.redisUrl, shardQueueName);
+  const shardSubmissionQueue = new ShardSubmissionQueue(
+    env.redisUrl,
+    shardQueueName
+  );
   const shardWorker = new ShardSubmissionWorker(
     shardRepository,
     shardEncryptor,
@@ -51,24 +56,40 @@ async function bootstrap() {
   );
   shardSubmissionQueue.startWorker(async (job) => shardWorker.process(job));
 
-  const prepareSecretShards = new PrepareSecretShards(runRepository, shardRepository);
+  const prepareSecretShards = new PrepareSecretShards(
+    runRepository,
+    shardRepository
+  );
 
   const handleRunRequested = new HandleRunRequested(runRepository);
+  const thresholdProvider = new CommitteeThresholdProvider(
+    publicClient,
+    env.committeeManagerAddress
+  );
+  const runRequestProcessor = new RunRequestProcessor(
+    handleRunRequested,
+    shardRepository,
+    shardSubmissionQueue,
+    account.address,
+    thresholdProvider
+  );
   const runRequestSubscriber = new RunRequestSubscriber(
     publicClient,
     env.licenseManagerAddress,
-    env.committeeManagerAddress,
-    handleRunRequested,
-    env.eventPollIntervalMs,
-    shardRepository,
-    shardSubmissionQueue,
-    account.address
+    runRequestProcessor,
+    env.eventPollIntervalMs
   );
   runRequestSubscriber.start();
 
   const submitShard = new SubmitShard(runRepository);
   const getRunStatus = new GetRunStatus(runRepository);
-  const runController = new RunController(submitShard, getRunStatus, undefined, prepareSecretShards);
+  const runController = new RunController(
+    submitShard,
+    getRunStatus,
+    undefined,
+    prepareSecretShards,
+    runRequestProcessor
+  );
 
   const httpServer = new HttpServer(runController, env.port);
   await httpServer.start();

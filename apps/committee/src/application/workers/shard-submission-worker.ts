@@ -70,6 +70,7 @@ export class ShardSubmissionWorker {
     await this.submitter.submitShard({
       codeId: BigInt(shard.codeId),
       requester: job.requester,
+      runNonce: job.runNonce,
       shardCid: cid,
     });
 

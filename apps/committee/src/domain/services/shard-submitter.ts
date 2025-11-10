@@ -1,6 +1,7 @@
 export interface ShardSubmitParams {
   codeId: bigint;
   requester: `0x${string}`;
+  runNonce: `0x${string}`;
   shardCid: string;
 }
 

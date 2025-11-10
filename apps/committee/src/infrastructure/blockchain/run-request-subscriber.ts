@@ -43,6 +43,7 @@ export class RunRequestSubscriber {
               : ((args.requester?.toString?.() ?? "0x0") as `0x${string}`);
           const shardNonce =
             typeof args.shardNonce === "bigint" ? args.shardNonce : BigInt(args.shardNonce as string);
+          const runNonceHex = this.formatBytes32(shardNonce);
           const thresholdValue =
             typeof args.threshold === "bigint"
               ? Number(args.threshold)
@@ -58,7 +59,7 @@ export class RunRequestSubscriber {
           const timestamp = await this.resolveTimestamp(log);
 
           const run = await this.handler.execute({
-            runId: this.buildRunKey(codeId, requester),
+            runId: this.buildRunKey(codeId, requester, runNonceHex),
             codeId,
             shardNonce,
             threshold: thresholdValue,
@@ -86,6 +87,7 @@ export class RunRequestSubscriber {
             codeId: shard.codeId,
             recipientPubKey,
             requester: run.requester,
+            runNonce: runNonceHex,
           });
         }
       },
@@ -116,8 +118,8 @@ export class RunRequestSubscriber {
     }
   }
 
-  private buildRunKey(codeId: bigint, requester: `0x${string}`): string {
-    return `${codeId.toString()}:${requester.toLowerCase()}`;
+  private buildRunKey(codeId: bigint, requester: `0x${string}`, runNonce: `0x${string}`): string {
+    return `${codeId.toString()}:${requester.toLowerCase()}:${runNonce}`;
   }
 
   private parseRecipientPubKey(value: unknown): `0x${string}` | null {
@@ -137,5 +139,10 @@ export class RunRequestSubscriber {
       }
     }
     return null;
+  }
+
+  private formatBytes32(value: bigint): `0x${string}` {
+    const hex = value.toString(16).padStart(64, "0");
+    return `0x${hex}` as `0x${string}`;
   }
 }

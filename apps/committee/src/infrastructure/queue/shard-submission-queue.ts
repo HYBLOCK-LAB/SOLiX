@@ -6,6 +6,7 @@ export interface ShardSubmissionJob {
   codeId: string;
   recipientPubKey: `0x${string}`;
   requester: `0x${string}`;
+  runNonce: `0x${string}`;
 }
 
 export class ShardSubmissionQueue {
@@ -32,7 +33,7 @@ export class ShardSubmissionQueue {
     await this.queue.add("submit", job, {
       removeOnComplete: true,
       removeOnFail: 50,
-      jobId: `${job.codeId}:${job.requester}:${job.recipientPubKey}`,
+      jobId: `${job.codeId}:${job.requester}:${job.runNonce}`,
       ...options,
     });
   }

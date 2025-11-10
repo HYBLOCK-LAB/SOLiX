@@ -18,6 +18,7 @@ export const committeeAbi = [
     inputs: [
       { name: "codeId", type: "uint256" },
       { name: "requester", type: "address" },
+      { name: "runNonce", type: "bytes32" },
       { name: "shardCid", type: "string" },
     ],
     outputs: [],

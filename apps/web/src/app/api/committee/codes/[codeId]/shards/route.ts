@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { serverEnv } from "../../../../../../lib/serverEnv";
 
@@ -17,13 +17,17 @@ const requestSchema = z.object({
   ),
 });
 
+type RouteParams = Promise<{ codeId: string }>;
+
 export async function POST(
-  request: Request,
-  context: { params: { codeId: string } }
+  request: NextRequest,
+  context: { params: RouteParams }
 ) {
+  const { codeId } = await context.params;
+
   const payload = requestSchema.parse(await request.json());
   const response = await fetch(
-    `${serverEnv.COMMITTEE_API_URL}/codes/${context.params.codeId}/shards/plain`,
+    `${serverEnv.COMMITTEE_API_URL}/codes/${codeId}/shards/plain`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

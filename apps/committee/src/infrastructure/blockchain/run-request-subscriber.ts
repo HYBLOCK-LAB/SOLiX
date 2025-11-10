@@ -1,5 +1,5 @@
 import { bytesToHex, type PublicClient } from "viem";
-import { committeeAbi } from "./committee-abi";
+import { licenseManagerAbi } from "./license-manager-abi";
 import type { HandleRunRequested } from "../../application/use-cases/handle-run-requested";
 import type { ShardRepository } from "../../domain/repositories/shard-repository";
 import type { ShardSubmissionQueue } from "../queue/shard-submission-queue";
@@ -10,7 +10,7 @@ export class RunRequestSubscriber {
 
   constructor(
     private readonly client: PublicClient,
-    private readonly contractAddress: `0x${string}`,
+    private readonly licenseContractAddress: `0x${string}`,
     private readonly handler: HandleRunRequested,
     private readonly pollingIntervalMs: number,
     private readonly shardRepository: ShardRepository,
@@ -24,8 +24,8 @@ export class RunRequestSubscriber {
     }
 
     this.unwatch = this.client.watchContractEvent({
-      address: this.contractAddress,
-      abi: committeeAbi,
+      address: this.licenseContractAddress,
+      abi: licenseManagerAbi,
       eventName: "RunRequested",
       pollingInterval: this.pollingIntervalMs,
       onError: (error) => {

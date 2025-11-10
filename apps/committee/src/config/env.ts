@@ -12,9 +12,12 @@ const envSchema = z.object({
     .string()
     .transform((value) => BigInt(value))
     .refine((value) => value > 0n, "PUBLIC_CHAIN_ID must be positive"),
-  PUBLIC_CONTRACT_ADDRESS: z
+  LICENSE_MANAGER_ADDRESS: z
     .string()
-    .length(42, "PUBLIC_CONTRACT_ADDRESS must be a hex string"),
+    .length(42, "LICENSE_MANAGER_ADDRESS must be a hex string"),
+  COMMITTEE_MANAGER_ADDRESS: z
+    .string()
+    .length(42, "COMMITTEE_MANAGER_ADDRESS must be a hex string"),
   WALLET_PRIVATE_KEY: z
     .string()
     .regex(
@@ -53,7 +56,8 @@ export type AppConfig = {
   port: number;
   rpcUrl: string;
   chainId: bigint;
-  contractAddress: `0x${string}`;
+  licenseManagerAddress: `0x${string}`;
+  committeeManagerAddress: `0x${string}`;
   operatorPrivateKey: `0x${string}`;
   redisUrl: string;
   runTtlSeconds: number;
@@ -68,7 +72,8 @@ export const env: AppConfig = {
   port: parsed.PORT,
   rpcUrl: parsed.PUBLIC_CHAIN_RPC_URL,
   chainId: parsed.PUBLIC_CHAIN_ID,
-  contractAddress: parsed.PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+  licenseManagerAddress: parsed.LICENSE_MANAGER_ADDRESS as `0x${string}`,
+  committeeManagerAddress: parsed.COMMITTEE_MANAGER_ADDRESS as `0x${string}`,
   operatorPrivateKey: parsed.WALLET_PRIVATE_KEY as `0x${string}`,
   redisUrl: parsed.REDIS_URL,
   runTtlSeconds: parsed.RUN_TTL_SECONDS,

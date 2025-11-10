@@ -75,6 +75,9 @@ committee-start: ## Start committee app (production)
 build: ## Build web/contract containers
 	@docker compose build
 
+rebuild: ## Rebuild web/contract containers
+	@docker compose build --no-cache
+
 dev: ## Start web/contract containers
 	@docker compose up
 

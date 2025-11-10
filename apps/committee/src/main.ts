@@ -33,8 +33,14 @@ async function bootstrap() {
 
   const shardEncryptor = new EcdhShardEncryptor();
   const shardPublisher = new PinataShardPublisher(env.pinataJwt);
-  const shardSubmitter = new BlockchainShardSubmitter(walletClient, publicClient, env.contractAddress, account);
-  const shardQueueName = `shard-submission:${committeeId}`;
+  const shardSubmitter = new BlockchainShardSubmitter(
+    walletClient,
+    publicClient,
+    env.committeeManagerAddress,
+    account
+  );
+  const normalizedQueueSuffix = committeeId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const shardQueueName = `shard_submission_${normalizedQueueSuffix}`;
   const shardSubmissionQueue = new ShardSubmissionQueue(env.redisUrl, shardQueueName);
   const shardWorker = new ShardSubmissionWorker(
     shardRepository,
@@ -50,7 +56,7 @@ async function bootstrap() {
   const handleRunRequested = new HandleRunRequested(runRepository);
   const runRequestSubscriber = new RunRequestSubscriber(
     publicClient,
-    env.contractAddress,
+    env.licenseManagerAddress,
     handleRunRequested,
     env.eventPollIntervalMs,
     shardRepository,

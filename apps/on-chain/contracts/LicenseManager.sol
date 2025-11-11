@@ -5,13 +5,6 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
 
-// import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
-// import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
-// using ECDSA for bytes32;
-// using MessageHashUtils for bytes32;
-
 contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
 
@@ -258,41 +251,6 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             block.timestamp
         );
     }
-
-    // 소유자 혹은 사용자 대신 실행
-    // function requestOnBehalf(
-    //     uint256 codeId,
-    //     address user,
-    //     bytes calldata recipientPubKey,
-    //     uint256 runNonce,
-    //     bytes calldata sig
-    // ) external {
-    //     _requireCodeExists(codeId);
-
-    //     // 서명 검증
-    //     bytes32 h = keccak256(
-    //         abi.encodePacked(
-    //             "EXEC",
-    //             address(this),
-    //             codeId,
-    //             user,
-    //             recipientPubKey,
-    //             runNonce
-    //         )
-    //     );
-    //     address signer = h.toEthSignedMessageHash().recover(sig);
-    //     require(signer == _codes[codeId].owner || signer == user, "bad sig");
-
-    //     require(!_codes[codeId].paused, "paused");
-    //     require(balanceOf(user, codeId) > 0, "no runs");
-
-    //     uint256 expiry = _expiry[user][codeId];
-    //     require(expiry == 0 || block.timestamp <= expiry, "expired");
-
-    //     // 사용자의 실행권 소진(대리 실행)
-    //     _burn(user, codeId, 1);
-    //     emit RunRequested(codeId, user, recipientPubKey, block.timestamp);
-    // }
 
     /* ========= 뷰 헬퍼 ========= */
 

@@ -77,9 +77,10 @@ describe("LicenseManager", async () => {
     // 여러 번 실행 요청 (3회)
     let consumed = 0n;
     for (let i = 0; i < 3; i++) {
+      const runNonce = keccak256(stringToBytes(`run-${i}`));
       const tx = await licenseManager.write.requestCodeExecution([
         codeId,
-        // bytes 인자는 hex 또는 Uint8Array 모두 OK. 여기서는 hex로 전달.
+        runNonce,
         bytesToHex(stringToBytes(`recipient-pk-${i}`)),
       ]);
       await publicClient.getTransactionReceipt({ hash: tx });

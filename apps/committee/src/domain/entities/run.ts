@@ -11,7 +11,9 @@ export class Run {
   constructor(
     public readonly runId: string,
     public readonly codeId: bigint,
+    public readonly runNonce: bigint,
     public readonly threshold: number,
+    public readonly requester: `0x${string}`,
     public readonly createdAt: Date,
     public status: RunStatus = "pending",
     public approvedAt?: Date

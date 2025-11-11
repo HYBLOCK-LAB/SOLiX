@@ -5,7 +5,9 @@ import type { RunRepository } from "../../domain/repositories/run-repository";
 interface PersistedRun {
   runId: string;
   codeId: string;
+  runNonce: string;
   threshold: number;
+  requester: `0x${string}`;
   status: Run["status"];
   createdAt: string;
   approvedAt?: string;
@@ -32,12 +34,20 @@ export class RedisRunRepository implements RunRepository {
     const payload: PersistedRun = {
       runId: run.runId,
       codeId: run.codeId.toString(),
+      runNonce: run.runNonce.toString(),
       threshold: run.threshold,
+      requester: run.requester,
       status: run.status,
       createdAt: run.createdAt.toISOString(),
     };
 
-    const created = await this.redis.set(key, JSON.stringify(payload), "NX", "EX", this.runTtlSeconds);
+    const created = await this.redis.set(
+      key,
+      JSON.stringify(payload),
+      "EX",
+      this.runTtlSeconds,
+      "NX"
+    );
 
     if (created === "OK") {
       await this.redis.del(this.failureKey(run.runId));
@@ -59,7 +69,9 @@ export class RedisRunRepository implements RunRepository {
     const run = new Run(
       parsed.runId,
       BigInt(parsed.codeId),
+      BigInt(parsed.runNonce),
       parsed.threshold,
+      parsed.requester,
       new Date(parsed.createdAt),
       parsed.status,
       parsed.approvedAt ? new Date(parsed.approvedAt) : undefined
@@ -110,7 +122,13 @@ export class RedisRunRepository implements RunRepository {
     const parsed = JSON.parse(payload) as PersistedRun;
     parsed.status = "approved";
     parsed.approvedAt = approvedAt.toISOString();
-    await this.redis.set(key, JSON.stringify(parsed), "XX", "EX", this.approvedTtlSeconds);
+    await this.redis.set(
+      key,
+      JSON.stringify(parsed),
+      "EX",
+      this.approvedTtlSeconds,
+      "XX"
+    );
     await this.redis.expire(this.piecesKey(runId), this.approvedTtlSeconds);
   }
 

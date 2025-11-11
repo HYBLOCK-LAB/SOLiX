@@ -3,15 +3,22 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 const STORAGE_KEY = "solix.executionKeys";
 export const EXECUTION_KEY_STORAGE_LIMIT = 20;
 
-interface ExecutionKeyRecord {
+export interface ExecutionKeyRecord {
   publicKey: `0x${string}`;
   privateKey: `0x${string}`;
+  runNonce?: `0x${string}`;
+  codeId?: number;
   createdAt: string;
 }
 
 export interface ExecutionKeyPair {
   publicKey: `0x${string}`;
   privateKey: `0x${string}`;
+}
+
+export interface ExecutionKeyMetadata {
+  runNonce?: `0x${string}`;
+  codeId?: number;
 }
 
 function isBrowser(): boolean {
@@ -49,6 +56,8 @@ function sanitizeRecords(records: ExecutionKeyRecord[]): ExecutionKeyRecord[] {
     sanitized.push({
       publicKey: record.publicKey,
       privateKey: record.privateKey,
+      runNonce: record.runNonce,
+      codeId: record.codeId,
       createdAt: record.createdAt ?? new Date().toISOString(),
     });
     if (sanitized.length >= EXECUTION_KEY_STORAGE_LIMIT) break;
@@ -61,13 +70,15 @@ export function listExecutionKeys(): ExecutionKeyRecord[] {
   return readRecords();
 }
 
-export function storeExecutionKeyPair(pair: ExecutionKeyPair): ExecutionKeyRecord[] {
+export function storeExecutionKeyPair(pair: ExecutionKeyPair, metadata?: ExecutionKeyMetadata): ExecutionKeyRecord[] {
   const normalizedPublicKey = pair.publicKey.toLowerCase();
 
   const updated = [
     {
       publicKey: pair.publicKey,
       privateKey: pair.privateKey,
+      runNonce: metadata?.runNonce,
+      codeId: metadata?.codeId,
       createdAt: new Date().toISOString(),
     },
     ...readRecords().filter(
@@ -77,11 +88,19 @@ export function storeExecutionKeyPair(pair: ExecutionKeyPair): ExecutionKeyRecor
     .slice(0, EXECUTION_KEY_STORAGE_LIMIT)
     .map((record, index) => ({
       ...record,
+      runNonce: record.runNonce,
+      codeId: record.codeId,
       createdAt: record.createdAt ?? new Date(Date.now() - index).toISOString(),
     }));
 
   writeRecords(updated);
   return updated;
+}
+
+export function findExecutionKey(publicKey: `0x${string}`): ExecutionKeyRecord | null {
+  if (!publicKey) return null;
+  const normalized = publicKey.toLowerCase();
+  return listExecutionKeys().find((record) => record.publicKey.toLowerCase() === normalized) ?? null;
 }
 
 export function removeExecutionKey(publicKey: `0x${string}`): ExecutionKeyRecord[] {

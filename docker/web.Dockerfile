@@ -1,34 +1,42 @@
-FROM node:20-alpine AS deps
+FROM node:22-bullseye-slim AS deps
 
 WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY apps/web/package.json ./
 COPY apps/web/package-lock.json ./
 
 RUN npm install
 
-FROM node:20-alpine AS builder
+FROM node:22-bullseye-slim AS builder
 
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY apps/web ./app
+COPY apps/web/ ./
+COPY apps/web/.env ./.env.build
 
-WORKDIR /app/app
+RUN if [ -f ./.env.build ]; then cp ./.env.build ./.env; fi
 
 RUN npm run build
+RUN npm prune --omit=dev
 
-FROM node:20-alpine AS runner
+FROM node:22-bullseye-slim AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-COPY --from=builder /app/app/.next ./.next
-COPY --from=builder /app/app/public ./public
-COPY apps/web/package.json .
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN npm install --omit=dev
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY apps/web/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 

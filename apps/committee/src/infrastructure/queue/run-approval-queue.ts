@@ -1,6 +1,5 @@
 import { Queue, Worker, QueueEvents, type JobsOptions } from "bullmq";
-import type { RedisOptions } from "ioredis";
-import IORedis from "ioredis";
+import { Redis, type RedisOptions } from "ioredis";
 import { logger } from "../../shared/logger";
 
 const QUEUE_NAME = "run-approval";
@@ -8,17 +7,20 @@ const QUEUE_NAME = "run-approval";
 export class RunApprovalQueue {
   private readonly queue: Queue;
   private readonly events: QueueEvents;
+  private readonly redisUrl: string;
+  private readonly connectionOptions: RedisOptions;
   private worker?: Worker;
 
   constructor(redisUrl: string) {
-    const connectionOptions: RedisOptions = { lazyConnect: false, maxRetriesPerRequest: null };
+    this.redisUrl = redisUrl;
+    this.connectionOptions = { lazyConnect: false, maxRetriesPerRequest: null };
 
     this.queue = new Queue(QUEUE_NAME, {
-      connection: new IORedis(redisUrl, connectionOptions),
+      connection: new Redis(redisUrl, this.connectionOptions),
     });
 
     this.events = new QueueEvents(QUEUE_NAME, {
-      connection: new IORedis(redisUrl, connectionOptions),
+      connection: new Redis(redisUrl, this.connectionOptions),
     });
 
     this.events.on("failed", ({ jobId, failedReason }) => {
@@ -58,16 +60,19 @@ export class RunApprovalQueue {
         await process(runId);
       },
       {
-        connection: this.queue.client,
+        connection: new Redis(this.redisUrl, this.connectionOptions),
       }
     );
 
-    this.worker.on("completed", ({ id }) => {
-      logger.info({ jobId: id }, "Run approval job completed");
+    this.worker.on("completed", (job) => {
+      logger.info({ jobId: job?.id ?? "unknown" }, "Run approval job completed");
     });
 
-    this.worker.on("failed", ({ id, failedReason }) => {
-      logger.error({ jobId: id, failedReason }, "Run approval job processing failed");
+    this.worker.on("failed", (job, err) => {
+      logger.error(
+        { jobId: job?.id ?? "unknown", failedReason: err?.message ?? err },
+        "Run approval job processing failed"
+      );
     });
   }
 

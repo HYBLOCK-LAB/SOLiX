@@ -9,6 +9,10 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address"),
   NEXT_PUBLIC_WALLETCONNECT_ID: z.string().min(1),
   NEXT_PUBLIC_STORAGE_MODE: z.enum(["local", "production"]).default("local"),
+  NEXT_PUBLIC_COMMITTEE_MANAGER_ADDRESS: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid committee manager address"),
+  NEXT_PUBLIC_COMMITTEE_MEMBERS: z.string().min(1),
 });
 
 export const clientEnv = clientEnvSchema.parse({
@@ -20,4 +24,12 @@ export const clientEnv = clientEnvSchema.parse({
   NEXT_PUBLIC_CONTRACT_ADDRESS: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
   NEXT_PUBLIC_WALLETCONNECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_ID,
   NEXT_PUBLIC_STORAGE_MODE: process.env.NEXT_PUBLIC_STORAGE_MODE,
+  NEXT_PUBLIC_COMMITTEE_MANAGER_ADDRESS: process.env.NEXT_PUBLIC_COMMITTEE_MANAGER_ADDRESS,
+  NEXT_PUBLIC_COMMITTEE_MEMBERS: process.env.NEXT_PUBLIC_COMMITTEE_MEMBERS,
 });
+
+export function getCommitteeMembers(): `0x${string}`[] {
+  return clientEnv.NEXT_PUBLIC_COMMITTEE_MEMBERS.split(",")
+    .map((value) => value.trim())
+    .filter((value) => /^0x[a-fA-F0-9]{40}$/.test(value)) as `0x${string}`[];
+}

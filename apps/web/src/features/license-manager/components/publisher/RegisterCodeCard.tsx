@@ -1,17 +1,37 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
+import { useAccount, usePublicClient } from "wagmi";
+import { keccak256, stringToBytes } from "viem";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
 import { createEncryptedArtifact, uploadEncryptedArtifact } from "../../services/artifact";
 import { storageMode } from "../../../../lib/storageConfig";
+import { LICENSE_MANAGER_ADDRESS } from "../../constants";
+import { licenseManagerAbi } from "../../abi";
+import { getCommitteeMembers } from "../../../../lib/env";
+import { registerShards } from "../../services/shards/registerShards";
+import { splitSecret } from "../../services/shards/shamirSplit";
 
 const MAX_FILE_SIZE_BYTES = 256 * 1024 * 1024;
+const DEFAULT_SHARD_EXPIRY_SECONDS = 60 * 60; // 1 hour
+const DEFAULT_THRESHOLD = 3;
+
+type ShardStatusState = {
+  state: "idle" | "pending" | "success" | "error";
+  message?: string | null;
+};
 
 export function RegisterCodeCard() {
+  const publicClient = usePublicClient();
+  const { address } = useAccount();
+  const committeeMembers = useMemo(() => getCommitteeMembers(), []);
+  const threshold = Math.min(DEFAULT_THRESHOLD, committeeMembers.length || DEFAULT_THRESHOLD);
+
   const [codeHash, setCodeHash] = useState<`0x${string}` | "">("");
   const [cipherCid, setCipherCid] = useState("");
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [shardStatus, setShardStatus] = useState<ShardStatusState>({ state: "idle" });
   const [encryptionDetails, setEncryptionDetails] = useState<{
     keyHex: string;
     ivHex: string;
@@ -29,11 +49,75 @@ export function RegisterCodeCard() {
       return;
     }
 
+    if (!publicClient) {
+      setStatus("네트워크 연결을 초기화하는 중입니다. 잠시 후 다시 시도하세요.");
+      return;
+    }
+
+    if (!encryptionDetails) {
+      setStatus("파일을 업로드해 암호화 정보를 생성해주세요.");
+      return;
+    }
+
+    if (committeeMembers.length === 0) {
+      setShardStatus({ state: "error", message: "위원회 주소가 구성되어 있지 않습니다." });
+      return;
+    }
+
+    if (!address) {
+      setStatus("지갑을 연결해야 합니다.");
+      return;
+    }
+
     try {
       setStatus(null);
-      await execute([codeHash, cipherCid]);
+      setShardStatus({ state: "idle" });
+
+      const nextCodeId = (await publicClient.readContract({
+        address: LICENSE_MANAGER_ADDRESS,
+        abi: licenseManagerAbi,
+        functionName: "nextCodeId",
+      })) as bigint;
+
+      const txHash = await execute([codeHash, cipherCid]);
+      setStatus("트랜잭션 확인 중입니다...");
+      if (txHash) {
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
+      }
+
+      const shares = splitSecret(encryptionDetails.keyHex as `0x${string}`, committeeMembers.length, threshold);
+      if (shares.length !== committeeMembers.length) {
+        throw new Error("Shard 생성에 실패했습니다.");
+      }
+      const expiresAt = new Date(Date.now() + DEFAULT_SHARD_EXPIRY_SECONDS * 1000).toISOString();
+
+      setShardStatus({ state: "pending", message: "위원회 shard 등록 중..." });
+      const runNonce = keccak256(stringToBytes(`code-${nextCodeId.toString()}`));
+      const shardPayloads = committeeMembers.map((committee, index) => {
+        const share = shares[index];
+        if (!share) {
+          throw new Error("모든 위원에게 shard를 매핑할 수 없습니다.");
+        }
+        return {
+          committee,
+          runNonce,
+          shareIndex: share.index,
+          shareValue: share.value,
+          byteLength: share.byteLength,
+          expiresAt,
+        };
+      });
+
+      await registerShards({
+        codeId: nextCodeId.toString(),
+        wallet: address,
+        shards: shardPayloads,
+      });
+      setShardStatus({ state: "success", message: "위원회 shard 등록이 완료되었습니다." });
     } catch (err) {
-      setStatus(`트랜잭션 실패: ${(err as Error).message}`);
+      const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+      setStatus(message);
+      setShardStatus({ state: "error", message });
     }
   };
 
@@ -80,6 +164,7 @@ export function RegisterCodeCard() {
     setStatus(null);
     setEncryptionDetails(null);
     setIsProcessingFile(false);
+    setShardStatus({ state: "idle" });
   }, []);
 
   return (
@@ -198,6 +283,48 @@ export function RegisterCodeCard() {
           </p>
         )}
       </footer>
+
+      <section className="mt-6 rounded-xl border border-primary-25 bg-background-light-50 p-4 text-sm shadow-sm dark:border-primary-75 dark:bg-background-dark-75">
+        <h3 className="text-sm font-semibold text-primary-100 dark:text-text-dark-100">
+          위원회 분할 키 상태
+        </h3>
+        <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
+          총 {committeeMembers.length}명의 위원에게 키 조각을 전달하며, 임계값은 {threshold}입니다.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-light-75 dark:text-text-dark-75 sm:grid-cols-2">
+          {committeeMembers.map((member, index) => (
+            <div key={member} className="rounded border border-primary-25 p-2 dark:border-primary-75">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] uppercase text-text-light-50 dark:text-text-dark-50">
+                    위원 #{index + 1}
+                  </p>
+                  <p className="break-all font-mono">{member}</p>
+                </div>
+                <div className="text-right text-[11px]">
+                  <p className="text-text-light-50 dark:text-text-dark-50">상태</p>
+                  <p className="text-text-light-100 dark:text-text-dark-100">
+                    {renderShardStatus(shardStatus)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </section>
   );
+}
+
+function renderShardStatus(status: ShardStatusState): string {
+  switch (status.state) {
+    case "pending":
+      return status.message ?? "위원회에 shard를 등록 중입니다.";
+    case "success":
+      return status.message ?? "등록 완료";
+    case "error":
+      return status.message ?? "등록 중 오류가 발생했습니다.";
+    default:
+      return status.message ?? "대기 중";
+  }
 }

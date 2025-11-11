@@ -29,9 +29,9 @@ IPFS의 핵심 컴포넌트를 살펴보고 파일 추가, 조회 등의 동작 
 
 Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다.
 
-#### 4. 테스트
+#### 4. 테스트 및 배포
 
-수정한 내용을 바탕으로 테스트를 진행합니다.
+수정한 내용을 바탕으로 테스트 및 배포를 진행합니다.
 
 #### 5. Ethernaut로 취약점 학습
 
@@ -39,7 +39,7 @@ Ethernaut 레벨을 직접 플레이하면서 자주 등장하는 온체인 취�
 
 ## IPFS 구조 및 동작 원리
 
-Duration: 14
+Duration: 20
 
 [IPFS(InterPlanetary File System)](https://ipfs.tech/)는 콘텐츠 주소화(content addressing), 분산 P2P 네트워크(libp2p), DHT 기반 라우팅(BitSwap), IPLD(Merkle-DAG) 데이터 모델로 이루어진 분산 파일 시스템입니다. 핵심은 파일의 위치가 아니라 내용(CID) 으로 식별하고, 여러 피어가 데이터를 교환한다는 점입니다.
 
@@ -133,7 +133,7 @@ IPFS Desktop의 `Files` 탭에서는 로컬에서 업로드한 파일을 IPFS �
 
 Kubo는 Go로 작성된 IPFS의 가장 널리 쓰이는 구현체이며, CLI/RPC API/게이트웨이를 제공합니다. 과거 이름은 **go-ipfs**입니다.
 
-1. 저장소 초기화
+**저장소 초기화**
 
 Kubo는 모든 설정과 내부 데이터를 저장소라는 디렉터리에 저장합니다. Kubo를 처음 사용하기 전에 저장소를 초기화해야 합니다.
 
@@ -145,7 +145,7 @@ ipfs init
 
 ![ipfs cli init](./images/ipfs_cli_init.png)
 
-2. 노드를 온라인으로 전환
+**노드를 온라인으로 전환**
 
 노드를 온라인으로 전환하고 IPFS 네트워크와 상호 작용합니다. 다른 터미널 창을 열어 IPFS 데몬을 시작합니다.
 
@@ -159,7 +159,7 @@ ipfs daemon
 ipfs swarm peers
 ```
 
-3. 파일 가져오기
+**파일 가져오기**
 
 다음의 명령어를 입력하여 우주선 발사 사진을 가져옵니다. `QmSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq`는 [공식 문서](https://docs.ipfs.tech/how-to/command-line-quick-start/#take-your-node-online)에서 소개된 CID입니다.
 
@@ -167,7 +167,7 @@ ipfs swarm peers
  ipfs cat /ipfs/QmSgvgwxZGaBLqkGyWemEDqikCqU52XxsYLKtdy3vGZ8uq > ~/Desktop/spaceship-launch.jpg
 ```
 
-4. 파일 업로드
+**파일 업로드**
 
 원하는 파일을 다음의 명령어를 통해 업로드합니다.
 
@@ -199,7 +199,7 @@ HTTP/Go 클라이언트 예시와 상세 API는 [레퍼런스 문서](https://st
 
 ## Shamir's Secret Sharing Algorithm
 
-Duration: 20
+Duration: 15
 
 샤미르 비밀 공유는 1979년 Adi Shamir의 논문 [How to Share a Secret](https://dl.acm.org/doi/pdf/10.1145/359168.359176)에서 제안된 `(k, n)` 임계값 기반 분산 방법(threshold Scheme)입니다. “k개 이상이면 비밀을 복원하고, k-1개 이하로는 아무 정보도 얻지 못한다”는 목표를 수학적으로 보장합니다.
 
@@ -237,27 +237,66 @@ Duration: 20
 
 ![lagrange](./images/lagrange.png)
 
-### TypeScript 예시
+#### TypeScript 보는 흐름
+
+아래의 코드는 SSS를 적용하고 IPFS를 이용해 SSS를 적용한 코드입니다.
 
 ```ts
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 import { split, combine } from "shamirs-secret-sharing";
+import { create as createIpfsClient } from "ipfs-http-client";
 
-const dek = randomBytes(32); // AES-256 키
+const ipfs = createIpfsClient({ url: "https://storacha.network/" });
+
+type ShardEnvelope = {
+  runNonce: `0x${string}`;
+  committeeId: string;
+  expiresAt: number;
+  cid?: string;
+  data: Buffer;
+};
+
+const dek = randomBytes(32); // 실행 1회에 사용될 AES-256 키
 const quorum = { shares: 5, threshold: 3 };
+const runNonce = `0x${createHash("sha256")
+  .update(randomBytes(32))
+  .digest("hex")}`;
 
-// 분할
-const shards = split(dek, quorum);
-// 각 shard에 runNonce, committeeId, 만료 시간 메타데이터를 붙여 IPFS에 업로드
+// 분할 + 메타데이터 부착 + IPFS 업로드
+const shards: ShardEnvelope[] = split(dek, quorum).map((raw, idx) => ({
+  runNonce,
+  committeeId: `committee-${idx + 1}`,
+  expiresAt: Math.floor(Date.now() / 1000) + 60 * 30,
+  data: Buffer.from(raw),
+}));
 
-// 복원
-const recovered = combine(shards.slice(0, 3));
-console.assert(dek.equals(recovered));
+for (const shard of shards) {
+  const payload = JSON.stringify({
+    runNonce: shard.runNonce,
+    committeeId: shard.committeeId,
+    expiresAt: shard.expiresAt,
+    data: shard.data.toString("base64"),
+  });
+  const { cid } = await ipfs.add(payload);
+  shard.cid = cid.toString(); // ShardSubmitted 이벤트로 온체인에 기록
+}
+
+// 복원: threshold 개수의 CID만 가져와도 복호화 가능
+const shardsForRecovery = await Promise.all(
+  shards.slice(0, quorum.threshold).map(async (shard) => {
+    const file = await ipfs.cat(shard.cid!);
+    const parsed = JSON.parse(Buffer.from(file).toString("utf8"));
+    return Buffer.from(parsed.data, "base64");
+  })
+);
+
+const recoveredDek = combine(shardsForRecovery);
+console.assert(dek.equals(recoveredDek), "복원 실패 시 위원회 응답 재요청");
 ```
 
 ## Committee Manager 구현
 
-Duration: 30
+Duration: 25
 
 Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다. 프로젝트의 `apps/on-chain/contracts/CommitteeManager.sol`을 확인해주세요.
 
@@ -512,27 +551,236 @@ function submitShard(
 <p><code>ExecutionApproved</code> 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.</p>
 <p>중복 제출 방지를 위해 Off-chain 레이어에서 <code>(committee, runNonce)</code> 중복 여부를 체크합니다.</p></aside>
 
-## 테스트
+### LicenseManager
 
-Duration: 20
+실행 요청의 중복을 막기 위해 `RunRequested`에 runNonce를 추가해햐합니다. 다음과 같이 변경해주세요.
 
-#### 1. `apps/on-chain` 디렉터리에서 종속성을 설치합니다.
+`LicenseManager.sol`의 `requestCodeExecution`
+
+```solidity
+// 실행 요청. 1회 소진 + 이벤트 발생
+function requestCodeExecution(
+    uint256 codeId,
+    bytes32 runNonce,
+    bytes calldata recipientPubKey
+) external override {
+    _requireCodeExists(codeId);
+    require(!_codes[codeId].paused, "Code is paused");
+    require(balanceOf(msg.sender, codeId) > 0, "Insufficient runs");
+    uint256 expiry = _expiry[msg.sender][codeId];
+    require(expiry == 0 || block.timestamp <= expiry, "License expired");
+
+    // 1회 소진
+    _burn(msg.sender, codeId, 1);
+
+    emit RunRequested(
+        codeId,
+        msg.sender,
+        runNonce,
+        recipientPubKey,
+        block.timestamp
+    );
+}
+```
+
+`ILicenseManager.sol`의 `RunRequested`와 `requestCodeExecution`
+
+```solidity
+// 코드 실행 요청
+event RunRequested(
+    uint256 indexed codeId,
+    address indexed user,
+    bytes32 indexed runNonce,
+    bytes recipientPubKey,
+    uint256 blockTimestamp
+);
+
+```
+
+```solidity
+    // 코드 실행 요청
+    function requestCodeExecution(
+        uint256 codeId,
+        bytes32 runNonce,
+        bytes calldata recipientPubKey
+    ) external;
+```
+
+### 마무리
+
+이제 CommitteeManager 컨트랙트 작성을 완료했습니다. 전체 코드는 다음과 같습니다.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
+
+contract CommitteeManager is AccessControl {
+    /* ========= Errors ========= */
+
+    error DuplicateShard(uint256 codeId, address requester, address committee);
+
+    /* ========= 전역 변수 ========= */
+    bytes32 public constant COMMITTEE_ROLE = keccak256("COMMITTEE_ROLE");
+
+    /* ========= 상태 ========= */
+
+    mapping(bytes32 => uint256) public shardCountForRun;
+    mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
+    uint256 public committeeThreshold = 3;
+
+    //  라이선스 컨트랙트 읽기용
+    ILicenseManager public immutable licenseManager;
+
+    constructor(address licenseManager_) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        licenseManager = ILicenseManager(licenseManager_);
+    }
+
+    /* ========= 이벤트 ========= */
+
+    // 위원회 멤버가 shard CID(IPFS)를 제출했음을 알리는 이벤트
+    event ShardSubmitted(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        address committee,
+        string shardCid,
+        uint256 countAfter,
+        uint256 threshold
+    );
+
+    // 모든 위원회의 승인이 완료되었음을 알리는 이벤트
+    event ExecutionApproved(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        uint256 threshold,
+        uint256 count
+    );
+
+    /* ========= 관리자 기능 ========= */
+
+    // 위원회 임계치 설정. 관리자만 가능
+    function setCommitteeThreshold(
+        uint256 newThreshold
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newThreshold > 0, "threshold must be more then 0");
+        require(newThreshold <= type(uint32).max, "threshold too large");
+        committeeThreshold = newThreshold;
+    }
+
+    // 위원회 멤버 추가. 관리자만 가능
+    function addCommittee(
+        address newCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(COMMITTEE_ROLE, newCommittee);
+    }
+
+    // 위원회 멤버 제거. 관리자만 가능
+    function removeCommittee(
+        address removalCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(COMMITTEE_ROLE, removalCommittee);
+    }
+
+    // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
+    function submitShard(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce,
+        string calldata shardCid
+    ) external onlyRole(COMMITTEE_ROLE) {
+        require(licenseManager.checkCodeExists(codeId), "code is not exist");
+        require(licenseManager.checkCodeActive(codeId), "code is not active");
+
+        bytes32 runKey = keccak256(
+            abi.encodePacked(codeId, requester, runNonce)
+        );
+        if (hasSubmitted[runKey][msg.sender]) {
+            revert DuplicateShard(codeId, requester, msg.sender);
+        }
+        hasSubmitted[runKey][msg.sender] = true;
+        uint256 newCount = ++shardCountForRun[runKey];
+
+        emit ShardSubmitted(
+            codeId,
+            requester,
+            runNonce,
+            msg.sender,
+            shardCid,
+            newCount,
+            committeeThreshold
+        );
+
+        if (newCount >= committeeThreshold) {
+            emit ExecutionApproved(
+                codeId,
+                requester,
+                runNonce,
+                committeeThreshold,
+                newCount
+            );
+        }
+    }
+}
+```
+
+## 테스트 및 배포
+
+Duration: 15
+
+#### 1. `apps/on-chain` 디렉터리에서 종속성을 설치
 
 ```bash
+cd apps/on-chain
 npm install
 ```
 
-2. Committee와 LicenseManager를 배포해 상호 의존성을 설정한 뒤 아래 테스트 스켈레톤을 참고해 시나리오를 작성합니다.
+#### 2. 테스트 스크립트 실행
+
+`CommitteeManager.test.ts`에 테스트 스크립트가 작성되어 있습니다. 테스트 항목은 다음과 같습니다.
+
+- 관리자만이 임계치와 위원회 구성을 변경할 수 있는지 확인
+- `licenseManager.pauseCodeExecution` 이후 shard 제출이 거부되는지 확인
+- 동일 runNonce에 대해 threshold 이상 shard가 모였을 때 `ExecutionApproved` 이벤트가 발생하는지 확인
+
+테스트를 위해 다음의 명령어를 실행합니다.
 
 ```bash
 npx hardhat test test/CommitteeManager.test.ts
 ```
 
-3. 테스트 시나리오 예시
+#### 3. Sepolia 네트워크에 배포
 
-- 관리자만이 임계치와 위원회 구성을 변경할 수 있는지 확인
-- `licenseManager.pauseCodeExecution` 이후 shard 제출이 거부되는지 확인
-- 동일 runNonce에 대해 threshold 이상 shard가 모였을 때 `ExecutionApproved` 이벤트가 발생하는지 확인
+Sepolia 네트워크에 배포하려면 아래 Ignition 명령을 순서대로 실행합니다. 반드시 `LicenseManager` 배포 후 `CommitteeManager`를 배포해야 합니다.
+
+```bash
+npx hardhat ignition deploy ignition/modules/LicenseManager.ts \
+  --network sepolia
+
+npx hardhat ignition deploy ignition/modules/CommitteeManager.ts \
+  --network sepolia \
+  --parameters '{ "CommitteeManagerModule": { "licenseManagerAddress": "${YOUR_LICENSE_MANAGER_CONTRACT_ADDRESS}" } }'
+```
+
+#### 5. 소스 코드를 검증
+
+배포가 완료되면 Hardhat Verify를 사용해 소스 코드를 검증합니다.
+
+```bash
+npx hardhat verify \
+  --network sepolia \
+  ${YOUR_LICENSE_MANAGER_CONTRACT_ADDRESS} \
+  "ipfs://base/{id}.json"
+
+npx hardhat verify \
+  --network sepolia \
+  ${YOUR_COMMITTEE_MANAGER_CONTRACT_ADDRESS} \
+  ${YOUR_LICENSE_MANAGER_CONTRACT_ADDRESS}
+```
 
 ## Ethernaut를 통한 취약점 학습
 
@@ -615,9 +863,13 @@ Duration: 1
 1. [Lit Protocol](https://www.litprotocol.com/): Lit Protocol은 key와 secrets을 관리하기 위한 탈중앙화 네트워크 프로토콜입니다. 본 프로젝트는 이러한 Lit Protocol에서 영감을 받아, DKG(Distributed Key Generation) 개념을 기반으로 이를 솔리디티로 구현하였습니다. Lit Protocol에 대한 보다 자세한 내용은 [공식 백서](https://github.com/LIT-Protocol/whitepaper)를 참고하시기 바랍니다.
 2. [IPFS Concepts](https://docs.ipfs.tech/concepts/): [IPFS](https://github.com/ipfs)는 Web3 생태계에서는 중대형 오픈소스 프로젝트입니다. 또한, 이에 대한 구현 원리를 이해하기 위해서 Merkle DAG, UnixFS, DHT, Pub/Sub 모델(Gossip), BitSwap 등 Computer Sicence 관련 배경지식을 많이 요구합니다.
 3. [proto school](https://proto.school/tutorials): IPFS나 filecoin과 같은 분산형 웹 스토리지 시스템에 관한 기술 튜토리얼입니다.
-4. [Sharmir’s Secret Sharing](https://medium.com/@sineta01/sharmirs-secret-sharing%EC%9D%84-%EC%82%B4%ED%8E%B4%EB%B3%B4%EC%9E%90-eca906e17a4c): 샤미르 분산 공유(Sharmir’s Secret Sharing)관한 설명입니다.
+4. [Sharmir’s Secret Sharing](https://medium.com/@sineta01/sharmirs-secret-sharing%EC%9D%84-%EC%82%B4%ED%8E%B4%EB%B3%B4%EC%9E%90-eca906e17a4c): 샤미르 분산 공유(Sharmir’s Secret Sharing)에 관한 설명입니다.
 
 ### 참고 자료
 
 1. [openzeppelin의 contract관련 개발 문서](https://docs.openzeppelin.com/contracts)
 2. [ethernaut](https://ethernaut.openzeppelin.com)
+
+```
+
+```

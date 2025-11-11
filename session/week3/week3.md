@@ -29,13 +29,13 @@ IPFS의 핵심 컴포넌트를 살펴보고 파일 추가, 조회 등의 동작 
 
 Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설계하고 Smart Contract를 구현합니다.
 
-#### 5. 테스트
+#### 4. 테스트
 
 수정한 내용을 바탕으로 테스트를 진행합니다.
 
-#### 4. 취약점 탐색 및 수정
+#### 5. Ethernaut로 취약점 학습
 
-취약점을 공부할 수 있는 ethernaut에 대해 알아봅시다. 기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 검토해봅시다.
+Ethernaut 레벨을 직접 플레이하면서 자주 등장하는 온체인 취약점 패턴을 익히고, 이를 현재 프로젝트 컨트랙트에 어떻게 적용할지 정리합니다.
 
 ## IPFS 구조 및 동작 원리
 
@@ -512,60 +512,9 @@ function submitShard(
 <p><code>ExecutionApproved</code> 이벤트는 클라이언트가 shard 다운로드를 시작해도 된다는 신호로 활용합니다. 오프체인 서비스는 이벤트를 수신한 뒤 IPFS에서 shard를 내려받고, 위원회 멤버 서명을 검증한 뒤 복호화 절차를 진행합니다.</p>
 <p>중복 제출 방지를 위해 Off-chain 레이어에서 <code>(committee, runNonce)</code> 중복 여부를 체크합니다.</p></aside>
 
-## 취약점 탐색 및 수정
-
-Duration: 49
-
-이번 단계에서는 기존 컨트랙트에서 발생할 수 있는 온체인/오프체인 취약점을 식별하고, 대응 전략을 수립합니다. 테스트와 코드 리뷰를 반복해 보안 수준을 끌어올리는 것이 목표입니다.
-
-### 온체인 공통 점검 항목
-
-- **권한 제어:** `onlyRole` 또는 커스텀 modifier가 모든 상태 변경 함수에 적용돼 있는지 확인합니다.
-- **입력 검증:** CID, runNonce, runs 값 등 외부 입력에 대한 길이·범위 체크를 수행합니다.
-- **이벤트 로깅:** 민감한 상태 변화를 모두 이벤트로 노출해 오프체인 모니터링이 가능하도록 합니다.
-- **재진입 보호:** 외부 컨트랙트 호출이 있는 함수는 Checks-Effects-Interactions 패턴을 따르거나 `ReentrancyGuard`를 적용합니다.
-- **정수 오버플로우:** Solidity ^0.8.0부터 기본적으로 체크되지만, 카운터가 예상보다 빨리 증가하지 않는지 논리적으로 검토합니다.
-
-### LicenseManager에서 살펴볼 부분
-
-1. **라이선스 발급 제한:** `issueLicense` 호출 시 runs 값이 0인지 검증하고, 잔여 실행 횟수 `_balances`가 정상적으로 관리되는지 확인합니다.
-2. **만료 시간 관리:** 만료 시간이 과거 값으로 설정되는 것을 막아야 합니다. 또한 만료가 지난 라이선스는 실행 시 즉시 차단하도록 가드가 필요합니다.
-3. **이벤트 일관성:** `updateCode` 호출 후 `URI` 이벤트를 누락하면 ERC-1155 소비자들이 메타데이터를 최신 상태로 동기화하지 못합니다.
-4. **서명 기반 위임:** 오프체인 서명을 도입할 경우 `EIP-712 도메인`, nonce, 만료 시간 등을 포함하고 재사용 방지를 위한 `usedNonce` 맵을 추가해야 합니다.
-
-### CommitteeManager 개선 포인트
-
-- **중복 제출 방지:** 현재 구현은 동일한 위원회 멤버가 여러 번 `submitShard`를 호출해 카운트를 임의로 늘릴 수 있습니다. 아래와 같이 `(runKey, committee)` 조합을 기록해 이중 제출을 차단하세요.
-
-  ```solidity
-  mapping(bytes32 => mapping(address => bool)) public shardSubmitted;
-
-  function submitShard(...) external onlyRole(COMMITTEE_ROLE) {
-      ...
-      require(!shardSubmitted[runKey][msg.sender], "duplicate shard");
-      shardSubmitted[runKey][msg.sender] = true;
-      uint256 newCount = ++shardCountForRun[runKey];
-      ...
-  }
-  ```
-
-- **CID 검증:** shardCid 길이를 제한하고, 필요 시 `bytes32` 해시 값과 페어로 제출하도록 강제하면 조작 가능성을 낮출 수 있습니다.
-- **임계치 조정 이벤트:** `setCommitteeThreshold` 실행 시 이벤트를 발행하면 오프체인 서비스가 새로운 quorum을 반영하기 쉽습니다.
-
-### 오프체인 및 운영 측면
-
-- **IPFS 신뢰성:** Pinning 서비스가 실패할 경우를 대비해 다중 게이트웨이와 백업 노드를 준비합니다.
-- **감사 로그:** 이벤트 스트림을 서명된 로그로 별도 저장해 사후 감사가 가능하도록 합니다.
-- **키 보관 정책:** Committee 멤버는 HSM 또는 MPC 지갑을 사용해 shard에 접근하는 개인키를 보호해야 합니다.
-- **런북 작성:** 승인 실패 시 재시도 절차, shard 재업로드 정책, 키 회수 프로세스를 문서화합니다.
-
-### 실습 과제
-
-1. 중복 제출 방지 로직과 임계치 변경 이벤트를 구현하고 단위 테스트를 작성합니다.
-2. `LicenseManager`에 만료 시간 검증 로직을 추가하고, 만료된 라이선스로 `requestCodeExecution`이 호출될 때 revert되는지 테스트합니다.
-3. Hardhat Network에서 위 시나리오를 모두 검증한 뒤, Sepolia에 배포하고 이벤트 로그를 확인해 봅니다.
-
 ## 테스트
+
+Duration: 20
 
 #### 1. `apps/on-chain` 디렉터리에서 종속성을 설치합니다.
 
@@ -585,7 +534,75 @@ npx hardhat test test/CommitteeManager.test.ts
 - `licenseManager.pauseCodeExecution` 이후 shard 제출이 거부되는지 확인
 - 동일 runNonce에 대해 threshold 이상 shard가 모였을 때 `ExecutionApproved` 이벤트가 발생하는지 확인
 
-이 과정을 통해 스마트 컨트랙트가 설계 의도대로 동작하는지 조기에 검증할 수 있습니다.
+## Ethernaut를 통한 취약점 학습
+
+Duration: 29
+
+이번 단계에서는 OpenZeppelin이 운영하는 CTF(Capture The Flag) 스타일 학습 환경인 [Ethernaut](https://ethernaut.openzeppelin.com/)를 활용해 대표적인 온체인 취약점을 체험합니다. 직접 공격 트랜잭션을 만들어 레벨을 클리어한 뒤, 동일한 패턴을 우리 프로젝트 컨트랙트에 어떻게 적용하거나 예방할 수 있을지 기록합니다.
+
+### 진행 방법
+
+- **환경 준비:** Remix 또는 Hardhat 스크립트를 이용해 레벨 인스턴스를 배포하고, 메타마스크 테스트 지갑을 연결합니다.
+- **가설 세우기:** 레벨 설명에서 요구하는 목표를 정리하고, 어떤 취약점 유형(재진입, delegatecall, 권한 착오 등)이 연관돼 있는지 추측합니다.
+- **익스플로잇 구현:** 트랜잭션 시퀀스나 공격용 컨트랙트를 작성해 레벨을 클리어합니다. 실패 로그를 꼼꼼히 남기고, 스토리지/이벤트를 추적하며 원인을 분석합니다.
+- **회고:** 취약점이 발생한 이유와 우리의 `LicenseManager`, `CommitteeManager`에 대응되는 부분을 비교해 보완 아이디어를 메모합니다.
+
+### 권장 학습 루트
+
+- **Fallback / Fallout:** 초기 권한 설정과 `receive()` 함수 오용으로 소유권이 탈취되는 시나리오입니다. AccessControl 초기화 로직을 재검토할 때 참고합니다.
+- **Coin Flip / Telephone:** 온체인 난수 및 delegatecall 사용의 위험성을 다루며, 오프체인 의존 데이터를 어떻게 검증해야 하는지 생각하게 해 줍니다.
+- **Token / Re-entrancy:** ERC 토큰 구현에서 흔히 나오는 정수 언더플로·재진입 문제를 실습합니다. `requestCodeExecution`처럼 토큰을 소각하는 함수와 비교해 봅니다.
+- **Preservation / Elevator:** 스토리지 레이아웃과 라이브러리 호출을 악용하는 사례로, 업그레이더블 컨트랙트나 외부 라이브러리를 사용할 때의 주의점을 짚어볼 수 있습니다.
+
+### 실습
+
+이번 세션에서는 튜토리얼을 같이 진행합니다. Hello Ethernaut(https://ethernaut.openzeppelin.com/level/0)는 게임 전체 흐름과 콘솔 도구를 익히기 위한 튜토리얼 레벨입니다.
+
+#### 1. 지갑 및 네트워크 세팅
+
+- 데스크톱 브라우저에 MetaMask 확장 프로그램을 설치하고 새 지갑을 생성합니다.
+- MetaMask 좌측 상단 네트워크 드롭다운에서 `Sepolia`를 선택합니다. Ethernaut는 `Sepolia`, `Optimism Sepolia`, `Arbitrum Sepolia`, `Localhost(31337)`를 지원하므로 필요하면 해당 네트워크를 추가 등록한 뒤 전환할 수 있습니다.
+- 상단 바의 `Connect wallet` 버튼으로 사이트와 지갑을 연결하고, 잔액이 없다면 공식 Sepolia Faucet(Alchemy, Infura, QuickNode 등)에서 테스트 ETH를 요청합니다.
+
+#### 2. 브라우저 콘솔 열기
+
+macOS의 경우 `Shift+Cmd+I`, Windows의 F12로 콘솔을 열고, 최초 메시지에 표시되는 `player` 주소를 확인합니다.
+
+언제든지 `player`를 입력해 현재 플레이어 주소를 확인할 수 있고, `getBalance(player)`로 잔액을 조회할 수 있습니다. Chrome 62+에서는 `await getBalance(player)`를 사용하면 `Promise`를 펼치지 않아도 됩니다.
+
+#### 3. 레벨 인스턴스 생성
+
+`Get new instance` 버튼을 클릭하고 MetaMask 트랜잭션을 승인합니다. 이 과정에서 `Instance.sol`이 선택한 네트워크에 새로 배포됩니다. 배포가 끝나면 콘솔에 인스턴스 주소와 `contract` 헬퍼가 자동으로 출력됩니다.
+
+문제 발생 시 `Reset instance`로 기존 인스턴스를 폐기하고 재배포할 수 있습니다.
+![ethernaut instance](./images/ethernaut_instance.png)
+
+#### 4. 도움말 및 메인 컨트랙트 확인
+
+`help()` 명령으로 Ethernaut가 제공하는 콘솔 헬퍼 목록을 확인합니다.
+![ethernaut help](./images/ethernaut_help.png)
+
+`ethernaut`를 입력하면 게임의 메인 컨트랙트 `Ethernaut.sol`에 접근할 수 있습니다.
+![ethernaut ethernaut](./images/ethernaut_ethernaut.png)
+
+`contract`를 입력하면 게임의 발급받은 컨트랙트 `Instance.sol`에 접근할 수 있습니다.
+![ethernaut ethernaut](./images/ethernaut_contract.png)
+
+#### 5. Hello Ethernaut 컨트랙트 탐험
+
+- 콘솔에 자동으로 주입된 `contract` 객체가 나만의 `Instance` 컨트랙트입니다. `await contract.info()`를 입력하면 다음 단계 안내가 나오고, 지시에 맞춰 체인처럼 함수를 따라가면 됩니다.
+
+![ethernaut soution](./images/ethernaut_solution.png)
+
+#### 6. **인스턴스 제출**
+
+모든 단계를 마쳤다면 페이지 하단의 `Submit instance` 버튼을 눌러 Ethernaut 메인 컨트랙트에 결과를 전송합니다.
+
+![ethernaut done](./images/ethernaut_done.png)
+
+![ethernaut code](./images/ethernaut_code.png)
+
+위 과정을 통해 콘솔 헬퍼 사용법, 인스턴스 생성/제출 플로우, 그리고 단순한 읽기·쓰기 호출을 모두 체험할 수 있습니다. 이후 레벨도 동일한 UX를 따르므로 이 실습을 완전히 익혀 두면 Ethernaut 전반과 실제 스마트컨트랙트 디버깅 과정이 훨씬 수월해집니다.
 
 ## 축하합니다
 
@@ -598,11 +615,9 @@ Duration: 1
 1. [Lit Protocol](https://www.litprotocol.com/): Lit Protocol은 key와 secrets을 관리하기 위한 탈중앙화 네트워크 프로토콜입니다. 본 프로젝트는 이러한 Lit Protocol에서 영감을 받아, DKG(Distributed Key Generation) 개념을 기반으로 이를 솔리디티로 구현하였습니다. Lit Protocol에 대한 보다 자세한 내용은 [공식 백서](https://github.com/LIT-Protocol/whitepaper)를 참고하시기 바랍니다.
 2. [IPFS Concepts](https://docs.ipfs.tech/concepts/): [IPFS](https://github.com/ipfs)는 Web3 생태계에서는 중대형 오픈소스 프로젝트입니다. 또한, 이에 대한 구현 원리를 이해하기 위해서 Merkle DAG, UnixFS, DHT, Pub/Sub 모델(Gossip), BitSwap 등 Computer Sicence 관련 배경지식을 많이 요구합니다.
 3. [proto school](https://proto.school/tutorials): IPFS나 filecoin과 같은 분산형 웹 스토리지 시스템에 관한 기술 튜토리얼입니다.
+4. [Sharmir’s Secret Sharing](https://medium.com/@sineta01/sharmirs-secret-sharing%EC%9D%84-%EC%82%B4%ED%8E%B4%EB%B3%B4%EC%9E%90-eca906e17a4c): 샤미르 분산 공유(Sharmir’s Secret Sharing)관한 설명입니다.
 
 ### 참고 자료
 
 1. [openzeppelin의 contract관련 개발 문서](https://docs.openzeppelin.com/contracts)
-2. [EIP-20: ERC-20(Token Standard)](https://eips.ethereum.org/EIPS/eip-20)
-3. [EIP-165: ERC-165(Standard Interface Detection)](https://eips.ethereum.org/EIPS/eip-165)
-4. [EIP-721: ERC-721(Non-Fungible Token Standard)](https://eips.ethereum.org/EIPS/eip-721)
-5. [EIP-1155: ERC-1155(Multi Token Standa)](https://eips.ethereum.org/EIPS/eip-1155)
+2. [ethernaut](https://ethernaut.openzeppelin.com)

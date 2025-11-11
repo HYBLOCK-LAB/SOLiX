@@ -7,7 +7,7 @@ tags: Solidity, Blockchain, Smart Contracts
 authors: Jiseop Shin
 duration: 110
 
-# Week 3: Smart Contract 개발 및 보안 사항 수정
+# Week 3: Smart Contract 개발 및 온체인 취약점 학습
 
 ## 세션 소개
 
@@ -33,7 +33,7 @@ Shard 제출, 위원회 관리 등 `CommitteeManager`에 필요한 기능을 설
 
 수정한 내용을 바탕으로 테스트 및 배포를 진행합니다.
 
-#### 5. Ethernaut로 취약점 학습
+#### 5. Ethernaut을 통한 취약점 학습
 
 Ethernaut 레벨을 직접 플레이하면서 자주 등장하는 온체인 취약점 패턴을 익히고, 이를 현재 프로젝트 컨트랙트에 어떻게 적용할지 정리합니다.
 
@@ -242,11 +242,11 @@ Duration: 15
 아래의 코드는 SSS를 적용하고 IPFS를 이용해 SSS를 적용한 코드입니다.
 
 ```ts
-import { randomBytes, createHash } from "crypto";
-import { split, combine } from "shamirs-secret-sharing";
-import { create as createIpfsClient } from "ipfs-http-client";
+import { randomBytes, createHash } from 'crypto';
+import { split, combine } from 'shamirs-secret-sharing';
+import { create as createIpfsClient } from 'ipfs-http-client';
 
-const ipfs = createIpfsClient({ url: "https://storacha.network/" });
+const ipfs = createIpfsClient({ url: 'https://storacha.network/' });
 
 type ShardEnvelope = {
   runNonce: `0x${string}`;
@@ -258,9 +258,7 @@ type ShardEnvelope = {
 
 const dek = randomBytes(32); // 실행 1회에 사용될 AES-256 키
 const quorum = { shares: 5, threshold: 3 };
-const runNonce = `0x${createHash("sha256")
-  .update(randomBytes(32))
-  .digest("hex")}`;
+const runNonce = `0x${createHash('sha256').update(randomBytes(32)).digest('hex')}`;
 
 // 분할 + 메타데이터 부착 + IPFS 업로드
 const shards: ShardEnvelope[] = split(dek, quorum).map((raw, idx) => ({
@@ -275,7 +273,7 @@ for (const shard of shards) {
     runNonce: shard.runNonce,
     committeeId: shard.committeeId,
     expiresAt: shard.expiresAt,
-    data: shard.data.toString("base64"),
+    data: shard.data.toString('base64'),
   });
   const { cid } = await ipfs.add(payload);
   shard.cid = cid.toString(); // ShardSubmitted 이벤트로 온체인에 기록
@@ -285,13 +283,13 @@ for (const shard of shards) {
 const shardsForRecovery = await Promise.all(
   shards.slice(0, quorum.threshold).map(async (shard) => {
     const file = await ipfs.cat(shard.cid!);
-    const parsed = JSON.parse(Buffer.from(file).toString("utf8"));
-    return Buffer.from(parsed.data, "base64");
+    const parsed = JSON.parse(Buffer.from(file).toString('utf8'));
+    return Buffer.from(parsed.data, 'base64');
   })
 );
 
 const recoveredDek = combine(shardsForRecovery);
-console.assert(dek.equals(recoveredDek), "복원 실패 시 위원회 응답 재요청");
+console.assert(dek.equals(recoveredDek), '복원 실패 시 위원회 응답 재요청');
 ```
 
 ## Committee Manager 구현
@@ -856,7 +854,7 @@ macOS의 경우 `Shift+Cmd+I`, Windows의 F12로 콘솔을 열고, 최초 메시
 
 Duration: 1
 
-축하합니다! 성공적으로 License 관련 컨트랙트를 작성하고 IPFS에 대해 익혔습니다. 다음 시간에는 위원회 관련 컨트랙트 개발과 기존 컨트랙트에서 보안할 점을 확인하도록 하겠습니다.
+축하합니다! 이번 프로젝트에서 사용된 IPFS와 샤미르 비밀공유에 대해 알아보았습니다. 또한 Committee 관련 컨트랙트를 작성하고 Ethernaut을 통해 on chain에서 발생할 수 있는 취약점 학습하는 방법을 성공적으로 익혔습니다. 다음 시간에는 기존 컨트랙트에서 발생할 수 있는 취약점을 보안하고 테스트를 진행하도록 하겠습니다.
 
 ### 도움이 될 만한 자료
 

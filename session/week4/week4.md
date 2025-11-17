@@ -1,5 +1,5 @@
 id: html
-summary: 프로젝트 요구사항에 알맞게 Smart Contract를 개발한다.
+summary: 컨트랙트에서 발생할 수 있는 보안 취약점을 이해하고 수정할 수 있다.
 categories: Solidity
 status: Published
 feedback email: sinphi03@gmail.com
@@ -25,9 +25,16 @@ Ethernaut 레벨을 바탕으로 취약점 재현 과정, 악용 시나리오, �
 
 `CommitteeManager`, `LicenseManager` 등 핵심 컨트랙트와 관련 오프체인 서비스의 접근 제어, 재진입, 입력 검증 항목을 중심으로 취약점을 점검합니다.
 
+- 라이선스 만료 정보는 `_expiry[user][codeId]`에 묶여 있지만 ERC-1155 토큰 전송은 그대로 열려 있어, 만료 직전에 토큰을 새 지갑으로 옮기면 만료 검증을 무력화할 수 있습니다.
+- `CommitteeManager.submitShard`가 `LicenseManager`의 `RunRequested` 이벤트를 확인하지 않아서, 위원이 실제 요청 없이도 `ExecutionApproved`를 생성해 임의 코드 복호화가 가능한 인증 우회 취약점이 존재했습니다. 또한 `hasSubmitted`와 카운트 맵이 runNonce 기준으로 고정되어 있어 공격자가 임의 nonce로 선점하면 영구적으로 DoS가 발생했습니다.
+
 #### 3. 취약점 수정 및 개선 작업
 
 우선순위가 높은 취약점부터 컨트랙트 로직, 이벤트를 수정하고 코드 리뷰를 통해 개선 사항을 확정합니다.
+
+- 라이선스를 타 주소로 이전하지 못하도록 ERC-1155의 `_update` 훅을 오버라이드해 사용자 간 전송을 모두 차단하고, `requestCodeExecution` 시 `runNonce`별 실행 요청을 온체인에 기록/검증하는 `hasRunRequest` 뷰를 도입했습니다.(`apps/on-chain/contracts/LicenseManager.sol`)
+- `CommitteeManager`는 실행 요청 여부를 `licenseManager.hasRunRequest`로 검증한 뒤에만 샤드를 집계하며, runNonce별 버전 관리와 `resetRunState` 관리 기능을 추가해 악성 위원의 DoS를 즉시 정리할 수 있도록 했습니다.(`apps/on-chain/contracts/CommitteeManager.sol`)
+- 상기 변경을 검증하기 위해 Hardhat 테스트에 새 시나리오(퍼블리셔 권한, 비양도성, 실행 요청 필요, 관리자 리셋 등)를 추가하고, `npx hardhat test`로 전체 테스트 스위트를 통과시켰습니다.
 
 #### 4. 최종 테스트
 
@@ -315,7 +322,7 @@ modifier noReentrant() {
 
 `isLastFloor`는 `goTo` 함수 내에서 두 번 호출된다. 처음은 조건 검사이고 두 번째는 top을 변경하기 위한 용도이다. 처음 `isLastFloor`가 호출되었을 때 false이고 그 다음 호출되기 전에 true라면 top은 true로 바뀔 수 있다. Build의 isLastFloor가 다음과 같이 동작하도록 구현하면 된다.
 
-```
+```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
@@ -414,17 +421,187 @@ uint256, address, bool 전부 결국 32바이트 슬롯에 저장되기 때문�
 
 delegatecall을 사용할 때는 context preserving 된다는 시실과 storage 변수들이 어떻게 저장되고 접근되는지 이해가 필요하다.
 
-## 프로젝트 취약점 점검
-
-Duration: 10
-
 ## 취약점 수정 및 개선 작업
 
 Duration: 20
 
+### 프로젝트 취약점 점검
+
+#### 1. 만료 우회 + 양도성 토큰
+
+`LicenseManager`는 `_expiry[user][codeId]`를 통해 만료 시간을 추적하지만, 기본 ERC‑1155 전송 로직을 그대로 두어 사용자가 `safeTransferFrom`으로 실행권 토큰을 다른 지갑으로 넘길 수 있었습니다. 공격자는 만료 직전에 새 지갑으로 토큰을 옮긴 뒤, 새 지갑으로 `requestCodeExecution`을 호출해 만료 검증을 사실상 무력화할 수 있었습니다.
+
+#### 2. 요청 없는 복호화 및 nonce DoS:
+
+`CommitteeManager`의 `submitShard`는 `LicenseManager`가 발행하는 `RunRequested` 이벤트를 검증하지 않아서, 위원이 임의의 `codeId`/`runNonce`로 샤드를 올려 `ExecutionApproved` 이벤트를 만들 수 있었습니다. 동시에 `hasSubmitted`와 `shardCountForRun` 키가 단순 `runNonce` 기반이라 악성 위원이 가짜 nonce를 **선점하면** 카운트가 초기화되지 않아 영구 DoS가 가능했습니다.
+
+#### 3. 운영 통제 부재
+
+관리자에게 실행 상태를 강제로 비우는 수단이 없어, 이상 징후가 감지되어도 진행 중인 `runNonce`를 리셋할 방법이 없습니다.
+
+위 취약점을 제거하기 위해 컨트랙트 코드를 다음과 같이 개편했습니다.
+
+### LicenseManager 수정
+
+상단에 에러를 하나 정의합니다. 라이선스 토큰을 임의로 다른 지갑으로 옮길 수 없도록 막는 사용자 정의 오류입니다.
+
+```solidity
+contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
+    bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
+
+    error LicenseTransferDisabled();
+    ...
+```
+
+실행 요청 여부를 나타내는 상태를 추가합니다.
+
+```solidity
+mapping(bytes32 => bool) private _runRequests;
+```
+
+실행 요청을 한 번만 등록하도록 `runKey`를 추적하고, `_update`를 통해 사용자 간 ERC‑1155 전송을 아예 차단해 라이선스를 임의 이관할 수 없게 합니다.
+
+```solidity
+function requestCodeExecution(
+    uint256 codeId,
+    bytes32 runNonce,
+    bytes calldata recipientPubKey
+) external override {
+    _requireCodeExists(codeId);
+    require(!_codes[codeId].paused, "Code is paused");
+    require(balanceOf(msg.sender, codeId) > 0, "Insufficient runs");
+    uint256 expiry = _expiry[msg.sender][codeId];
+    require(expiry == 0 || block.timestamp <= expiry, "License expired");
+    bytes32 runKey = keccak256(abi.encodePacked(codeId, msg.sender, runNonce));
+    require(!_runRequests[runKey], "Run already requested");
+
+    _burn(msg.sender, codeId, 1);
+    _runRequests[runKey] = true;
+    emit RunRequested(codeId, msg.sender, runNonce, recipientPubKey, block.timestamp);
+}
+
+function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory amounts
+) internal override {
+    if (from != address(0) && to != address(0)) {
+        revert LicenseTransferDisabled();
+    }
+    super._update(from, to, ids, amounts);
+}
+```
+
+또한, 오프체인에서 실행 요청 여부를 알 수 있도록 다음과 같이 작성해 줍니다.
+
+```solidity
+function hasRunRequest(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) external view override returns (bool) {
+    return
+        _runRequests[
+            keccak256(abi.encodePacked(codeId, requester, runNonce))
+        ];
+}
+```
+
+### CommitteeManager
+
+각 실행 버전을 확인할 수 있도록 상태를 하나 추가합니다.
+
+```solidity
+mapping(bytes32 => uint256) private runStateVersion;
+```
+
+`hasRunRequest` 검증으로 요청 없는 승인 우회를 막고 runKey를 버전 정보로 한 번 더 해싱해
+버전이 다른 경우 다른 요청으로 처리할 수 있도록 코드를 수정합니다.
+
+```solidity
+function submitShard(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce,
+    string calldata shardCid
+) external onlyRole(COMMITTEE_ROLE) {
+    require(licenseManager.checkCodeExists(codeId), "code is not exist");
+    require(licenseManager.checkCodeActive(codeId), "code is not active");
+    require(
+        licenseManager.hasRunRequest(codeId, requester, runNonce),
+        "run not requested"
+    );
+
+    bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+    bytes32 runKey = _versionedRunKey(baseKey);
+    if (hasSubmitted[runKey][msg.sender]) {
+        revert DuplicateShard(codeId, requester, msg.sender);
+    }
+    hasSubmitted[runKey][msg.sender] = true;
+    uint256 newCount = ++shardCountForRun[runKey];
+    emit ShardSubmitted(codeId, requester, runNonce, msg.sender, shardCid, newCount, committeeThreshold);
+
+    if (newCount >= committeeThreshold) {
+        emit ExecutionApproved(codeId, requester, runNonce, committeeThreshold, newCount);
+    }
+}
+
+function _baseRunKey(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) private pure returns (bytes32) {
+    return keccak256(abi.encodePacked(codeId, requester, runNonce));
+}
+
+function _versionedRunKey(
+    bytes32 baseKey
+) private view returns (bytes32) {
+    uint256 version = runStateVersion[baseKey];
+    return keccak256(abi.encodePacked(baseKey, version));
+}
+```
+
+실행 상태를 초기화하는 함수를 만들어 악성 nonce가 시스템을 영구적으로 잠그지 못하도록 수정합니다.
+
+```solidity
+function resetRunState(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+    uint256 newVersion = ++runStateVersion[baseKey];
+    bytes32 newKey = _versionedRunKey(baseKey);
+    shardCountForRun[newKey] = 0;
+    emit RunStateReset(codeId, requester, runNonce, newVersion);
+}
+```
+
 ## 최종 테스트
 
 Duration: 19
+
+최종적으로 작성해야할 컨트랙트는 다음과 같습니다.
+
+ILicenseManager.sol
+
+```solidity
+
+```
+
+LicenseManager.sol
+
+```solidity
+
+```
+
+CommitteeManager.sol
+
+```solidity
+
+```
 
 ## 축하합니다
 

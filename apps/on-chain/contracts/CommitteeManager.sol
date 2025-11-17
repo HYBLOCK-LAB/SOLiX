@@ -16,6 +16,7 @@ contract CommitteeManager is AccessControl {
 
     mapping(bytes32 => uint256) public shardCountForRun;
     mapping(bytes32 => mapping(address => bool)) private hasSubmitted;
+    mapping(bytes32 => uint256) private runStateVersion;
     uint256 public committeeThreshold = 3;
 
     //  라이선스 컨트랙트 읽기용
@@ -46,6 +47,13 @@ contract CommitteeManager is AccessControl {
         bytes32 indexed runNonce,
         uint256 threshold,
         uint256 count
+    );
+
+    event RunStateReset(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        uint256 newVersion
     );
 
     /* ========= 관리자 기능 ========= */
@@ -82,10 +90,13 @@ contract CommitteeManager is AccessControl {
     ) external onlyRole(COMMITTEE_ROLE) {
         require(licenseManager.checkCodeExists(codeId), "code is not exist");
         require(licenseManager.checkCodeActive(codeId), "code is not active");
-
-        bytes32 runKey = keccak256(
-            abi.encodePacked(codeId, requester, runNonce)
+        require(
+            licenseManager.hasRunRequest(codeId, requester, runNonce),
+            "run not requested"
         );
+
+        bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+        bytes32 runKey = _versionedRunKey(baseKey);
         if (hasSubmitted[runKey][msg.sender]) {
             revert DuplicateShard(codeId, requester, msg.sender);
         }
@@ -111,5 +122,32 @@ contract CommitteeManager is AccessControl {
                 newCount
             );
         }
+    }
+
+    function resetRunState(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+        uint256 newVersion = ++runStateVersion[baseKey];
+        bytes32 newKey = _versionedRunKey(baseKey);
+        shardCountForRun[newKey] = 0;
+        emit RunStateReset(codeId, requester, runNonce, newVersion);
+    }
+
+    function _baseRunKey(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(codeId, requester, runNonce));
+    }
+
+    function _versionedRunKey(
+        bytes32 baseKey
+    ) private view returns (bytes32) {
+        uint256 version = runStateVersion[baseKey];
+        return keccak256(abi.encodePacked(baseKey, version));
     }
 }

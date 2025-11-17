@@ -15,6 +15,8 @@ import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
 contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
 
+    error LicenseTransferDisabled();
+
     /* ========= 구조/상태 ========= */
 
     struct CodeInfo {
@@ -33,6 +35,9 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // account => codeId => expiry
     // 계정별 만료시간: expiry[user][codeId] = timestamp
     mapping(address => mapping(uint256 => uint256)) private _expiry;
+
+    // 실행 요청 여부 (codeId, user, nonce)
+    mapping(bytes32 => bool) private _runRequests;
 
     uint256 private _nextCodeId = 1;
 
@@ -246,9 +251,14 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         require(balanceOf(msg.sender, codeId) > 0, "Insufficient runs");
         uint256 expiry = _expiry[msg.sender][codeId];
         require(expiry == 0 || block.timestamp <= expiry, "License expired");
+        bytes32 runKey = keccak256(
+            abi.encodePacked(codeId, msg.sender, runNonce)
+        );
+        require(!_runRequests[runKey], "Run already requested");
 
         // 1회 소진
         _burn(msg.sender, codeId, 1);
+        _runRequests[runKey] = true;
 
         emit RunRequested(
             codeId,
@@ -257,6 +267,17 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             recipientPubKey,
             block.timestamp
         );
+    }
+
+    function hasRunRequest(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external view override returns (bool) {
+        return
+            _runRequests[
+                keccak256(abi.encodePacked(codeId, requester, runNonce))
+            ];
     }
 
     // 소유자 혹은 사용자 대신 실행
@@ -340,5 +361,17 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             _codes[codeId].owner == msg.sender,
             "Caller is neither code owner nor admin"
         );
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal override(ERC1155) {
+        if (from != address(0) && to != address(0)) {
+            revert LicenseTransferDisabled();
+        }
+        super._update(from, to, ids, amounts);
     }
 }

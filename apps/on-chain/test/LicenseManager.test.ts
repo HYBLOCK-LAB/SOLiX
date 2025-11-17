@@ -76,8 +76,10 @@ describe("LicenseManager", async () => {
 
     // 여러 번 실행 요청 (3회)
     let consumed = 0n;
+    let lastRunNonce: `0x${string}` = "0x00";
     for (let i = 0; i < 3; i++) {
       const runNonce = keccak256(stringToBytes(`run-${i}`));
+      lastRunNonce = runNonce;
       const tx = await licenseManager.write.requestCodeExecution([
         codeId,
         runNonce,
@@ -103,5 +105,50 @@ describe("LicenseManager", async () => {
     const expectedBalance = runs - consumed;
     const onchainBalance = await licenseManager.read.balanceOf([to, codeId]);
     assert.equal(onchainBalance, expectedBalance);
+
+    const hasRun = await licenseManager.read.hasRunRequest([
+      codeId,
+      to,
+      lastRunNonce,
+    ]);
+    assert.equal(hasRun, true);
+  });
+
+  it("blocks license transfers between users", async () => {
+    const licenseManager = await viem.deployContract(
+      "contracts/LicenseManager.sol:LicenseManager",
+      ["ipfs://base/{id}.json"]
+    );
+
+    const wallets = await viem.getWalletClients();
+    const alice = wallets[0];
+    const bob = wallets[1];
+
+    const codeHash = keccak256(stringToBytes("role-locked"));
+    const cipherCid = "ipfs://role-locked";
+    await licenseManager.write.registerCode([codeHash, cipherCid], {
+      account: alice.account,
+    });
+    const nextId = await licenseManager.read.nextCodeId();
+    const codeId = BigInt(nextId) - 1n;
+
+    await licenseManager.write.issueLicense(
+      [codeId, alice.account.address, 1n, 0n],
+      { account: alice.account }
+    );
+
+    await assert.rejects(
+      licenseManager.write.safeTransferFrom(
+        [
+          alice.account.address,
+          bob.account.address,
+          codeId,
+          1n,
+          "0x",
+        ],
+        { account: alice.account }
+      ),
+      (error: any) => String(error).includes("LicenseTransferDisabled")
+    );
   });
 });

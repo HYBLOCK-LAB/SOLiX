@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { network } from "hardhat";
-import { keccak256, stringToBytes, getAddress } from "viem";
+import { keccak256, stringToBytes, getAddress, bytesToHex } from "viem";
 
 async function expectCustomError(
   promise: Promise<unknown>,
@@ -40,6 +40,24 @@ describe("CommitteeManager", async () => {
     await publicClient.getTransactionReceipt({ hash: tx });
     const nextId = await licenseManager.read.nextCodeId();
     return BigInt(nextId) - 1n;
+  }
+
+  async function issueAndRequestRun(
+    licenseManager: any,
+    codeId: bigint,
+    requester: any,
+    admin: any,
+    runNonce: `0x${string}`
+  ) {
+    const requesterAddress = getAddress(requester.account.address);
+    await licenseManager.write.issueLicense(
+      [codeId, requesterAddress, 3n, 0n],
+      { account: admin.account }
+    );
+    await licenseManager.write.requestCodeExecution(
+      [codeId, runNonce, bytesToHex(stringToBytes("pubkey"))],
+      { account: requester.account }
+    );
   }
 
   it("allows admin to update committee threshold", async () => {
@@ -101,6 +119,14 @@ describe("CommitteeManager", async () => {
     const requesterAddress = getAddress(requester.account.address);
     const runNonce = keccak256(stringToBytes("run-1"));
 
+    await issueAndRequestRun(
+      licenseManager,
+      codeId,
+      requester,
+      admin,
+      runNonce
+    );
+
     await viem.assertions.emitWithArgs(
       committeeManager.write.submitShard(
         [codeId, requesterAddress, runNonce, "ipfs://shard-1"],
@@ -153,6 +179,65 @@ describe("CommitteeManager", async () => {
       committeeManager,
       "ExecutionApproved",
       [codeId, requesterAddress, runNonce, 3n, 3n]
+    );
+  });
+
+  it("requires a valid run request and allows admin reset", async () => {
+    const licenseManager = await deployLicenseManager();
+    const committeeManager = await deployCommitteeManager(
+      licenseManager.address
+    );
+
+    const codeId = await prepareCode(licenseManager, "code-v3");
+
+    const wallets = await viem.getWalletClients();
+    const admin = wallets[0];
+    const committee = wallets[1];
+    const requester = wallets[2];
+    const requesterAddress = getAddress(requester.account.address);
+    const runNonce = keccak256(stringToBytes("run-reset"));
+
+    await committeeManager.write.addCommittee([committee.account.address], {
+      account: admin.account,
+    });
+
+    await expectCustomError(
+      committeeManager.write.submitShard(
+        [codeId, requesterAddress, runNonce, "ipfs://shard-reset"],
+        { account: committee.account }
+      ),
+      "run not requested"
+    );
+
+    await issueAndRequestRun(
+      licenseManager,
+      codeId,
+      requester,
+      admin,
+      runNonce
+    );
+
+    await committeeManager.write.submitShard(
+      [codeId, requesterAddress, runNonce, "ipfs://shard-original"],
+      { account: committee.account }
+    );
+
+    await expectCustomError(
+      committeeManager.write.submitShard(
+        [codeId, requesterAddress, runNonce, "ipfs://shard-duplicate"],
+        { account: committee.account }
+      ),
+      "DuplicateShard"
+    );
+
+    await committeeManager.write.resetRunState(
+      [codeId, requesterAddress, runNonce],
+      { account: admin.account }
+    );
+
+    await committeeManager.write.submitShard(
+      [codeId, requesterAddress, runNonce, "ipfs://shard-after-reset"],
+      { account: committee.account }
     );
   });
 });

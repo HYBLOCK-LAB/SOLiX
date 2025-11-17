@@ -76,6 +76,11 @@ export class ShardSubmissionWorker {
       createdAt: now.toISOString(),
     });
 
+    const jitterMs = Math.floor(Math.random() * 3000);
+    if (jitterMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, jitterMs));
+    }
+
     await this.submitter.submitShard({
       codeId: BigInt(shard.codeId),
       requester: job.requester,

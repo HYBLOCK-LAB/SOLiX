@@ -27,7 +27,7 @@ export default function Home() {
           <div className="rounded-2xl border border-primary-25 bg-background-light-50 p-4 shadow-sm dark:border-surface-dark-75 dark:bg-surface-dark-75">
             <dt className="text-text-light-50 dark:text-text-dark-50">컨트랙트</dt>
             <dd className="mt-1 font-mono text-xs overflow-hidden text-ellipsis text-text-light-75 dark:text-text-dark-75">
-              {clientEnv.NEXT_PUBLIC_CONTRACT_ADDRESS}
+              {clientEnv.NEXT_PUBLIC_CONTRACT_LICENSE_ADDRESS}
             </dd>
           </div>
         </dl>

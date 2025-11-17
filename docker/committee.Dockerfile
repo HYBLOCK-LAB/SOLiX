@@ -55,6 +55,7 @@ start_instance() {
   echo "Starting committee instance $((idx + 1)) on port $PORT"
   PORT=$PORT node dist/main.js &
   pids="$pids $!"
+  sleep 1
 }
 
 cleanup() {

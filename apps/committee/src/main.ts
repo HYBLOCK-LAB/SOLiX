@@ -18,6 +18,7 @@ import { ShardSubmissionQueue } from "./infrastructure/queue/shard-submission-qu
 import { ShardSubmissionWorker } from "./application/workers/shard-submission-worker";
 import { CommitteeThresholdProvider } from "./application/services/committee-threshold-provider";
 import { RunRequestProcessor } from "./application/services/run-request-processor";
+import { CommitteeRoleEnsurer } from "./infrastructure/blockchain/committee-role-ensurer";
 
 async function bootstrap() {
   logger.info("Bootstrapping committee backend");
@@ -42,6 +43,14 @@ async function bootstrap() {
   };
   const committeeAddress =
     committeeAddressOverrides[committeeId] ?? account.address;
+
+  const committeeRoleEnsurer = new CommitteeRoleEnsurer(
+    publicClient,
+    walletClient,
+    env.committeeManagerAddress,
+    account
+  );
+  await committeeRoleEnsurer.ensureRole(committeeAddress);
 
   const shardEncryptor = new EcdhShardEncryptor();
   const shardPublisher = new PinataShardPublisher(env.pinataJwt);

@@ -1,6 +1,5 @@
 import type { SecretSharePayload } from "./types";
-
-const PRIME = BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+import { FIELD_PRIME } from "./fieldPrime";
 
 export function combineShares(shares: SecretSharePayload[]): Uint8Array {
   if (shares.length === 0) {
@@ -44,15 +43,15 @@ function interpolateAtZero(points: { x: bigint; y: bigint }[]): bigint {
 }
 
 function mod(value: bigint): bigint {
-  const result = value % PRIME;
-  return result >= 0 ? result : result + PRIME;
+  const result = value % FIELD_PRIME;
+  return result >= 0 ? result : result + FIELD_PRIME;
 }
 
 function modInverse(value: bigint): bigint {
   if (value === 0n) {
     throw new Error("Cannot invert zero");
   }
-  return modPow(mod(value), PRIME - 2n);
+  return modPow(mod(value), FIELD_PRIME - 2n);
 }
 
 function modPow(base: bigint, exponent: bigint): bigint {

@@ -1,6 +1,5 @@
 import { hexToBytes } from "../../utils/hex";
-
-const PRIME = BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+import { FIELD_PRIME } from "./fieldPrime";
 
 export interface SplitShare {
   index: number;
@@ -25,7 +24,7 @@ export function splitSecret(secretHex: `0x${string}`, totalShares: number, thres
   }
 
   const secretInt = bytesToBigInt(secretBytes);
-  if (secretInt >= PRIME) {
+  if (secretInt >= FIELD_PRIME) {
     throw new Error("Secret must be smaller than field prime");
   }
 
@@ -58,7 +57,7 @@ function evaluatePolynomial(coefficients: bigint[], x: bigint): bigint {
 function randomLessThanPrime(): bigint {
   while (true) {
     const candidate = bytesToBigInt(randomBytes(primeByteLength()));
-    if (candidate < PRIME) {
+    if (candidate < FIELD_PRIME) {
       return candidate;
     }
   }
@@ -86,14 +85,14 @@ function bigIntToHex(value: bigint): `0x${string}` {
 }
 
 function mod(value: bigint): bigint {
-  const result = value % PRIME;
-  return result >= 0 ? result : result + PRIME;
+  const result = value % FIELD_PRIME;
+  return result >= 0 ? result : result + FIELD_PRIME;
 }
 
 let cachedPrimeByteLength: number | undefined;
 function primeByteLength() {
   if (cachedPrimeByteLength === undefined) {
-    cachedPrimeByteLength = Math.ceil(PRIME.toString(2).length / 8);
+    cachedPrimeByteLength = Math.ceil(FIELD_PRIME.toString(2).length / 8);
   }
   return cachedPrimeByteLength;
 }

@@ -5,7 +5,9 @@ import type {
   SplitSecretParams,
 } from "../../domain/services/secret-sharing-service";
 
-const DEFAULT_PRIME = BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+const DEFAULT_PRIME = BigInt(
+  "0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+);
 
 export class ShamirSecretSharingService implements SecretSharingService {
   private readonly prime: bigint;

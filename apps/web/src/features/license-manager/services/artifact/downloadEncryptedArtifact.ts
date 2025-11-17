@@ -1,12 +1,11 @@
 import { keccak256 } from "viem";
 import { fetchIpfsResource } from "../../services/shards/ipfs";
 import { hexToBytes } from "../../utils/hex";
-import { FIXED_AES_GCM_IV_HEX } from "../encryption/iv";
 
 export interface ArtifactDownloadParams {
   cipherCid: string;
   encryptionKeyHex: `0x${string}`;
-  initializationVectorHex?: `0x${string}`;
+  initializationVectorHex: `0x${string}`;
   expectedHash: `0x${string}`;
   fileName?: string;
 }
@@ -19,7 +18,6 @@ export interface ArtifactDownloadResult {
 export async function downloadAndDecryptArtifact(
   params: ArtifactDownloadParams,
 ): Promise<ArtifactDownloadResult> {
-  const ivHex = params.initializationVectorHex ?? FIXED_AES_GCM_IV_HEX;
   console.log("[artifact] Download/decrypt start", {
     cid: params.cipherCid,
     expectedHash: params.expectedHash,
@@ -29,11 +27,11 @@ export async function downloadAndDecryptArtifact(
   const decrypted = await decryptWithAesGcm(
     encrypted,
     params.encryptionKeyHex,
-    ivHex,
+    params.initializationVectorHex,
   );
   console.log("[artifact] Secret used for decryption", {
     keyHex: params.encryptionKeyHex,
-    ivHex,
+    ivHex: params.initializationVectorHex,
   });
   console.log("[artifact] Payload decrypted", { bytes: decrypted.byteLength });
   const verifiedHash = verifyHash(decrypted, params.expectedHash);

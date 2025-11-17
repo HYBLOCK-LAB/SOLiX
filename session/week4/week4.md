@@ -25,16 +25,9 @@ Ethernaut 레벨을 바탕으로 취약점 재현 과정, 악용 시나리오, �
 
 `CommitteeManager`, `LicenseManager` 등 핵심 컨트랙트와 관련 오프체인 서비스의 접근 제어, 재진입, 입력 검증 항목을 중심으로 취약점을 점검합니다.
 
-- 라이선스 만료 정보는 `_expiry[user][codeId]`에 묶여 있지만 ERC-1155 토큰 전송은 그대로 열려 있어, 만료 직전에 토큰을 새 지갑으로 옮기면 만료 검증을 무력화할 수 있습니다.
-- `CommitteeManager.submitShard`가 `LicenseManager`의 `RunRequested` 이벤트를 확인하지 않아서, 위원이 실제 요청 없이도 `ExecutionApproved`를 생성해 임의 코드 복호화가 가능한 인증 우회 취약점이 존재했습니다. 또한 `hasSubmitted`와 카운트 맵이 runNonce 기준으로 고정되어 있어 공격자가 임의 nonce로 선점하면 영구적으로 DoS가 발생했습니다.
-
 #### 3. 취약점 수정 및 개선 작업
 
 우선순위가 높은 취약점부터 컨트랙트 로직, 이벤트를 수정하고 코드 리뷰를 통해 개선 사항을 확정합니다.
-
-- 라이선스를 타 주소로 이전하지 못하도록 ERC-1155의 `_update` 훅을 오버라이드해 사용자 간 전송을 모두 차단하고, `requestCodeExecution` 시 `runNonce`별 실행 요청을 온체인에 기록/검증하는 `hasRunRequest` 뷰를 도입했습니다.(`apps/on-chain/contracts/LicenseManager.sol`)
-- `CommitteeManager`는 실행 요청 여부를 `licenseManager.hasRunRequest`로 검증한 뒤에만 샤드를 집계하며, runNonce별 버전 관리와 `resetRunState` 관리 기능을 추가해 악성 위원의 DoS를 즉시 정리할 수 있도록 했습니다.(`apps/on-chain/contracts/CommitteeManager.sol`)
-- 상기 변경을 검증하기 위해 Hardhat 테스트에 새 시나리오(퍼블리셔 권한, 비양도성, 실행 요청 필요, 관리자 리셋 등)를 추가하고, `npx hardhat test`로 전체 테스트 스위트를 통과시켰습니다.
 
 #### 4. 최종 테스트
 

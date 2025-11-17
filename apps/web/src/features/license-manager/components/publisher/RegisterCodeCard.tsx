@@ -11,6 +11,7 @@ import { licenseManagerAbi } from "../../abi";
 import { getCommitteeMembers } from "../../../../lib/env";
 import { registerShards } from "../../services/shards/registerShards";
 import { splitSecret } from "../../services/shards/shamirSplit";
+import { packEncryptionBundle } from "../../services/encryption/bundle";
 
 const MAX_FILE_SIZE_BYTES = 256 * 1024 * 1024;
 const DEFAULT_SHARD_EXPIRY_SECONDS = 60 * 60; // 1 hour
@@ -33,8 +34,8 @@ export function RegisterCodeCard() {
   const [status, setStatus] = useState<string | null>(null);
   const [shardStatus, setShardStatus] = useState<ShardStatusState>({ state: "idle" });
   const [encryptionDetails, setEncryptionDetails] = useState<{
-    keyHex: string;
-    ivHex: string;
+    keyHex: `0x${string}`;
+    ivHex: `0x${string}`;
     algorithm: string;
     size: number;
   } | null>(null);
@@ -85,7 +86,16 @@ export function RegisterCodeCard() {
         await publicClient.waitForTransactionReceipt({ hash: txHash });
       }
 
-      const shares = splitSecret(encryptionDetails.keyHex as `0x${string}`, committeeMembers.length, threshold);
+      const encryptionBundle = packEncryptionBundle({
+        keyHex: encryptionDetails.keyHex,
+        ivHex: encryptionDetails.ivHex,
+      });
+      console.log("[register] Encryption bundle prepared", {
+        keyBytes: (encryptionDetails.keyHex.length - 2) / 2,
+        ivBytes: (encryptionDetails.ivHex.length - 2) / 2,
+        bundleBytes: (encryptionBundle.length - 2) / 2,
+      });
+      const shares = splitSecret(encryptionBundle, committeeMembers.length, threshold);
       if (shares.length !== committeeMembers.length) {
         throw new Error("Shard 생성에 실패했습니다.");
       }
@@ -106,6 +116,10 @@ export function RegisterCodeCard() {
           byteLength: share.byteLength,
           expiresAt,
         };
+      });
+      console.log("[register] Shard payloads", {
+        runNonce,
+        byteLengths: shardPayloads.map((payload) => payload.byteLength),
       });
 
       await registerShards({
@@ -140,8 +154,8 @@ export function RegisterCodeCard() {
       setCodeHash(uploadResult.codeHash);
       setCipherCid(uploadResult.cipherCid);
       setEncryptionDetails({
-        keyHex: uploadResult.encryptionKeyHex,
-        ivHex: uploadResult.initializationVectorHex,
+        keyHex: uploadResult.encryptionKeyHex as `0x${string}`,
+        ivHex: uploadResult.initializationVectorHex as `0x${string}`,
         algorithm: uploadResult.algorithm,
         size: uploadResult.size,
       });
@@ -278,9 +292,7 @@ export function RegisterCodeCard() {
           <p className="text-secondary-100">등록 완료! Tx: {transactionHash.slice(0, 8)}...</p>
         )}
         {error && (
-          <p className="max-h-[4.5rem] overflow-hidden text-rose-500">
-            오류: {error.message}
-          </p>
+          <p className="max-h-[4.5rem] overflow-hidden text-rose-500">오류: {error.message}</p>
         )}
       </footer>
 
@@ -293,7 +305,10 @@ export function RegisterCodeCard() {
         </p>
         <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-text-light-75 dark:text-text-dark-75 sm:grid-cols-2">
           {committeeMembers.map((member, index) => (
-            <div key={member} className="rounded border border-primary-25 p-2 dark:border-primary-75">
+            <div
+              key={member}
+              className="rounded border border-primary-25 p-2 dark:border-primary-75"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[10px] uppercase text-text-light-50 dark:text-text-dark-50">

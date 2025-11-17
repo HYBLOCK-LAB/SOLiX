@@ -30,6 +30,30 @@ export const committeeAbi = [
     inputs: [],
     outputs: [{ type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "COMMITTEE_ROLE",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "hasRole",
+    stateMutability: "view",
+    inputs: [
+      { name: "role", type: "bytes32" },
+      { name: "account", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "addCommittee",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newCommittee", type: "address" }],
+    outputs: [],
+  },
 ] as const;
 
 export type CommitteeAbi = typeof committeeAbi;

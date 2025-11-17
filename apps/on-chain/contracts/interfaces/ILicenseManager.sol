@@ -139,6 +139,22 @@ interface ILicenseManager is IERC165 {
         bytes calldata recipientPubKey
     ) external;
 
+    // 실행 요청 여부 확인
+    function hasRunRequest(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external view returns (bool);
+
+    // 소유자 혹은 사용자 대신 실행
+    // function requestOnBehalf(
+    //     uint256 codeId,
+    //     address user,
+    //     bytes calldata recipientPubKey,
+    //     uint256 runNonce,
+    //     bytes calldata sig
+    // ) external;
+
     /* ========= View Helper ========= */
 
     function checkCodeActive(uint256 codeId) external view returns (bool);

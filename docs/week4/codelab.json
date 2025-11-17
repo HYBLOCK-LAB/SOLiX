@@ -1,0 +1,26 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2025-11-18T02:54:39+09:00",
+  "id": "html",
+  "duration": 105,
+  "title": "Week 4: 취약점 보완 및 테스트",
+  "authors": "Jiseop Shin",
+  "summary": "컨트랙트에서 발생할 수 있는 보안 취약점을 이해하고 수정할 수 있다.",
+  "source": "week4.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "solidity"
+  ],
+  "tags": [
+    "blockchain",
+    "smartcontracts",
+    "solidity"
+  ],
+  "url": "html"
+}

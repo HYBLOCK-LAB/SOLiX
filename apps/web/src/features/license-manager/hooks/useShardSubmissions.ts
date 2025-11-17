@@ -26,6 +26,8 @@ export interface ShardRun {
   lastUpdatedBlock: bigint;
 }
 
+const SHARD_POLL_INTERVAL_MS = 15_000;
+
 export function useShardSubmissions(codeId?: number | null, runNonce?: `0x${string}` | null) {
   const publicClient = usePublicClient();
   const queryClient = useQueryClient();
@@ -46,7 +48,9 @@ export function useShardSubmissions(codeId?: number | null, runNonce?: `0x${stri
     enabled: Boolean(publicClient && typeof codeId === "number" && codeId >= 0),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchInterval: false,
+    refetchInterval: SHARD_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnReconnect: true,
     queryFn: async (): Promise<ShardRun[]> => {
       if (!publicClient || codeId == null) return [];
 

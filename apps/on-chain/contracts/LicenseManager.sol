@@ -5,8 +5,17 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ILicenseManager} from "./interfaces/ILicenseManager.sol";
 
+// import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+// import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+// using ECDSA for bytes32;
+// using MessageHashUtils for bytes32;
+
 contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
+
+    error LicenseTransferDisabled();
 
     /* ========= 구조/상태 ========= */
 
@@ -26,6 +35,9 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
     // account => codeId => expiry
     // 계정별 만료시간: expiry[user][codeId] = timestamp
     mapping(address => mapping(uint256 => uint256)) private _expiry;
+
+    // 실행 요청 여부 (codeId, user, nonce)
+    mapping(bytes32 => bool) private _runRequests;
 
     uint256 private _nextCodeId = 1;
 
@@ -239,9 +251,14 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
         require(balanceOf(msg.sender, codeId) > 0, "Insufficient runs");
         uint256 expiry = _expiry[msg.sender][codeId];
         require(expiry == 0 || block.timestamp <= expiry, "License expired");
+        bytes32 runKey = keccak256(
+            abi.encodePacked(codeId, msg.sender, runNonce)
+        );
+        require(!_runRequests[runKey], "Run already requested");
 
         // 1회 소진
         _burn(msg.sender, codeId, 1);
+        _runRequests[runKey] = true;
 
         emit RunRequested(
             codeId,
@@ -251,6 +268,52 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             block.timestamp
         );
     }
+
+    function hasRunRequest(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external view override returns (bool) {
+        return
+            _runRequests[
+                keccak256(abi.encodePacked(codeId, requester, runNonce))
+            ];
+    }
+
+    // 소유자 혹은 사용자 대신 실행
+    // function requestOnBehalf(
+    //     uint256 codeId,
+    //     address user,
+    //     bytes calldata recipientPubKey,
+    //     uint256 runNonce,
+    //     bytes calldata sig
+    // ) external {
+    //     _requireCodeExists(codeId);
+
+    //     // 서명 검증
+    //     bytes32 h = keccak256(
+    //         abi.encodePacked(
+    //             "EXEC",
+    //             address(this),
+    //             codeId,
+    //             user,
+    //             recipientPubKey,
+    //             runNonce
+    //         )
+    //     );
+    //     address signer = h.toEthSignedMessageHash().recover(sig);
+    //     require(signer == _codes[codeId].owner || signer == user, "bad sig");
+
+    //     require(!_codes[codeId].paused, "paused");
+    //     require(balanceOf(user, codeId) > 0, "no runs");
+
+    //     uint256 expiry = _expiry[user][codeId];
+    //     require(expiry == 0 || block.timestamp <= expiry, "expired");
+
+    //     // 사용자의 실행권 소진(대리 실행)
+    //     _burn(user, codeId, 1);
+    //     emit RunRequested(codeId, user, recipientPubKey, block.timestamp);
+    // }
 
     /* ========= 뷰 헬퍼 ========= */
 
@@ -298,5 +361,17 @@ contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
             _codes[codeId].owner == msg.sender,
             "Caller is neither code owner nor admin"
         );
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal override(ERC1155) {
+        if (from != address(0) && to != address(0)) {
+            revert LicenseTransferDisabled();
+        }
+        super._update(from, to, ids, amounts);
     }
 }

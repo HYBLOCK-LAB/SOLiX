@@ -49,8 +49,12 @@ export class RunRequestProcessor {
     );
 
     if (!shard) {
-      logger.debug(
-        { codeId: run.codeId.toString(), requester: run.requester },
+      logger.warn(
+        {
+          codeId: run.codeId.toString(),
+          requester: run.requester,
+          committee: this.committeeAddress,
+        },
         "No shard assigned to this committee for run"
       );
       return { queued: false, reason: "NO_SHARD" };

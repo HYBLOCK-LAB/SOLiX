@@ -5,7 +5,9 @@ import type {
   SplitSecretParams,
 } from "../../domain/services/secret-sharing-service";
 
-const DEFAULT_PRIME = BigInt("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+const DEFAULT_PRIME = BigInt(
+  "0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+);
 
 export class ShamirSecretSharingService implements SecretSharingService {
   private readonly prime: bigint;
@@ -187,7 +189,9 @@ export class ShamirSecretSharingService implements SecretSharingService {
   }
 
   private bigIntToHex(value: bigint): `0x${string}` {
-    return `0x${this.mod(value).toString(16)}` as `0x${string}`;
+    const hex = this.mod(value).toString(16);
+    const padded = hex.length % 2 === 0 ? hex : `0${hex}`;
+    return `0x${padded}` as `0x${string}`;
   }
 
   private hexToBigInt(value: `0x${string}` | string): bigint {

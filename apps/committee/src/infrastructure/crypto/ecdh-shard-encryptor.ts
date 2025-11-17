@@ -11,17 +11,19 @@ export class EcdhShardEncryptor implements ShardEncryptor {
   async encrypt(input: ShardEncryptionInput): Promise<EncryptedShardPayload> {
     const recipient = this.normalize(input.recipientPublicKey);
     const share = this.normalize(input.secretShare);
+    const recipientBytes = this.hexToBuffer(recipient);
+    const shareBytes = this.hexToBuffer(share);
 
     const ecdh = createECDH("secp256k1");
     ecdh.generateKeys();
 
-    const sharedSecret = ecdh.computeSecret(Buffer.from(recipient, "hex"));
+    const sharedSecret = ecdh.computeSecret(recipientBytes);
     const key = createHash("sha256").update(sharedSecret).digest();
 
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-256-gcm", key, iv);
     const ciphertext = Buffer.concat([
-      cipher.update(Buffer.from(share, "hex")),
+      cipher.update(shareBytes),
       cipher.final(),
     ]);
     const authTag = cipher.getAuthTag();
@@ -37,5 +39,10 @@ export class EcdhShardEncryptor implements ShardEncryptor {
 
   private normalize(value: `0x${string}` | string): string {
     return value.startsWith("0x") ? value.slice(2) : value;
+  }
+
+  private hexToBuffer(value: string): Buffer {
+    const padded = value.length % 2 === 0 ? value : `0${value}`;
+    return Buffer.from(padded, "hex");
   }
 }

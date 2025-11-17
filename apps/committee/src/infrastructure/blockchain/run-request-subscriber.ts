@@ -5,30 +5,42 @@ import type { RunRequestProcessor } from "../../application/services/run-request
 
 export class RunRequestSubscriber {
   private unwatch?: () => void;
+  private currentClient: PublicClient;
+  private usePolling: boolean;
 
   constructor(
-    private readonly client: PublicClient,
+    private readonly httpClient: PublicClient,
+    private readonly wsClient: PublicClient | undefined,
     private readonly licenseContractAddress: `0x${string}`,
     private readonly processor: RunRequestProcessor,
     private readonly pollingIntervalMs: number
-  ) {}
+  ) {
+    this.currentClient = wsClient ?? httpClient;
+    this.usePolling = !wsClient;
+  }
 
   start() {
     if (this.unwatch) {
       return;
     }
 
-    this.unwatch = this.client.watchContractEvent({
+    this.watch();
+    logger.info(
+      this.usePolling
+        ? "RunRequested subscriber started (HTTP polling)"
+        : "RunRequested subscriber started (WebSocket)"
+    );
+  }
+
+  private watch() {
+    this.unwatch = this.currentClient.watchContractEvent({
       address: this.licenseContractAddress,
       abi: licenseManagerAbi,
       eventName: "RunRequested",
-      pollingInterval: this.pollingIntervalMs,
-      onError: (error) => {
-        logger.error(
-          { err: error },
-          "Error while processing RunRequested event"
-        );
-      },
+      ...(this.usePolling && this.pollingIntervalMs > 0
+        ? { pollingInterval: this.pollingIntervalMs }
+        : {}),
+      onError: (error) => this.handleError(error),
       onLogs: async (logs) => {
         for (const log of logs) {
           const args = log.args as Record<string, unknown>;
@@ -79,8 +91,6 @@ export class RunRequestSubscriber {
         }
       },
     });
-
-    logger.info("RunRequested subscriber started");
   }
 
   stop() {
@@ -92,14 +102,14 @@ export class RunRequestSubscriber {
   }
 
   private async resolveTimestamp(log: {
-    blockNumber?: bigint;
+    blockNumber?: bigint | null;
   }): Promise<number> {
     if (!log.blockNumber) {
       return Date.now();
     }
 
     try {
-      const block = await this.client.getBlock({
+      const block = await this.currentClient.getBlock({
         blockNumber: log.blockNumber,
       });
       return Number(block.timestamp) * 1000;
@@ -127,5 +137,42 @@ export class RunRequestSubscriber {
       return bytesToHex(pubKey) as `0x${string}`;
     }
     return undefined;
+  }
+
+  private handleError(error: unknown) {
+    logger.error({ err: error }, "Error while processing RunRequested event");
+    if (!this.usePolling && this.wsClient && this.shouldFallback(error)) {
+      logger.warn(
+        { err: error },
+        "WebSocket subscription error; switching to HTTP polling"
+      );
+      this.switchToPolling();
+    }
+  }
+
+  private switchToPolling() {
+    if (this.usePolling) return;
+    if (this.unwatch) {
+      try {
+        this.unwatch();
+      } catch {
+        // ignore
+      }
+      this.unwatch = undefined;
+    }
+    this.usePolling = true;
+    this.currentClient = this.httpClient;
+    this.watch();
+    logger.info("RunRequested subscriber restarted with HTTP polling");
+  }
+
+  private shouldFallback(error: unknown): boolean {
+    if (!error) return false;
+    const name = (error as { name?: string }).name ?? "";
+    const message = ((error as Error)?.message ?? "").toLowerCase();
+    if (name === "WebSocketRequestError" || name === "SocketClosedError") {
+      return true;
+    }
+    return message.includes("429") || message.includes("too many requests");
   }
 }

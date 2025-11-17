@@ -1,9 +1,10 @@
 import { toHex } from "../../utils/byteEncoding";
 import type { EncryptionResult } from "./types";
-
-const AES_ALGORITHM = "AES-GCM";
-const AES_KEY_LENGTH_BITS = 256;
-const AES_GCM_IV_LENGTH_BYTES = 12;
+import {
+  AES_ALGORITHM,
+  AES_GCM_IV_LENGTH_BYTES,
+  AES_KEY_LENGTH_BITS,
+} from "./constants";
 
 const AES_USAGES: KeyUsage[] = ["encrypt"];
 

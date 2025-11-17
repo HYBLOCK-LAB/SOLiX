@@ -3,6 +3,7 @@ import {
   createWalletClient,
   defineChain,
   http,
+  webSocket,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { AppConfig } from "../../config/env";
@@ -20,16 +21,29 @@ export function createViemClients(config: AppConfig) {
 
   const account = privateKeyToAccount(config.operatorPrivateKey);
 
+  const httpTransport = http(config.rpcUrl);
   const publicClient = createPublicClient({
     chain,
-    transport: http(config.rpcUrl),
+    transport: httpTransport,
   });
+  const wsPublicClient = config.rpcWsUrl
+    ? createPublicClient({
+        chain,
+        transport: webSocket(config.rpcWsUrl),
+      })
+    : undefined;
 
   const walletClient = createWalletClient({
     chain,
-    transport: http(config.rpcUrl),
+    transport: httpTransport,
     account,
   });
 
-  return { chain, account, publicClient, walletClient };
+  return {
+    chain,
+    account,
+    publicClient,
+    walletClient,
+    wsPublicClient,
+  };
 }

@@ -7,6 +7,7 @@ DOCS_DIR    ?= docs
 .PHONY: help \
 	docs \
 	contracts-install contracts-clean contracts-test contracts-deploy contracts-deploy-sepolia \
+	contracts-deploy-sepolia-cli contracts-verify-sepolia contracts-deploy-verify-sepolia \
 	web-install web-dev web-build web-start web-lint \
 	committee-install committee-dev committee-build committee-start \
 	docker-up docker-down docker-build
@@ -15,6 +16,7 @@ docs: ## Create HTML files for codelabs
 	@cd ./session/week1 && claat export week1.md && cd ../../ && rm -rf ./docs/week1/** && mv ./session/week1/html/** ./docs/week1/
 	@cd ./session/week2 && claat export week2.md && cd ../../ && rm -rf ./docs/week2/** && mv ./session/week2/html/** ./docs/week2/
 	@cd ./session/week3 && claat export week3.md && cd ../../ && rm -rf ./docs/week3/** && mv ./session/week3/html/** ./docs/week3/
+	@cd ./session/week4 && claat export week4.md && cd ../../ && rm -rf ./docs/week4/** && mv ./session/week4/html/** ./docs/week4/
 
 # 
 # Contracts
@@ -32,8 +34,8 @@ contracts-test: ## Run contract tests
 contracts-deploy: ## Deploy contracts to local network
 	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts
 
-contracts-deploy-sepolia: ## Deploy contracts to Sepolia network
-	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts --network sepolia
+contracts-deploy-verify-sepolia: ## Deploy and verify LicenseManager+CommitteeManager on Sepolia in one command
+	@bash apps/on-chain/scripts/deploy-verify-sepolia.sh
 
 # 
 # Web

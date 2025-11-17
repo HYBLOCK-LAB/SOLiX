@@ -1532,7 +1532,7 @@ cp .env.example .env
 - `NEXT_PUBLIC_CHAIN_NAME`: UI에 표시될 Chain 명입니다.
 - `NEXT_PUBLIC_CHAIN_RPC_URL`: dApp이 사용할 RPC Url입니다. 로컬 Hardhat에 연결하려면 `http://127.0.0.1:8545` 처럼 변경합니다.
 - `NEXT_PUBLIC_CHAIN_SYMBOL`: UI에 표시될 Chain 심볼입니다.
-- `NEXT_PUBLIC_CONTRACT_ADDRESS`: 앞서 배포한 LicenseManager 컨트랙트 주소입니다.
+- `NEXT_PUBLIC_CONTRACT_LICENSE_ADDRESS`: 앞서 배포한 LicenseManager 컨트랙트 주소입니다.
 - `NEXT_PUBLIC_WALLETCONNECT_ID`: WalletConnect 프로젝트를 사용하면 고유 ID로 교체해주세요.
 - `NEXT_PUBLIC_STORAGE_MODE`: IPFS 스토리지 모드입니다. `local`로 설정하면 `Helia`만 사용하고 `production`으로 설정하면 `Helia` + `Pinata`를 사용합니다.
 - `PINATA_JWT`: Pinata에서 발급한 JWT토큰입니다. 선택 옵션입니다.

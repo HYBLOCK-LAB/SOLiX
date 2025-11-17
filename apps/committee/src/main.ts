@@ -18,6 +18,7 @@ import { ShardSubmissionQueue } from "./infrastructure/queue/shard-submission-qu
 import { ShardSubmissionWorker } from "./application/workers/shard-submission-worker";
 import { CommitteeThresholdProvider } from "./application/services/committee-threshold-provider";
 import { RunRequestProcessor } from "./application/services/run-request-processor";
+import { CommitteeRoleEnsurer } from "./infrastructure/blockchain/committee-role-ensurer";
 
 async function bootstrap() {
   logger.info("Bootstrapping committee backend");
@@ -30,18 +31,26 @@ async function bootstrap() {
     throw new Error("PINATA_JWT is required for shard publishing");
   }
 
-  const { publicClient, walletClient, account } = createViemClients(env);
+  const { publicClient, wsPublicClient, walletClient, account } =
+    createViemClients(env);
   const committeeId = env.committeeId;
 
-  const committeeAddressOverrides: Record<string, `0x${string}`> = {
-    "committee-1": "0x1111111111111111111111111111111111111111",
-    "committee-2": "0x2222222222222222222222222222222222222222",
-    "committee-3": "0x3333333333333333333333333333333333333333",
-    "committee-4": "0x4444444444444444444444444444444444444444",
-    "committee-5": "0x5555555555555555555555555555555555555555",
-  };
-  const committeeAddress =
-    committeeAddressOverrides[committeeId] ?? account.address;
+  const committeeAddress = env.walletPublicKey ?? account.address;
+
+  if (!env.walletPublicKey) {
+    const committeeRoleEnsurer = new CommitteeRoleEnsurer(
+      publicClient,
+      walletClient,
+      env.committeeManagerAddress,
+      account
+    );
+    await committeeRoleEnsurer.ensureRole(committeeAddress);
+  } else {
+    logger.info(
+      { committeeAddress },
+      "[On-chain] Skipping auto COMMITTEE_ROLE grant (expecting pre-granted role)"
+    );
+  }
 
   const shardEncryptor = new EcdhShardEncryptor();
   const shardPublisher = new PinataShardPublisher(env.pinataJwt);
@@ -85,6 +94,7 @@ async function bootstrap() {
   );
   const runRequestSubscriber = new RunRequestSubscriber(
     publicClient,
+    wsPublicClient,
     env.licenseManagerAddress,
     runRequestProcessor,
     env.eventPollIntervalMs

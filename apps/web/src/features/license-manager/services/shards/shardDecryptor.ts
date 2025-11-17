@@ -3,13 +3,10 @@ import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex, hexToBytes } from "../../utils/hex";
 import type { RemoteShardPublication, SecretSharePayload } from "./types";
 import { combineShares } from "./combineShares";
-import { resolveIpfsUri } from "./ipfs";
+import { fetchIpfsResource } from "./ipfs";
 
 export async function fetchShardPublication(shardCid: string): Promise<RemoteShardPublication> {
-  const response = await fetch(resolveIpfsUri(shardCid));
-  if (!response.ok) {
-    throw new Error(`Failed to fetch shard ${shardCid}`);
-  }
+  const { response } = await fetchIpfsResource(shardCid);
   return (await response.json()) as RemoteShardPublication;
 }
 

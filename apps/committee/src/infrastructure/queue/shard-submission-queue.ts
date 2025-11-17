@@ -1,6 +1,7 @@
 import { Queue, Worker, QueueEvents, type JobsOptions } from "bullmq";
 import IORedis from "ioredis";
 import type { RedisOptions } from "ioredis";
+import { logger } from "../../shared/logger";
 
 export interface ShardSubmissionJob {
   codeId: string;
@@ -45,7 +46,20 @@ export class ShardSubmissionQueue {
     this.worker = new Worker(
       this.queue.name,
       async (job) => {
-        await process(job.data);
+        try {
+          await process(job.data);
+        } catch (error) {
+          logger.error(
+            {
+              queue: this.queue.name,
+              jobId: job.id,
+              data: job.data,
+              err: error,
+            },
+            "Shard submission job failed"
+          );
+          throw error;
+        }
       },
       {
         connection: this.queue.opts.connection,

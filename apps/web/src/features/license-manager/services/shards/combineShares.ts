@@ -6,15 +6,29 @@ export function combineShares(shares: SecretSharePayload[]): Uint8Array {
     throw new Error("At least one share is required");
   }
 
-  const byteLength = shares[0].byteLength;
-  if (shares.some((share) => share.byteLength !== byteLength)) {
-    throw new Error("All shares must have the same byteLength");
+  const byteLengths = shares.map((share) => share.byteLength).filter((length) => length > 0);
+  if (byteLengths.length === 0) {
+    throw new Error("Shares must include byteLength metadata");
   }
+  const minByteLength = Math.min(...byteLengths);
+  const maxByteLength = Math.max(...byteLengths);
+  if (minByteLength !== maxByteLength) {
+    console.warn("[combineShares] Inconsistent byteLength detected", {
+      byteLengths,
+      chosenByteLength: maxByteLength,
+    });
+  }
+  const byteLength = maxByteLength;
 
   const parsed = shares.map((share) => ({
     x: BigInt(share.index),
     y: hexToBigInt(share.value),
   }));
+  console.log("[combineShares] Input shares", {
+    count: shares.length,
+    expectedByteLength: byteLength,
+    shareByteLengths: shares.map((share) => share.byteLength),
+  });
 
   const secretInt = parsed.length === 1 ? mod(parsed[0].y) : interpolateAtZero(parsed);
   return bigIntToBytes(secretInt, byteLength);
@@ -76,16 +90,28 @@ function hexToBigInt(value: `0x${string}`): bigint {
 }
 
 function bigIntToBytes(value: bigint, length: number): Uint8Array {
-  const buffer = new Uint8Array(length);
-  let temp = mod(value);
-
-  for (let i = length - 1; i >= 0; i -= 1) {
-    buffer[i] = Number(temp & 0xffn);
-    temp >>= 8n;
+  if (length <= 0) {
+    throw new Error("byteLength must be positive");
   }
 
-  if (temp !== 0n) {
-    throw new Error("Secret does not fit into byteLength");
+  const normalized = mod(value);
+  const requiredLength =
+    normalized === 0n ? 1 : Math.ceil(normalized.toString(2).length / 8);
+  const targetLength = Math.max(length, requiredLength);
+  if (targetLength !== length) {
+    console.warn("[combineShares] Expanding byteLength for recovered secret", {
+      requestedByteLength: length,
+      requiredByteLength: requiredLength,
+      targetLength,
+    });
+  }
+
+  const buffer = new Uint8Array(targetLength);
+  let temp = normalized;
+
+  for (let i = targetLength - 1; i >= 0; i -= 1) {
+    buffer[i] = Number(temp & 0xffn);
+    temp >>= 8n;
   }
 
   return buffer;

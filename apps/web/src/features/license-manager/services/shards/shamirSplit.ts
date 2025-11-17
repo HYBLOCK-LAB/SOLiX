@@ -81,7 +81,9 @@ function bytesToBigInt(bytes: Uint8Array): bigint {
 }
 
 function bigIntToHex(value: bigint): `0x${string}` {
-  return `0x${mod(value).toString(16)}` as `0x${string}`;
+  const hex = mod(value).toString(16);
+  const padded = hex.length % 2 === 0 ? hex : `0${hex}`;
+  return `0x${padded}` as `0x${string}`;
 }
 
 function mod(value: bigint): bigint {

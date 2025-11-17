@@ -4,10 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useShardSubmissions } from "../../hooks/useShardSubmissions";
 import { useShardRecovery, type ShardRecoveryEntry } from "../../hooks/useShardRecovery";
 import { downloadAndDecryptArtifact } from "../../services/artifact/downloadEncryptedArtifact";
-import {
-  type EncryptionBundle,
-  unpackEncryptionBundle,
-} from "../../services/encryption/bundle";
+import { type EncryptionBundle, unpackEncryptionBundle } from "../../services/encryption/bundle";
 
 interface ShardStatusCardProps {
   codeId: number;
@@ -26,7 +23,7 @@ export function ShardStatusCard({
   codeHash,
   codeName,
 }: ShardStatusCardProps) {
-  const { latestRun, isLoading } = useShardSubmissions(codeId, runNonce);
+  const { latestRun, isLoading, refetch } = useShardSubmissions(codeId, runNonce);
   const { shardStates, recoveredSecret, decryptedCount, error, isProcessing } = useShardRecovery({
     run: latestRun ?? null,
     recipientPublicKey,
@@ -39,15 +36,18 @@ export function ShardStatusCard({
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [legacyKeyHex, setLegacyKeyHex] = useState<`0x${string}` | null>(null);
   const [legacyIvInput, setLegacyIvInput] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const normalizedLegacyIv = useMemo(() => {
     if (!legacyKeyHex) return null;
     return normalizeHexInput(legacyIvInput);
   }, [legacyKeyHex, legacyIvInput]);
 
-  const activeBundle = encryptionBundle ?? (legacyKeyHex && normalizedLegacyIv
-    ? { keyHex: legacyKeyHex, ivHex: normalizedLegacyIv }
-    : null);
+  const activeBundle =
+    encryptionBundle ??
+    (legacyKeyHex && normalizedLegacyIv
+      ? { keyHex: legacyKeyHex, ivHex: normalizedLegacyIv }
+      : null);
 
   useEffect(() => {
     if (!recoveredSecret) {
@@ -79,10 +79,7 @@ export function ShardStatusCard({
   }, [recoveredSecret]);
 
   const canDownload =
-    Boolean(activeBundle) &&
-    Boolean(cipherCid) &&
-    Boolean(codeHash) &&
-    decryptedCount > 0;
+    Boolean(activeBundle) && Boolean(cipherCid) && Boolean(codeHash) && decryptedCount > 0;
 
   if (!recipientPublicKey || !runNonce) {
     return (
@@ -111,9 +108,26 @@ export function ShardStatusCard({
 
   return (
     <section className="mt-6 rounded-2xl border border-primary-25 bg-background-light-50 p-4 text-sm shadow-lg dark:border-primary-75 dark:bg-background-dark-75">
-      <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">
-        Shard 상태
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-primary-100 dark:text-text-dark-100">
+          Shard 상태
+        </h3>
+        <button
+          type="button"
+          className="rounded border border-primary-50 px-3 py-1 text-[11px] font-semibold text-primary-100 transition hover:border-primary-75 hover:text-primary-75 disabled:cursor-not-allowed disabled:border-primary-25 disabled:text-primary-25 dark:border-primary-75 dark:text-text-dark-75 dark:hover:text-text-dark-100"
+          disabled={isRefreshing}
+          onClick={async () => {
+            setIsRefreshing(true);
+            try {
+              await refetch();
+            } finally {
+              setIsRefreshing(false);
+            }
+          }}
+        >
+          {isRefreshing ? "새로고침 중..." : "상태 새로고침"}
+        </button>
+      </div>
       <p className="mt-1 text-xs text-text-light-50 dark:text-text-dark-50">
         요청자 {shortenAddress(latestRun.requester)} · 임계값 {latestRun.threshold} · RunNonce{" "}
         {shortenAddress(latestRun.runNonce)}
@@ -217,7 +231,10 @@ export function ShardStatusCard({
                 encryptionKeyHex: activeBundle.keyHex,
                 initializationVectorHex: activeBundle.ivHex,
                 expectedHash: codeHash,
-                fileName: codeName ? `${codeName}.zip` : `code-${codeId}.bin`,
+                fileName:
+                  codeName?.trim() && codeName.trim().length > 0
+                    ? codeName.trim()
+                    : `code-${codeId}.bin`,
               });
               setDownloadStatus(
                 `다운로드 완료! 해시 검증 성공 (${result.verifiedHash.slice(0, 10)}…)`,

@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { useLicenseManagerWrite } from "../../hooks/useLicenseManagerWrite";
-import { useRegisteredCodes } from "../../hooks/useRegisteredCodes";
+import { useUserLicenses } from "../../hooks/useUserLicenses";
 import {
   createExecutionKeyPair,
   removeExecutionKey,
@@ -40,21 +40,21 @@ export function ExecutionRequestCard() {
 
   const { execute, isPending, isSuccess, transactionHash, error } =
     useLicenseManagerWrite("requestCodeExecution");
-  const { codes: registeredCodes, isLoading: isCodesLoading } = useRegisteredCodes();
+  const { licenses: ownedLicenses, isLoading: isLicensesLoading } = useUserLicenses();
   const { address } = useAccount();
 
-  const hasRegisteredCodes = registeredCodes.length > 0;
+  const hasAvailableCodes = ownedLicenses.length > 0;
   const selectedCode = useMemo(
-    () => registeredCodes.find((code) => code.codeId === codeId) ?? null,
-    [registeredCodes, codeId],
+    () => ownedLicenses.find((code) => code.codeId === codeId) ?? null,
+    [ownedLicenses, codeId],
   );
   const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
 
   useEffect(() => {
-    if (!codeId && registeredCodes.length > 0) {
-      setCodeId(registeredCodes[0].codeId);
+    if (!codeId && ownedLicenses.length > 0) {
+      setCodeId(ownedLicenses[0].codeId);
     }
-  }, [codeId, registeredCodes]);
+  }, [codeId, ownedLicenses]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -160,20 +160,20 @@ export function ExecutionRequestCard() {
               const value = event.target.value;
               setCodeId(value ? Number(value) : 0);
             }}
-            disabled={isCodesLoading || !hasRegisteredCodes}
+            disabled={isLicensesLoading || !hasAvailableCodes}
           >
             <option value="">
-              {isCodesLoading ? "코드 목록을 불러오는 중..." : "코드를 선택하세요"}
+              {isLicensesLoading ? "코드 목록을 불러오는 중..." : "코드를 선택하세요"}
             </option>
-            {registeredCodes.map((code) => (
+            {ownedLicenses.map((code) => (
               <option key={code.codeId} value={code.codeId}>
                 #{code.codeId} · {code.name || code.cipherCid}
               </option>
             ))}
           </select>
-          {!isCodesLoading && !hasRegisteredCodes && (
+          {!isLicensesLoading && !hasAvailableCodes && (
             <span className="text-xs text-text-light-50 dark:text-text-dark-50">
-              등록된 코드가 없습니다. 먼저 코드를 등록하세요.
+              보유한 라이선스가 없습니다. 먼저 라이선스를 발급받으세요.
             </span>
           )}
         </label>

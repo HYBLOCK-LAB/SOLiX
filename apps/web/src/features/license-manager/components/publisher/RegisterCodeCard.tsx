@@ -90,6 +90,11 @@ export function RegisterCodeCard() {
         keyHex: encryptionDetails.keyHex,
         ivHex: encryptionDetails.ivHex,
       });
+      console.log("[register] Encryption bundle prepared", {
+        keyBytes: (encryptionDetails.keyHex.length - 2) / 2,
+        ivBytes: (encryptionDetails.ivHex.length - 2) / 2,
+        bundleBytes: (encryptionBundle.length - 2) / 2,
+      });
       const shares = splitSecret(encryptionBundle, committeeMembers.length, threshold);
       if (shares.length !== committeeMembers.length) {
         throw new Error("Shard 생성에 실패했습니다.");
@@ -111,6 +116,10 @@ export function RegisterCodeCard() {
           byteLength: share.byteLength,
           expiresAt,
         };
+      });
+      console.log("[register] Shard payloads", {
+        runNonce,
+        byteLengths: shardPayloads.map((payload) => payload.byteLength),
       });
 
       await registerShards({

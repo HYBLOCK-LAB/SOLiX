@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ShardRun } from "./useShardSubmissions";
 import {
   combineDecryptedShares,
@@ -51,6 +51,7 @@ export function useShardRecovery({
   const [recoveredSecret, setRecoveredSecret] = useState<`0x${string}` | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const recoveredSecretRef = useRef<`0x${string}` | null>(null);
 
   useEffect(() => {
     setShardStates({});
@@ -58,6 +59,7 @@ export function useShardRecovery({
     setRecoveredSecret(null);
     setError(null);
     setIsProcessing(false);
+    recoveredSecretRef.current = null;
   }, [run?.requester, run?.runNonce, executionKey?.privateKey]);
 
   useEffect(() => {
@@ -70,8 +72,8 @@ export function useShardRecovery({
 
     async function processShards() {
       setIsProcessing(true);
-      for (const shard of activeRun.shards) {
-        if (cancelled) break;
+      const tasks = activeRun.shards.map(async (shard) => {
+        if (cancelled) return;
         const stateKey = shard.committee.toLowerCase();
         setShardStates((prev) => ({
           ...prev,
@@ -86,21 +88,39 @@ export function useShardRecovery({
             throw new Error("Execution key not available for shard decryption");
           }
           const publication = await fetchShardPublication(shard.shardCid);
+          console.log("[recovery] Fetched shard publication", {
+            committee: shard.committee,
+            byteLength: publication.byteLength,
+            shareIndex: publication.shareIndex,
+          });
+          if (cancelled) return;
           const decrypted = await decryptShardPublication(publication, executionKey.privateKey);
           if (cancelled) return;
+          console.log("[recovery] Decrypted shard", {
+            committee: shard.committee,
+            shareIndex: decrypted.index,
+            byteLength: decrypted.byteLength,
+          });
+
           setShares((prev) => {
             const next = [...prev.filter((item) => item.index !== decrypted.index), decrypted];
             const requiredShares = Math.min(activeRun.threshold, SHARD_THRESHOLD);
-            if (next.length >= requiredShares && !recoveredSecret) {
+            if (next.length >= requiredShares && !recoveredSecretRef.current) {
               try {
                 const secret = combineDecryptedShares(next.slice(0, requiredShares));
+                recoveredSecretRef.current = secret;
                 setRecoveredSecret(secret);
+                console.log("[recovery] Combined secret", {
+                  requiredShares,
+                  bundleBytes: (secret.length - 2) / 2,
+                });
               } catch (combineError) {
                 setError((combineError as Error).message);
               }
             }
             return next;
           });
+
           setShardStates((prev) => ({
             ...prev,
             [stateKey]: { committee: shard.committee, status: "ready" },
@@ -115,8 +135,12 @@ export function useShardRecovery({
             },
           }));
         }
+      });
+
+      await Promise.allSettled(tasks);
+      if (!cancelled) {
+        setIsProcessing(false);
       }
-      setIsProcessing(false);
     }
 
     processShards().catch((processError) => {
@@ -127,7 +151,7 @@ export function useShardRecovery({
     return () => {
       cancelled = true;
     };
-  }, [executionKey, run, runNonce, recoveredSecret]);
+  }, [executionKey, run, runNonce]);
 
   return {
     shardStates,

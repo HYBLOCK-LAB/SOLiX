@@ -7,6 +7,7 @@ DOCS_DIR    ?= docs
 .PHONY: help \
 	docs \
 	contracts-install contracts-clean contracts-test contracts-deploy contracts-deploy-sepolia \
+	contracts-deploy-sepolia-cli contracts-verify-sepolia contracts-deploy-verify-sepolia \
 	web-install web-dev web-build web-start web-lint \
 	committee-install committee-dev committee-build committee-start \
 	docker-up docker-down docker-build
@@ -33,8 +34,14 @@ contracts-test: ## Run contract tests
 contracts-deploy: ## Deploy contracts to local network
 	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts
 
-contracts-deploy-sepolia: ## Deploy contracts to Sepolia network
-	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts --network sepolia
+contracts-deploy-sepolia: ## Deploy LicenseManager + CommitteeManager to Sepolia via local Hardhat (no Docker)
+	@bash apps/on-chain/scripts/deploy-sepolia.sh
+
+contracts-verify-sepolia: ## Verify LicenseManager & CommitteeManager on Sepolia (optional env LICENSE_MANAGER_ADDRESS / COMMITTEE_MANAGER_ADDRESS)
+	@bash apps/on-chain/scripts/verify-sepolia.sh $(LICENSE_MANAGER_ADDRESS) $(COMMITTEE_MANAGER_ADDRESS)
+
+contracts-deploy-verify-sepolia: ## Deploy and verify LicenseManager+CommitteeManager on Sepolia in one command
+	@bash apps/on-chain/scripts/deploy-verify-sepolia.sh
 
 # 
 # Web

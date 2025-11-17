@@ -8,6 +8,13 @@ const envSchema = z.object({
   PUBLIC_CHAIN_RPC_URL: z
     .string()
     .min(1, "PUBLIC_CHAIN_RPC_URL is required"),
+  PUBLIC_CHAIN_WS_URL: z
+    .preprocess((value) => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }, z.string().url().optional())
+    .optional(),
   PUBLIC_CHAIN_ID: z
     .string()
     .transform((value) => BigInt(value))
@@ -38,6 +45,13 @@ const envSchema = z.object({
   COMMITTEE_ID: z
     .string()
     .min(1, "COMMITTEE_ID is required"),
+  WALLET_PUBLIC_KEY: z
+    .preprocess((value) => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }, z.string().length(42, "WALLET_PUBLIC_KEY must be a hex string"))
+    .optional(),
 });
 
 const rawEnv = envSchema.safeParse(process.env);
@@ -55,6 +69,7 @@ if (!rawEnv.success) {
 export type AppConfig = {
   port: number;
   rpcUrl: string;
+  rpcWsUrl?: string;
   chainId: bigint;
   licenseManagerAddress: `0x${string}`;
   committeeManagerAddress: `0x${string}`;
@@ -64,6 +79,7 @@ export type AppConfig = {
   pinataJwt: string;
   eventPollIntervalMs: number;
   committeeId: string;
+  walletPublicKey?: `0x${string}`;
 };
 
 const parsed = rawEnv.data;
@@ -71,6 +87,7 @@ const parsed = rawEnv.data;
 export const env: AppConfig = {
   port: parsed.PORT,
   rpcUrl: parsed.PUBLIC_CHAIN_RPC_URL,
+  rpcWsUrl: parsed.PUBLIC_CHAIN_WS_URL,
   chainId: parsed.PUBLIC_CHAIN_ID,
   licenseManagerAddress: parsed.LICENSE_MANAGER_ADDRESS as `0x${string}`,
   committeeManagerAddress: parsed.COMMITTEE_MANAGER_ADDRESS as `0x${string}`,
@@ -80,4 +97,5 @@ export const env: AppConfig = {
   pinataJwt: parsed.PINATA_JWT,
   eventPollIntervalMs: parsed.EVENT_POLL_INTERVAL_MS,
   committeeId: parsed.COMMITTEE_ID,
+  walletPublicKey: parsed.WALLET_PUBLIC_KEY as `0x${string}` | undefined,
 };

@@ -52,6 +52,17 @@ export class BlockchainShardSubmitter implements ShardSubmitter {
         return;
       } catch (error) {
         attempt += 1;
+        logger.error(
+          {
+            codeId: params.codeId.toString(),
+            requester: params.requester,
+            runNonce: params.runNonce,
+            shardCid: params.shardCid,
+            attempt,
+            err: error,
+          },
+          "[IPFS] submitShard failed"
+        );
         if (attempt >= MAX_RETRIES || !this.isTooManyRequests(error)) {
           throw error;
         }

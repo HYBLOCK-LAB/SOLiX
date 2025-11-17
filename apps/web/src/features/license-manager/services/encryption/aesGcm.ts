@@ -1,10 +1,9 @@
 import { toHex } from "../../utils/byteEncoding";
+import { FIXED_AES_GCM_IV_BYTES, FIXED_AES_GCM_IV_HEX } from "./iv";
 import type { EncryptionResult } from "./types";
 
 const AES_ALGORITHM = "AES-GCM";
 const AES_KEY_LENGTH_BITS = 256;
-const AES_GCM_IV_LENGTH_BYTES = 12;
-
 const AES_USAGES: KeyUsage[] = ["encrypt"];
 
 function getCrypto(): Crypto {
@@ -12,13 +11,6 @@ function getCrypto(): Crypto {
     throw new Error("Web Crypto API is not available in this environment.");
   }
   return globalThis.crypto;
-}
-
-function createInitializationVector(): Uint8Array {
-  const crypto = getCrypto();
-  const iv = new Uint8Array(AES_GCM_IV_LENGTH_BYTES);
-  crypto.getRandomValues(iv);
-  return iv;
 }
 
 async function generateKey(): Promise<CryptoKey> {
@@ -36,7 +28,7 @@ async function generateKey(): Promise<CryptoKey> {
 export async function encryptWithAesGcm(payload: BufferSource): Promise<EncryptionResult> {
   const crypto = getCrypto();
   const key = await generateKey();
-  const iv = createInitializationVector();
+  const iv = FIXED_AES_GCM_IV_BYTES;
 
   const payloadView =
     payload instanceof Uint8Array ? payload : new Uint8Array(payload as ArrayBuffer);
@@ -70,7 +62,7 @@ export async function encryptWithAesGcm(payload: BufferSource): Promise<Encrypti
   return {
     cipherBytes,
     keyHex: toHex(rawKey),
-    ivHex: toHex(iv),
+    ivHex: FIXED_AES_GCM_IV_HEX,
     algorithm: AES_ALGORITHM,
   };
 }

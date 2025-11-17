@@ -85,6 +85,11 @@ export function RegisterCodeCard() {
         await publicClient.waitForTransactionReceipt({ hash: txHash });
       }
 
+      console.log("[register] Encryption key before splitting", {
+        keyHex: encryptionDetails.keyHex,
+        threshold,
+        committeeCount: committeeMembers.length,
+      });
       const shares = splitSecret(encryptionDetails.keyHex as `0x${string}`, committeeMembers.length, threshold);
       if (shares.length !== committeeMembers.length) {
         throw new Error("Shard 생성에 실패했습니다.");

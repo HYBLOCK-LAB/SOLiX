@@ -34,12 +34,6 @@ contracts-test: ## Run contract tests
 contracts-deploy: ## Deploy contracts to local network
 	@docker compose run --rm contracts-node npx hardhat ignition deploy ignition/modules/LicenseManager.ts
 
-contracts-deploy-sepolia: ## Deploy LicenseManager + CommitteeManager to Sepolia via local Hardhat (no Docker)
-	@bash apps/on-chain/scripts/deploy-sepolia.sh
-
-contracts-verify-sepolia: ## Verify LicenseManager & CommitteeManager on Sepolia (optional env LICENSE_MANAGER_ADDRESS / COMMITTEE_MANAGER_ADDRESS)
-	@bash apps/on-chain/scripts/verify-sepolia.sh $(LICENSE_MANAGER_ADDRESS) $(COMMITTEE_MANAGER_ADDRESS)
-
 contracts-deploy-verify-sepolia: ## Deploy and verify LicenseManager+CommitteeManager on Sepolia in one command
 	@bash apps/on-chain/scripts/deploy-verify-sepolia.sh
 

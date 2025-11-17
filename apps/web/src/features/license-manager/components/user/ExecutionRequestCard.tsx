@@ -44,6 +44,10 @@ export function ExecutionRequestCard() {
   const { address } = useAccount();
 
   const hasRegisteredCodes = registeredCodes.length > 0;
+  const selectedCode = useMemo(
+    () => registeredCodes.find((code) => code.codeId === codeId) ?? null,
+    [registeredCodes, codeId],
+  );
   const codeSelectValue = useMemo(() => (codeId > 0 ? String(codeId) : ""), [codeId]);
 
   useEffect(() => {
@@ -221,6 +225,9 @@ export function ExecutionRequestCard() {
           codeId={codeId}
           recipientPublicKey={latestPublicKey}
           runNonce={latestRunNonce}
+          cipherCid={selectedCode?.cipherCid}
+          codeHash={selectedCode?.codeHash}
+          codeName={selectedCode?.name || selectedCode?.cipherCid}
         />
       )}
     </section>

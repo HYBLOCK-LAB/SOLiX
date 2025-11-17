@@ -35,8 +35,17 @@
 <p>Ethernaut 레벨을 바탕으로 취약점 재현 과정, 악용 시나리오, 안전한 방어 전략을 정리하고 학습합니다.</p>
 <h3 is-upgraded>2. 프로젝트 취약점 점검</h3>
 <p><code>CommitteeManager</code>, <code>LicenseManager</code> 등 핵심 컨트랙트와 관련 오프체인 서비스의 접근 제어, 재진입, 입력 검증 항목을 중심으로 취약점을 점검합니다.</p>
+<ul>
+<li>라이선스 만료 정보는 <code>_expiry[user][codeId]</code>에 묶여 있지만 ERC-1155 토큰 전송은 그대로 열려 있어, 만료 직전에 토큰을 새 지갑으로 옮기면 만료 검증을 무력화할 수 있습니다.</li>
+<li><code>CommitteeManager.submitShard</code>가 <code>LicenseManager</code>의 <code>RunRequested</code> 이벤트를 확인하지 않아서, 위원이 실제 요청 없이도 <code>ExecutionApproved</code>를 생성해 임의 코드 복호화가 가능한 인증 우회 취약점이 존재했습니다. 또한 <code>hasSubmitted</code>와 카운트 맵이 runNonce 기준으로 고정되어 있어 공격자가 임의 nonce로 선점하면 영구적으로 DoS가 발생했습니다.</li>
+</ul>
 <h3 is-upgraded>3. 취약점 수정 및 개선 작업</h3>
 <p>우선순위가 높은 취약점부터 컨트랙트 로직, 이벤트를 수정하고 코드 리뷰를 통해 개선 사항을 확정합니다.</p>
+<ul>
+<li>라이선스를 타 주소로 이전하지 못하도록 ERC-1155의 <code>_update</code> 훅을 오버라이드해 사용자 간 전송을 모두 차단하고, <code>requestCodeExecution</code> 시 <code>runNonce</code>별 실행 요청을 온체인에 기록/검증하는 <code>hasRunRequest</code> 뷰를 도입했습니다.(<code>apps/on-chain/contracts/LicenseManager.sol</code>)</li>
+<li><code>CommitteeManager</code>는 실행 요청 여부를 <code>licenseManager.hasRunRequest</code>로 검증한 뒤에만 샤드를 집계하며, runNonce별 버전 관리와 <code>resetRunState</code> 관리 기능을 추가해 악성 위원의 DoS를 즉시 정리할 수 있도록 했습니다.(<code>apps/on-chain/contracts/CommitteeManager.sol</code>)</li>
+<li>상기 변경을 검증하기 위해 Hardhat 테스트에 새 시나리오(퍼블리셔 권한, 비양도성, 실행 요청 필요, 관리자 리셋 등)를 추가하고, <code>npx hardhat test</code>로 전체 테스트 스위트를 통과시켰습니다.</li>
+</ul>
 <h3 is-upgraded>4. 최종 테스트</h3>
 <p>수정된 내용을 배포하고, 발행부터 복원까지 사용자 시나리오를 통합 테스트로 검증합니다.</p>
 
@@ -246,7 +255,7 @@ modifier noReentrant() {
 <p><a href="https://ethernaut.openzeppelin.com/level/11" target="_blank">Elevator</a>은 빌딩의 꼭대기에 도달하는 문제입니다. 컨트랙트에 보면 top이라는 boll 타입의 변수가 있는데 이 값을 true로 바꾸면 됩니다.</p>
 <p>컨트랙트에서 goTo 함수를 호출하면 그 컨트랙트의 주소(<code>msg.sender</code>)를 Building 타입으로 보고 <code>isLastFloor()</code>를 호출한다. 우리는 Building interface와 동일한 컨트랙트를 통해 top을 true로 바꿀 것이다.</p>
 <p><code>isLastFloor</code>는 <code>goTo</code> 함수 내에서 두 번 호출된다. 처음은 조건 검사이고 두 번째는 top을 변경하기 위한 용도이다. 처음 <code>isLastFloor</code>가 호출되었을 때 false이고 그 다음 호출되기 전에 true라면 top은 true로 바뀔 수 있다. Build의 isLastFloor가 다음과 같이 동작하도록 구현하면 된다.</p>
-<pre><code>// SPDX-License-Identifier: MIT
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
 interface IElevator {
@@ -323,18 +332,795 @@ contract AttackPreservation {
 
       </google-codelab-step>
     
-      <google-codelab-step label="프로젝트 취약점 점검" duration="10">
-        
-
-      </google-codelab-step>
-    
       <google-codelab-step label="취약점 수정 및 개선 작업" duration="20">
-        
+        <h2 is-upgraded>프로젝트 취약점 점검</h2>
+<h3 is-upgraded>1. 만료 우회 + 양도성 토큰</h3>
+<p><code>LicenseManager</code>는 <code>_expiry[user][codeId]</code>를 통해 만료 시간을 추적하지만, 기본 ERC‑1155 전송 로직을 그대로 두어 사용자가 <code>safeTransferFrom</code>으로 실행권 토큰을 다른 지갑으로 넘길 수 있었습니다. 공격자는 만료 직전에 새 지갑으로 토큰을 옮긴 뒤, 새 지갑으로 <code>requestCodeExecution</code>을 호출해 만료 검증을 사실상 무력화할 수 있었습니다.</p>
+<h3 is-upgraded>2. 요청 없는 복호화 및 nonce DoS:</h3>
+<p><code>CommitteeManager</code>의 <code>submitShard</code>는 <code>LicenseManager</code>가 발행하는 <code>RunRequested</code> 이벤트를 검증하지 않아서, 위원이 임의의 <code>codeId</code>/<code>runNonce</code>로 샤드를 올려 <code>ExecutionApproved</code> 이벤트를 만들 수 있었습니다. 동시에 <code>hasSubmitted</code>와 <code>shardCountForRun</code> 키가 단순 <code>runNonce</code> 기반이라 악성 위원이 가짜 nonce를 <strong>선점하면</strong> 카운트가 초기화되지 않아 영구 DoS가 가능했습니다.</p>
+<h3 is-upgraded>3. 운영 통제 부재</h3>
+<p>관리자에게 실행 상태를 강제로 비우는 수단이 없어, 이상 징후가 감지되어도 진행 중인 <code>runNonce</code>를 리셋할 방법이 없습니다.</p>
+<p>위 취약점을 제거하기 위해 컨트랙트 코드를 다음과 같이 개편했습니다.</p>
+<h2 is-upgraded>LicenseManager 수정</h2>
+<p>상단에 에러를 하나 정의합니다. 라이선스 토큰을 임의로 다른 지갑으로 옮길 수 없도록 막는 사용자 정의 오류입니다.</p>
+<pre><code language="language-solidity" class="language-solidity">contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
+    bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
+
+    error LicenseTransferDisabled();
+    ...
+</code></pre>
+<p>실행 요청 여부를 나타내는 상태를 추가합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">mapping(bytes32 =&gt; bool) private _runRequests;
+</code></pre>
+<p>실행 요청을 한 번만 등록하도록 <code>runKey</code>를 추적하고, <code>_update</code>를 통해 사용자 간 ERC‑1155 전송을 아예 차단해 라이선스를 임의 이관할 수 없게 합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">function requestCodeExecution(
+    uint256 codeId,
+    bytes32 runNonce,
+    bytes calldata recipientPubKey
+) external override {
+    _requireCodeExists(codeId);
+    require(!_codes[codeId].paused, &#34;Code is paused&#34;);
+    require(balanceOf(msg.sender, codeId) &gt; 0, &#34;Insufficient runs&#34;);
+    uint256 expiry = _expiry[msg.sender][codeId];
+    require(expiry == 0 || block.timestamp &lt;= expiry, &#34;License expired&#34;);
+    bytes32 runKey = keccak256(abi.encodePacked(codeId, msg.sender, runNonce));
+    require(!_runRequests[runKey], &#34;Run already requested&#34;);
+
+    _burn(msg.sender, codeId, 1);
+    _runRequests[runKey] = true;
+    emit RunRequested(codeId, msg.sender, runNonce, recipientPubKey, block.timestamp);
+}
+
+function _update(
+    address from,
+    address to,
+    uint256[] memory ids,
+    uint256[] memory amounts
+) internal override {
+    if (from != address(0) &amp;&amp; to != address(0)) {
+        revert LicenseTransferDisabled();
+    }
+    super._update(from, to, ids, amounts);
+}
+</code></pre>
+<p>또한, 오프체인에서 실행 요청 여부를 알 수 있도록 다음과 같이 작성해 줍니다.</p>
+<pre><code language="language-solidity" class="language-solidity">function hasRunRequest(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) external view override returns (bool) {
+    return
+        _runRequests[
+            keccak256(abi.encodePacked(codeId, requester, runNonce))
+        ];
+}
+</code></pre>
+<h2 is-upgraded>CommitteeManager</h2>
+<p>각 실행 버전을 확인할 수 있도록 상태를 하나 추가합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">mapping(bytes32 =&gt; uint256) private runStateVersion;
+</code></pre>
+<p><code>hasRunRequest</code> 검증으로 요청 없는 승인 우회를 막고 runKey를 버전 정보로 한 번 더 해싱해 버전이 다른 경우 다른 요청으로 처리할 수 있도록 코드를 수정합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">function submitShard(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce,
+    string calldata shardCid
+) external onlyRole(COMMITTEE_ROLE) {
+    require(licenseManager.checkCodeExists(codeId), &#34;code is not exist&#34;);
+    require(licenseManager.checkCodeActive(codeId), &#34;code is not active&#34;);
+    require(
+        licenseManager.hasRunRequest(codeId, requester, runNonce),
+        &#34;run not requested&#34;
+    );
+
+    bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+    bytes32 runKey = _versionedRunKey(baseKey);
+    if (hasSubmitted[runKey][msg.sender]) {
+        revert DuplicateShard(codeId, requester, msg.sender);
+    }
+    hasSubmitted[runKey][msg.sender] = true;
+    uint256 newCount = ++shardCountForRun[runKey];
+    emit ShardSubmitted(codeId, requester, runNonce, msg.sender, shardCid, newCount, committeeThreshold);
+
+    if (newCount &gt;= committeeThreshold) {
+        emit ExecutionApproved(codeId, requester, runNonce, committeeThreshold, newCount);
+    }
+}
+
+function _baseRunKey(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) private pure returns (bytes32) {
+    return keccak256(abi.encodePacked(codeId, requester, runNonce));
+}
+
+function _versionedRunKey(
+    bytes32 baseKey
+) private view returns (bytes32) {
+    uint256 version = runStateVersion[baseKey];
+    return keccak256(abi.encodePacked(baseKey, version));
+}
+</code></pre>
+<p>실행 상태를 초기화하는 함수를 만들어 악성 nonce가 시스템을 영구적으로 잠그지 못하도록 수정합니다.</p>
+<pre><code language="language-solidity" class="language-solidity">function resetRunState(
+    uint256 codeId,
+    address requester,
+    bytes32 runNonce
+) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+    uint256 newVersion = ++runStateVersion[baseKey];
+    bytes32 newKey = _versionedRunKey(baseKey);
+    shardCountForRun[newKey] = 0;
+    emit RunStateReset(codeId, requester, runNonce, newVersion);
+}
+</code></pre>
+
 
       </google-codelab-step>
     
       <google-codelab-step label="최종 테스트" duration="19">
-        
+        <p>최종적으로 작성해야할 컨트랙트는 다음과 같습니다.</p>
+<p>ILicenseManager.sol</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {IERC165} from &#34;@openzeppelin/contracts/utils/introspection/IERC165.sol&#34;;
+
+interface ILicenseManager is IERC165 {
+    /* ========= 상태 조회 ========= */
+
+    // code 조회
+    function code(
+        uint256 codeId
+    )
+        external
+        view
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        );
+
+    // 코드 소유자 조회
+    function codeOwner(uint256 codeId) external view returns (address);
+
+    // 계정별 라이선스 만료시간 조회
+    function licenseExpiry(
+        address account,
+        uint256 codeId
+    ) external view returns (uint256);
+
+    // 다음에 등록할 코드 ID 조회
+    function nextCodeId() external view returns (uint256);
+
+    /* ========= 이벤트 ========= */
+
+    // 코드 등록
+    event CodeRegistered(
+        uint256 indexed codeId,
+        bytes32 codeHash,
+        string cipherCid,
+        string name,
+        string version,
+        address indexed publisher
+    );
+
+    // 코드 이름 갱신
+    event CodeNameUpdated(
+        uint256 indexed codeId,
+        string name,
+        address indexed publisher
+    );
+
+    // 코드 메타데이터 갱신
+    event CodeUpdated(
+        uint256 indexed codeId,
+        bytes32 codeHash,
+        string cipherCid,
+        string version,
+        address indexed publisher
+    );
+
+    // 라이선스 발급
+    event LicenseIssued(
+        uint256 indexed codeId,
+        address indexed to,
+        uint256 runs,
+        uint256 expiry
+    );
+
+    // 라이선스 취소
+    event LicenseRevoked(
+        uint256 indexed codeId,
+        address indexed account,
+        uint256 burned
+    );
+
+    // 코드 일시정지
+    event CodePaused(uint256 indexed codeId);
+
+    // 코드 일시정지 해제
+    event CodeUnpaused(uint256 indexed codeId);
+
+    // 코드 실행 요청
+    event RunRequested(
+        uint256 indexed codeId,
+        address indexed user,
+        bytes32 indexed runNonce,
+        bytes recipientPubKey,
+        uint256 blockTimestamp
+    );
+
+    // ERC165 통합 오버라이드
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+
+    /* ========= 함수 정의 ========= */
+    // 코드 등록
+    function registerCode(
+        bytes32 codeHash,
+        string calldata cipherCid
+    ) external returns (uint256 codeId);
+
+    // 코드 메타데이터 갱신
+    function updateCodeMetadata(
+        uint256 codeId,
+        string calldata newName
+    ) external;
+
+    // 코드 버전 및 소스 갱신
+    function updateCode(
+        uint256 codeId,
+        bytes32 newCodeHash,
+        string calldata newCipherCid,
+        string calldata newVersion
+    ) external;
+
+    // 코드 실행 일시정지
+    function pauseCodeExecution(uint256 codeId) external;
+
+    // 코드 실행 일시정지 해제
+    function unpauseCodeExecution(uint256 codeId) external;
+
+    // 라이센스 발급
+    function issueLicense(
+        uint256 codeId,
+        address to,
+        uint256 runs,
+        uint256 expiryTimestamp
+    ) external;
+
+    // 라이센스 취소
+    function revokeUserLicense(address account, uint256 codeId) external;
+
+    // 코드 실행 요청
+    function requestCodeExecution(
+        uint256 codeId,
+        bytes32 runNonce,
+        bytes calldata recipientPubKey
+    ) external;
+
+    // 실행 요청 여부 확인
+    function hasRunRequest(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external view returns (bool);
+
+    /* ========= View Helper ========= */
+
+    function checkCodeActive(uint256 codeId) external view returns (bool);
+
+    function checkCodeExists(uint256 codeId) external view returns (bool);
+
+    function uri(uint256 id) external view returns (string memory);
+}
+</code></pre>
+<p>LicenseManager.sol</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {ERC1155} from &#34;@openzeppelin/contracts/token/ERC1155/ERC1155.sol&#34;;
+import {AccessControl} from &#34;@openzeppelin/contracts/access/AccessControl.sol&#34;;
+import {ILicenseManager} from &#34;./interfaces/ILicenseManager.sol&#34;;
+
+contract LicenseManager is ERC1155, AccessControl, ILicenseManager {
+    bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
+
+    error LicenseTransferDisabled();
+
+    /* ========= 구조/상태 ========= */
+
+    struct CodeInfo {
+        bytes32 codeHash; // code를 keccak256로 암호화한 값
+        string cipherCid; // 암호화 파일의 IPFS CID
+        string name; // 코드 표시용 이름
+        string version; // 코드 버전 정보
+        bool paused; // 실행 일시정지 여부
+        bool exists; // 존재 플래그
+        address owner; // 소유자 주소
+    }
+
+    // codeId =&gt; CodeInfo
+    mapping(uint256 =&gt; CodeInfo) private _codes;
+
+    // account =&gt; codeId =&gt; expiry
+    // 계정별 만료시간: expiry[user][codeId] = timestamp
+    mapping(address =&gt; mapping(uint256 =&gt; uint256)) private _expiry;
+
+    // 실행 요청 여부 (codeId, user, nonce)
+    mapping(bytes32 =&gt; bool) private _runRequests;
+
+    uint256 private _nextCodeId = 1;
+
+    /* ========= 생성자/기본 설정 ========= */
+    constructor(string memory baseUri) ERC1155(baseUri) {
+        _grantRole(ADMIN_ROLE, msg.sender);
+    }
+
+    /* ========= 상태 조회 ========= */
+
+    // code 조회
+    function code(
+        uint256 codeId
+    )
+        external
+        view
+        override
+        returns (
+            bytes32,
+            string memory,
+            string memory,
+            string memory,
+            bool,
+            bool
+        )
+    {
+        CodeInfo storage c = _codes[codeId];
+        return (c.codeHash, c.cipherCid, c.name, c.version, c.paused, c.exists);
+    }
+
+    // 코드 소유자 조회
+    function codeOwner(
+        uint256 codeId
+    ) external view override returns (address) {
+        return _codes[codeId].owner;
+    }
+
+    // 계정별 라이선스 만료시간 조회
+    function licenseExpiry(
+        address account,
+        uint256 codeId
+    ) external view override returns (uint256) {
+        return _expiry[account][codeId];
+    }
+
+    // 다음에 등록할 코드 ID 조회
+    function nextCodeId() external view override returns (uint256) {
+        return _nextCodeId;
+    }
+
+    // ERC165 통합 오버라이드: ERC1155, AccessControl, ILicenseManager에 대한 선언을 모두 해결
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        override(ERC1155, AccessControl, ILicenseManager)
+        returns (bool)
+    {
+        return
+            interfaceId == type(ILicenseManager).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+
+    /* ========= 함수 정의 ========= */
+
+    // 코드 등록
+    function registerCode(
+        bytes32 codeHash,
+        string calldata cipherCid
+    ) external override returns (uint256 codeId) {
+        require(codeHash != bytes32(0), &#34;Invalid codeHash&#34;);
+
+        codeId = _nextCodeId++;
+        _codes[codeId] = CodeInfo({
+            codeHash: codeHash,
+            cipherCid: cipherCid,
+            name: &#34;&#34;,
+            version: &#34;1.0.0&#34;,
+            paused: false,
+            exists: true,
+            owner: msg.sender
+        });
+
+        emit CodeRegistered(
+            codeId,
+            codeHash,
+            cipherCid,
+            &#34;&#34;,
+            &#34;1.0.0&#34;,
+            msg.sender
+        );
+    }
+
+    // 코드 메타데이터 갱신. 소유자만 갱신 가능
+    function updateCodeMetadata(
+        uint256 codeId,
+        string calldata newName
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+
+        CodeInfo storage c = _codes[codeId];
+        c.name = newName;
+
+        emit CodeNameUpdated(codeId, newName, msg.sender);
+    }
+
+    // 코드 버전 및 소스 갱신. 소유자만 갱신 가능
+    function updateCode(
+        uint256 codeId,
+        bytes32 newCodeHash,
+        string calldata newCipherCid,
+        string calldata newVersion
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+
+        CodeInfo storage c = _codes[codeId];
+        c.codeHash = newCodeHash;
+        c.cipherCid = newCipherCid;
+        c.version = newVersion;
+
+        emit CodeUpdated(
+            codeId,
+            newCodeHash,
+            newCipherCid,
+            newVersion,
+            msg.sender
+        );
+        // ERC1155
+        emit URI(newCipherCid, codeId);
+    }
+
+    // 코드 일시정지. 소유자 또는 관리자만 가능
+    function pauseCodeExecution(uint256 codeId) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwnerOrAdmin(codeId);
+        require(!_codes[codeId].paused, &#34;Code already paused&#34;);
+
+        _codes[codeId].paused = true;
+        emit CodePaused(codeId);
+    }
+
+    // 코드 일시정지 해제. 소유자 또는 관리자만 가능
+    function unpauseCodeExecution(uint256 codeId) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwnerOrAdmin(codeId);
+        require(_codes[codeId].paused, &#34;Code not paused&#34;);
+
+        _codes[codeId].paused = false;
+        emit CodeUnpaused(codeId);
+    }
+
+    // 특정 사용자에게 라이선스 발급. 소유자만 가능
+    function issueLicense(
+        uint256 codeId,
+        address to,
+        uint256 runs,
+        uint256 expiryTimestamp
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+        require(!_codes[codeId].paused, &#34;Code is paused&#34;);
+        require(to != address(0), &#34;Invalid recipient&#34;);
+        require(runs &gt; 0, &#34;Runs must be greater than 0&#34;);
+        require(
+            expiryTimestamp == 0 || expiryTimestamp &gt; block.timestamp,
+            &#34;Invalid expiry&#34;
+        );
+
+        // 만료 갱신: 더 긴 쪽으로 확장(기존 만료가 더 길면 유지)
+        uint256 prevTimestamp = _expiry[to][codeId];
+        if (expiryTimestamp &gt; prevTimestamp) {
+            _expiry[to][codeId] = expiryTimestamp;
+        }
+
+        _mint(to, codeId, runs, &#34;&#34;);
+        emit LicenseIssued(codeId, to, runs, _expiry[to][codeId]);
+    }
+
+    // 특정 사용자의 라이선스 전량 취소(소각). 소유자만 가능
+    function revokeUserLicense(
+        address account,
+        uint256 codeId
+    ) external override {
+        _requireCodeExists(codeId);
+        _requireCodeOwner(codeId);
+        uint256 bal = balanceOf(account, codeId);
+        require(
+            bal &gt; 0 || _expiry[account][codeId] &gt; 0,
+            &#34;No license to revoke&#34;
+        );
+
+        if (bal &gt; 0) {
+            _burn(account, codeId, bal);
+        }
+        _expiry[account][codeId] = 0;
+
+        emit LicenseRevoked(codeId, account, bal);
+    }
+
+    // 실행 요청. 1회 소진 + 이벤트 발생
+    function requestCodeExecution(
+        uint256 codeId,
+        bytes32 runNonce,
+        bytes calldata recipientPubKey
+    ) external override {
+        _requireCodeExists(codeId);
+        require(!_codes[codeId].paused, &#34;Code is paused&#34;);
+        require(balanceOf(msg.sender, codeId) &gt; 0, &#34;Insufficient runs&#34;);
+        uint256 expiry = _expiry[msg.sender][codeId];
+        require(expiry == 0 || block.timestamp &lt;= expiry, &#34;License expired&#34;);
+        bytes32 runKey = keccak256(
+            abi.encodePacked(codeId, msg.sender, runNonce)
+        );
+        require(!_runRequests[runKey], &#34;Run already requested&#34;);
+
+        // 1회 소진
+        _burn(msg.sender, codeId, 1);
+        _runRequests[runKey] = true;
+
+        emit RunRequested(
+            codeId,
+            msg.sender,
+            runNonce,
+            recipientPubKey,
+            block.timestamp
+        );
+    }
+
+    function hasRunRequest(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external view override returns (bool) {
+        return
+            _runRequests[
+                keccak256(abi.encodePacked(codeId, requester, runNonce))
+            ];
+    }
+
+    /* ========= 뷰 헬퍼 ========= */
+
+    // 코드가 존재하고 정지 상태가 아닌지 여부
+    function checkCodeActive(
+        uint256 codeId
+    ) external view override returns (bool) {
+        return _codes[codeId].exists &amp;&amp; !_codes[codeId].paused;
+    }
+
+    // 코드 존재 여부 확인
+    function checkCodeExists(
+        uint256 codeId
+    ) external view override returns (bool) {
+        return _codes[codeId].exists;
+    }
+
+    // ERC1155의 메타데이터 URI를 code별로 반환
+    function uri(
+        uint256 id
+    ) public view override(ERC1155, ILicenseManager) returns (string memory) {
+        CodeInfo storage c = _codes[id];
+        if (bytes(c.cipherCid).length &gt; 0) {
+            return c.cipherCid;
+        }
+        // fallback: ERC1155 기본 동작
+        return super.uri(id);
+    }
+
+    /* ========= 내부 유틸 ========= */
+    function _requireCodeExists(uint256 codeId) internal view {
+        require(_codes[codeId].exists, &#34;Code not found&#34;);
+    }
+
+    function _requireCodeOwner(uint256 codeId) internal view {
+        require(
+            _codes[codeId].owner == msg.sender,
+            &#34;Caller is not the code owner&#34;
+        );
+    }
+
+    function _requireCodeOwnerOrAdmin(uint256 codeId) internal view {
+        if (hasRole(ADMIN_ROLE, msg.sender)) return;
+        require(
+            _codes[codeId].owner == msg.sender,
+            &#34;Caller is neither code owner nor admin&#34;
+        );
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal override(ERC1155) {
+        if (from != address(0) &amp;&amp; to != address(0)) {
+            revert LicenseTransferDisabled();
+        }
+        super._update(from, to, ids, amounts);
+    }
+}
+</code></pre>
+<p>CommitteeManager.sol</p>
+<pre><code language="language-solidity" class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {AccessControl} from &#34;@openzeppelin/contracts/access/AccessControl.sol&#34;;
+import {ILicenseManager} from &#34;./interfaces/ILicenseManager.sol&#34;;
+
+contract CommitteeManager is AccessControl {
+    /* ========= Errors ========= */
+
+    error DuplicateShard(uint256 codeId, address requester, address committee);
+
+    /* ========= 전역 변수 ========= */
+    bytes32 public constant COMMITTEE_ROLE = keccak256(&#34;COMMITTEE_ROLE&#34;);
+
+    /* ========= 상태 ========= */
+
+    mapping(bytes32 =&gt; uint256) public shardCountForRun;
+    mapping(bytes32 =&gt; mapping(address =&gt; bool)) private hasSubmitted;
+    mapping(bytes32 =&gt; uint256) private runStateVersion;
+    uint256 public committeeThreshold = 3;
+
+    //  라이선스 컨트랙트 읽기용
+    ILicenseManager public immutable licenseManager;
+
+    constructor(address licenseManager_) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        licenseManager = ILicenseManager(licenseManager_);
+    }
+
+    /* ========= 이벤트 ========= */
+
+    // 위원회 멤버가 shard CID(IPFS)를 제출했음을 알리는 이벤트
+    event ShardSubmitted(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        address committee,
+        string shardCid,
+        uint256 countAfter,
+        uint256 threshold
+    );
+
+    // 모든 위원회의 승인이 완료되었음을 알리는 이벤트
+    event ExecutionApproved(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        uint256 threshold,
+        uint256 count
+    );
+
+    event RunStateReset(
+        uint256 indexed codeId,
+        address indexed requester,
+        bytes32 indexed runNonce,
+        uint256 newVersion
+    );
+
+    /* ========= 관리자 기능 ========= */
+
+    // 위원회 임계치 설정. 관리자만 가능
+    function setCommitteeThreshold(
+        uint256 newThreshold
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newThreshold &gt; 0, &#34;threshold must be more then 0&#34;);
+        require(newThreshold &lt;= type(uint32).max, &#34;threshold too large&#34;);
+        committeeThreshold = newThreshold;
+    }
+
+    // 위원회 멤버 추가. 관리자만 가능
+    function addCommittee(
+        address newCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(COMMITTEE_ROLE, newCommittee);
+    }
+
+    // 위원회 멤버 제거. 관리자만 가능
+    function removeCommittee(
+        address removalCommittee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(COMMITTEE_ROLE, removalCommittee);
+    }
+
+    // 위원회가 shard CID(IPFS)를 제출. 온체인에는 카운트만 저장, CID는 이벤트로 공개
+    function submitShard(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce,
+        string calldata shardCid
+    ) external onlyRole(COMMITTEE_ROLE) {
+        require(licenseManager.checkCodeExists(codeId), &#34;code is not exist&#34;);
+        require(licenseManager.checkCodeActive(codeId), &#34;code is not active&#34;);
+        require(
+            licenseManager.hasRunRequest(codeId, requester, runNonce),
+            &#34;run not requested&#34;
+        );
+
+        bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+        bytes32 runKey = _versionedRunKey(baseKey);
+        if (hasSubmitted[runKey][msg.sender]) {
+            revert DuplicateShard(codeId, requester, msg.sender);
+        }
+        hasSubmitted[runKey][msg.sender] = true;
+        uint256 newCount = ++shardCountForRun[runKey];
+
+        emit ShardSubmitted(
+            codeId,
+            requester,
+            runNonce,
+            msg.sender,
+            shardCid,
+            newCount,
+            committeeThreshold
+        );
+
+        if (newCount &gt;= committeeThreshold) {
+            emit ExecutionApproved(
+                codeId,
+                requester,
+                runNonce,
+                committeeThreshold,
+                newCount
+            );
+        }
+    }
+
+    function resetRunState(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 baseKey = _baseRunKey(codeId, requester, runNonce);
+        uint256 newVersion = ++runStateVersion[baseKey];
+        bytes32 newKey = _versionedRunKey(baseKey);
+        shardCountForRun[newKey] = 0;
+        emit RunStateReset(codeId, requester, runNonce, newVersion);
+    }
+
+    function _baseRunKey(
+        uint256 codeId,
+        address requester,
+        bytes32 runNonce
+    ) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(codeId, requester, runNonce));
+    }
+
+    function _versionedRunKey(
+        bytes32 baseKey
+    ) private view returns (bytes32) {
+        uint256 version = runStateVersion[baseKey];
+        return keccak256(abi.encodePacked(baseKey, version));
+    }
+}
+</code></pre>
+<p>아래의 명령어를 통해 컨트랙트를 배포하고 검증해 주세요.</p>
+<pre><code language="language-bash" class="language-bash">make contracts-deploy-verify-sepolia
+</code></pre>
+<p>프로젝트는 라이선스를 관리하는 대시보드(Web)과 위원회(Committee) 5개, 임시로 파일을 저장하기 위한 redis로 구성되어 있습니다. 쉽게 실행하고 관리하기 위해 docker를 사용합니다. 환경 변수를 채우고 다음의 명령어를 입력해주세요.</p>
+<pre><code language="language-bash" class="language-bash">make build
+make start
+</code></pre>
+<p>localhost:3000에 접속해서 확인하면 됩니다.</p>
+<p class="image-container"><img alt="Test Deploy" src="img/e5e42a7e98c437c1.png"><img alt="Test License" src="img/456ef5af3580cae5.png"><img alt="Test Run Request" src="img/d94124131ba009be.png"><img alt="Test Shard Pending" src="img/252e5ffb8f373aaa.png"><img alt="Test Shard End" src="img/d99cf596f23bb1dc.png"></p>
+
 
       </google-codelab-step>
     

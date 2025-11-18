@@ -1273,13 +1273,6 @@ Duration: 1
 - IPFS와 Shamir’s Secret Sharing 동작을 이해하였습니다.
 - Ethernaut를 통해 자주 발생하는 온체인 취약점 패턴을 학습했습니다.
 
-### 도움이 될 만한 자료
-
-1. [Lit Protocol](https://www.litprotocol.com/): Lit Protocol은 key와 secrets을 관리하기 위한 탈중앙화 네트워크 프로토콜입니다. 본 프로젝트는 이러한 Lit Protocol에서 영감을 받아, DKG(Distributed Key Generation) 개념을 기반으로 이를 솔리디티로 구현하였습니다. Lit Protocol에 대한 보다 자세한 내용은 [공식 백서](https://github.com/LIT-Protocol/whitepaper)를 참고하시기 바랍니다.
-2. [IPFS Concepts](https://docs.ipfs.tech/concepts/): [IPFS](https://github.com/ipfs)는 Web3 생태계에서는 중대형 오픈소스 프로젝트입니다. 또한, 이에 대한 구현 원리를 이해하기 위해서 Merkle DAG, UnixFS, DHT, Pub/Sub 모델(Gossip), BitSwap 등 Computer Sicence 관련 배경지식을 많이 요구합니다.
-3. [proto school](https://proto.school/tutorials): IPFS나 filecoin과 같은 분산형 웹 스토리지 시스템에 관한 기술 튜토리얼입니다.
-4. [Sharmir’s Secret Sharing](https://medium.com/@sineta01/sharmirs-secret-sharing%EC%9D%84-%EC%82%B4%ED%8E%B4%EB%B3%B4%EC%9E%90-eca906e17a4c): 샤미르 분산 공유(Sharmir’s Secret Sharing)에 관한 설명입니다.
-
 ### 참고 자료
 
 1. [Ethernaut](https://ethernaut.openzeppelin.com)
